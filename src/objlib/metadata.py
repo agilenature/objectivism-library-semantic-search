@@ -1,9 +1,11 @@
 """Metadata extraction from folder hierarchy and filenames.
 
 Extracts structured metadata from Objectivism Library file paths using
-pre-compiled regex patterns. Supports two naming conventions:
-  - Simple (99%): {Course} - Lesson {N} - {Topic}.txt
-  - Complex (1%): {Course} - Year {N} - Q{N} - Week {N} - {Topic}.txt
+pre-compiled regex patterns. Supports four naming conventions:
+  - Simple Course (41%): {Course} - Lesson {N} - {Topic}.txt
+  - Complex Course (rare): {Course} - Year {N} - Q{N} - Week {N} - {Topic}.txt
+  - MOTM (25%): MOTM_YYYY-MM-DD_Topic.txt
+  - Peikoff Podcast (18%): Episode {N} [ID].txt
 
 Quality grading assigns COMPLETE/PARTIAL/MINIMAL/NONE based on how many
 fields were successfully extracted.
@@ -27,6 +29,14 @@ SIMPLE_PATTERN = re.compile(
 COMPLEX_PATTERN = re.compile(
     r"^(?P<course>.+?) - Year (?P<year>\d+) - Q(?P<quarter>\d+)"
     r" - Week (?P<week>\d+) - (?P<topic>.+?)\.txt$"
+)
+# MOTM pattern: MOTM_2019-07-28_Topic-With-Dashes.txt
+MOTM_PATTERN = re.compile(
+    r"^MOTM_(?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})_(?P<topic>.+?)\.txt$"
+)
+# Peikoff Podcast pattern: Episode 356 [1000332668759].txt
+PODCAST_PATTERN = re.compile(
+    r"^Episode (?P<episode>\d+) \[(?P<id>\d+)\]\.txt$"
 )
 # Folder detection for complex pattern: Year{N}/Q{N}/ subfolders
 YEAR_FOLDER = re.compile(r"^Year\s*(\d+)$")
@@ -156,8 +166,8 @@ class MetadataExtractor:
     def _extract_filename_metadata(self, filename: str) -> dict:
         """Extract metadata from the filename using regex patterns.
 
-        Tries COMPLEX_PATTERN first (more specific), then SIMPLE_PATTERN.
-        If neither matches, returns minimal metadata with unparsed flag.
+        Tries patterns in order: COMPLEX, SIMPLE, MOTM, PODCAST.
+        If no match, returns minimal metadata with unparsed flag.
 
         Args:
             filename: The filename (not full path).
@@ -165,7 +175,7 @@ class MetadataExtractor:
         Returns:
             Dict with extracted filename-level fields.
         """
-        # Try complex pattern first (more specific, avoids false matches)
+        # Try complex course pattern first (most specific)
         match = COMPLEX_PATTERN.match(filename)
         if match:
             topic = match.group("topic").strip()
@@ -178,7 +188,7 @@ class MetadataExtractor:
                 "topic": topic,
             }
 
-        # Try simple pattern
+        # Try simple course pattern
         match = SIMPLE_PATTERN.match(filename)
         if match:
             topic = match.group("topic").strip()
@@ -189,7 +199,31 @@ class MetadataExtractor:
                 "topic": topic,
             }
 
-        # Neither pattern matched -- graceful degradation
+        # Try MOTM pattern: MOTM_YYYY-MM-DD_Topic.txt
+        match = MOTM_PATTERN.match(filename)
+        if match:
+            topic = match.group("topic").strip()
+            topic = topic.replace("-", " ").replace("_", " ").strip()
+            date_str = f"{match.group('year')}-{match.group('month')}-{match.group('day')}"
+            return {
+                "series": "MOTM",
+                "date": date_str,
+                "year": match.group("year"),
+                "month": match.group("month"),
+                "day": match.group("day"),
+                "topic": topic,
+            }
+
+        # Try Peikoff Podcast pattern: Episode N [ID].txt
+        match = PODCAST_PATTERN.match(filename)
+        if match:
+            return {
+                "series": "Peikoff Podcast",
+                "episode_number": match.group("episode"),
+                "episode_id": match.group("id"),
+            }
+
+        # No pattern matched -- graceful degradation
         # Strip extension and use filename as raw data
         stem = Path(filename).stem
         metadata: dict = {
@@ -207,25 +241,37 @@ class MetadataExtractor:
         """Grade metadata quality based on extracted fields.
 
         Returns:
-            COMPLETE: has course + (lesson_number or (year + quarter + week)) + topic
-            PARTIAL: has course + topic (missing structural fields)
-            MINIMAL: has course OR topic (but not both)
+            COMPLETE: courses with structure, MOTM with date+topic, podcasts with episode
+            PARTIAL: has course+topic OR series without full structure
+            MINIMAL: has course OR topic OR series (but incomplete)
             NONE: no recognizable fields extracted
         """
         has_course = bool(metadata.get("course"))
+        has_series = bool(metadata.get("series"))
         has_topic = bool(metadata.get("topic"))
         has_lesson = bool(metadata.get("lesson_number"))
         has_hierarchy = all(
             metadata.get(f) for f in ("year", "quarter", "week")
         )
+        has_date = bool(metadata.get("date"))
+        has_episode = bool(metadata.get("episode_number"))
 
+        # COMPLETE: structured course content or series with identifying info
         if has_course and (has_lesson or has_hierarchy) and has_topic:
             return MetadataQuality.COMPLETE
+        if has_series == "MOTM" and has_date and has_topic:
+            return MetadataQuality.COMPLETE
+        if has_series == "Peikoff Podcast" and has_episode:
+            return MetadataQuality.COMPLETE
 
+        # PARTIAL: has main identifier + topic but missing structure
         if has_course and has_topic:
             return MetadataQuality.PARTIAL
+        if has_series and has_topic:
+            return MetadataQuality.PARTIAL
 
-        if has_course or has_topic:
+        # MINIMAL: has something but incomplete
+        if has_course or has_topic or has_series:
             return MetadataQuality.MINIMAL
 
         return MetadataQuality.NONE
