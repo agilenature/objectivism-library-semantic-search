@@ -1,0 +1,14 @@
+{
+  "mode": "yolo",
+  "depth": "comprehensive",
+  "parallelization": true,
+  "commit_docs": true,
+  "model_profile": "quality",
+  "discuss_mode": "ai",
+  "ai_providers": ["openai", "gemini", "perplexity"],
+  "workflow": {
+    "research": true,
+    "plan_check": true,
+    "verifier": true
+  }
+}
