@@ -1,0 +1,8 @@
+{
+  "allowed_extensions": [".txt", ".md", ".pdf", ".epub", ".docx", ".html"],
+  "min_file_size_bytes": 1024,
+  "skip_hidden_files": true,
+  "skip_patterns": [".DS_Store", "Thumbs.db", ".git", "__pycache__"],
+  "follow_symlinks": true,
+  "library_path": "/Volumes/U32 Shadow/Objectivism Library"
+}

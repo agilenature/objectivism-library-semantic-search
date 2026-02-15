@@ -1,0 +1,8 @@
+{
+  "courses": {},
+  "folder_patterns": {
+    "year": "\\d{4}",
+    "quarter": "Q[1-4]|Quarter-[1-4]",
+    "week": "Week-\\d+|W\\d+"
+  }
+}
