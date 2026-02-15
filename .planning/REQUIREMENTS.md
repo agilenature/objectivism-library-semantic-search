@@ -17,7 +17,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **FOUN-06**: Idempotency keys using content hashes for deduplication
 - [ ] **FOUN-07**: Upload timestamp tracking to prevent 48-hour expiration issues
 - [ ] **FOUN-08**: Embedding model version tracking in state schema
-- [ ] **FOUN-09**: Status tracking with atomic state transitions (pending → uploading → uploaded/failed)
+- [ ] **FOUN-09**: Status tracking with atomic state transitions (pending -> uploading -> uploaded/failed)
 
 ### Upload Pipeline
 
@@ -55,8 +55,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Advanced Features
 
-- [ ] **ADVN-01**: Concept evolution tracking (show how concepts develop from intro → advanced)
-- [ ] **ADVN-02**: Cross-encoder reranking for top-50 → top-10 precision improvement
+- [ ] **ADVN-01**: Concept evolution tracking (show how concepts develop from intro -> advanced)
+- [ ] **ADVN-02**: Cross-encoder reranking for top-50 -> top-10 precision improvement
 - [ ] **ADVN-03**: Multi-document synthesis with LLM (synthesized answers from 5-10 passages)
 - [ ] **ADVN-04**: Inline citation format (every claim traces to source passage with quote)
 - [ ] **ADVN-05**: Query expansion for philosophical terminology (synonym mapping)
@@ -79,7 +79,7 @@ Deferred to future release. Tracked but not in current roadmap.
 
 - **ADVN2-01**: Knowledge graph of philosophical concepts with entity extraction
 - **ADVN2-02**: Contradiction and tension detection across sources
-- **ADVN2-03**: Reading list / learning path generation (ordered sequences intro → advanced)
+- **ADVN2-03**: Reading list / learning path generation (ordered sequences intro -> advanced)
 - **ADVN2-04**: Hierarchical chunk indexing with query routing (summaries vs details)
 - **ADVN2-05**: Domain-tuned embeddings fine-tuned on corpus for better concept similarity
 
@@ -118,58 +118,58 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FOUN-01 | Phase 1 | Pending |
-| FOUN-02 | Phase 1 | Pending |
-| FOUN-03 | Phase 1 | Pending |
-| FOUN-04 | Phase 1 | Pending |
-| FOUN-05 | Phase 1 | Pending |
-| FOUN-06 | Phase 1 | Pending |
-| FOUN-07 | Phase 1 | Pending |
-| FOUN-08 | Phase 1 | Pending |
-| FOUN-09 | Phase 1 | Pending |
-| UPLD-01 | Phase 2 | Pending |
-| UPLD-02 | Phase 2 | Pending |
-| UPLD-03 | Phase 2 | Pending |
-| UPLD-04 | Phase 2 | Pending |
-| UPLD-05 | Phase 2 | Pending |
-| UPLD-06 | Phase 2 | Pending |
-| UPLD-07 | Phase 2 | Pending |
-| UPLD-08 | Phase 2 | Pending |
-| UPLD-09 | Phase 2 | Pending |
-| UPLD-10 | Phase 2 | Pending |
-| SRCH-01 | Phase 3 | Pending |
-| SRCH-02 | Phase 3 | Pending |
-| SRCH-03 | Phase 3 | Pending |
-| SRCH-04 | Phase 3 | Pending |
-| SRCH-05 | Phase 3 | Pending |
-| SRCH-06 | Phase 3 | Pending |
-| SRCH-07 | Phase 3 | Pending |
-| SRCH-08 | Phase 3 | Pending |
-| INTF-01 | Phase 3 | Pending |
-| INTF-02 | Phase 3 | Pending |
-| INTF-03 | Phase 3 | Pending |
-| INTF-04 | Phase 3 | Pending |
-| INTF-05 | Phase 3 | Pending |
-| INTF-06 | Phase 3 | Pending |
-| INTF-07 | Phase 3 | Pending |
-| ADVN-01 | Phase 4 | Pending |
-| ADVN-02 | Phase 4 | Pending |
-| ADVN-03 | Phase 4 | Pending |
-| ADVN-04 | Phase 4 | Pending |
-| ADVN-05 | Phase 4 | Pending |
-| ADVN-06 | Phase 4 | Pending |
-| ADVN-07 | Phase 4 | Pending |
-| INCR-01 | Phase 5 | Pending |
-| INCR-02 | Phase 5 | Pending |
-| INCR-03 | Phase 5 | Pending |
-| INCR-04 | Phase 5 | Pending |
-| INCR-05 | Phase 5 | Pending |
+| FOUN-01 | Phase 1: Foundation | Pending |
+| FOUN-02 | Phase 1: Foundation | Pending |
+| FOUN-03 | Phase 1: Foundation | Pending |
+| FOUN-04 | Phase 1: Foundation | Pending |
+| FOUN-05 | Phase 1: Foundation | Pending |
+| FOUN-06 | Phase 1: Foundation | Pending |
+| FOUN-07 | Phase 1: Foundation | Pending |
+| FOUN-08 | Phase 1: Foundation | Pending |
+| FOUN-09 | Phase 1: Foundation | Pending |
+| UPLD-01 | Phase 2: Upload Pipeline | Pending |
+| UPLD-02 | Phase 2: Upload Pipeline | Pending |
+| UPLD-03 | Phase 2: Upload Pipeline | Pending |
+| UPLD-04 | Phase 2: Upload Pipeline | Pending |
+| UPLD-05 | Phase 2: Upload Pipeline | Pending |
+| UPLD-06 | Phase 2: Upload Pipeline | Pending |
+| UPLD-07 | Phase 2: Upload Pipeline | Pending |
+| UPLD-08 | Phase 2: Upload Pipeline | Pending |
+| UPLD-09 | Phase 2: Upload Pipeline | Pending |
+| UPLD-10 | Phase 2: Upload Pipeline | Pending |
+| SRCH-01 | Phase 3: Search & CLI | Pending |
+| SRCH-02 | Phase 3: Search & CLI | Pending |
+| SRCH-03 | Phase 3: Search & CLI | Pending |
+| SRCH-04 | Phase 3: Search & CLI | Pending |
+| SRCH-05 | Phase 3: Search & CLI | Pending |
+| SRCH-06 | Phase 3: Search & CLI | Pending |
+| SRCH-07 | Phase 3: Search & CLI | Pending |
+| SRCH-08 | Phase 3: Search & CLI | Pending |
+| INTF-01 | Phase 3: Search & CLI | Pending |
+| INTF-02 | Phase 3: Search & CLI | Pending |
+| INTF-03 | Phase 3: Search & CLI | Pending |
+| INTF-04 | Phase 3: Search & CLI | Pending |
+| INTF-05 | Phase 3: Search & CLI | Pending |
+| INTF-06 | Phase 3: Search & CLI | Pending |
+| INTF-07 | Phase 3: Search & CLI | Pending |
+| ADVN-01 | Phase 4: Quality Enhancements | Pending |
+| ADVN-02 | Phase 4: Quality Enhancements | Pending |
+| ADVN-03 | Phase 4: Quality Enhancements | Pending |
+| ADVN-04 | Phase 4: Quality Enhancements | Pending |
+| ADVN-05 | Phase 4: Quality Enhancements | Pending |
+| ADVN-06 | Phase 4: Quality Enhancements | Pending |
+| ADVN-07 | Phase 4: Quality Enhancements | Pending |
+| INCR-01 | Phase 5: Incremental Updates | Pending |
+| INCR-02 | Phase 5: Incremental Updates | Pending |
+| INCR-03 | Phase 5: Incremental Updates | Pending |
+| INCR-04 | Phase 5: Incremental Updates | Pending |
+| INCR-05 | Phase 5: Incremental Updates | Pending |
 
 **Coverage:**
-- v1 requirements: 45 total
-- Mapped to phases: 45
-- Unmapped: 0 ✓
+- v1 requirements: 46 total
+- Mapped to phases: 46
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-15*
-*Last updated: 2026-02-15 after initial definition with research-informed categorization*
+*Last updated: 2026-02-15 after roadmap creation (phase names added to traceability, count corrected to 46)*

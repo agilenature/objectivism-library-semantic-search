@@ -1,0 +1,111 @@
+# Roadmap: Objectivism Library Semantic Search
+
+## Overview
+
+This roadmap transforms a 1,749-file Objectivism Library into a semantic search system using Google Gemini's File Search API. The journey follows the natural three-phase pipeline (scan, upload, query) dictated by the architecture, extended with quality enhancements and incremental update capability. Each phase delivers a complete, independently verifiable capability: Phase 1 builds the foundation offline with zero API dependencies, Phase 2 gets files into Gemini reliably, Phase 3 delivers working search, Phase 4 sharpens result quality with reranking and synthesis, and Phase 5 makes the system maintainable long-term with incremental updates.
+
+## Phases
+
+**Phase Numbering:**
+- Integer phases (1, 2, 3): Planned milestone work
+- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
+
+Decimal phases appear between their surrounding integers in numeric order.
+
+- [ ] **Phase 1: Foundation** - SQLite state tracking and library scanning with metadata extraction
+- [ ] **Phase 2: Upload Pipeline** - Reliable batch upload to Gemini File Search with rate limiting and resume
+- [ ] **Phase 3: Search & CLI** - Semantic search, filtering, and CLI interface for querying the indexed library
+- [ ] **Phase 4: Quality Enhancements** - Reranking, synthesis, query expansion, and difficulty-aware ordering
+- [ ] **Phase 5: Incremental Updates** - Change detection, selective re-upload, and orphan cleanup
+
+## Phase Details
+
+### Phase 1: Foundation
+**Goal**: User can scan the entire 1,749-file library offline, extracting rich metadata from every file, with all state persisted to SQLite -- ready for upload
+**Depends on**: Nothing (first phase)
+**Requirements**: FOUN-01, FOUN-02, FOUN-03, FOUN-04, FOUN-05, FOUN-06, FOUN-07, FOUN-08, FOUN-09
+**Success Criteria** (what must be TRUE):
+  1. Running the scanner against `/Volumes/U32 Shadow/Objectivism Library` discovers all 1,749 .txt files and records each in the SQLite database with its content hash, file path, and size
+  2. Each scanned file has extracted metadata (course, year, quarter, week, topic, instructor, difficulty) derived from its folder hierarchy and filename -- viewable by querying the database
+  3. Re-running the scanner on an unchanged library produces zero new inserts and zero hash changes (idempotent)
+  4. Running the scanner after adding, modifying, or deleting files correctly detects each change type (new, modified, deleted) and updates the database accordingly
+  5. The SQLite database schema includes upload status tracking (pending/uploading/uploaded/failed), Gemini file IDs, upload timestamps, and embedding model version -- ready for Phase 2 to consume
+**Plans**: TBD
+
+Plans:
+- [ ] 01-01: TBD
+- [ ] 01-02: TBD
+- [ ] 01-03: TBD
+
+### Phase 2: Upload Pipeline
+**Goal**: User can upload the entire library to Gemini File Search reliably -- with rate limiting, resume from interruption, and progress visibility -- resulting in a fully indexed and queryable store
+**Depends on**: Phase 1
+**Requirements**: UPLD-01, UPLD-02, UPLD-03, UPLD-04, UPLD-05, UPLD-06, UPLD-07, UPLD-08, UPLD-09, UPLD-10
+**Success Criteria** (what must be TRUE):
+  1. Running the upload command processes all pending files in batches of 100-200, with Rich progress bars showing per-file and per-batch status, completing within the 36-hour safety window per batch
+  2. Interrupting the upload mid-batch (Ctrl+C or crash) and restarting skips already-uploaded files and resumes from the exact point of interruption -- no duplicate uploads, no lost progress
+  3. When Gemini returns 429 rate-limit errors, the system backs off automatically (exponential with jitter) and reduces concurrency, without user intervention, eventually completing the batch
+  4. After upload completes, every file in the SQLite database shows status "uploaded" with a valid Gemini file ID, and the Gemini File Search store reports the correct file count
+  5. Each uploaded file carries its full metadata (20-30 fields) attached to the Gemini file record, preserving the pedagogical structure for downstream filtering
+**Plans**: TBD
+
+Plans:
+- [ ] 02-01: TBD
+- [ ] 02-02: TBD
+- [ ] 02-03: TBD
+
+### Phase 3: Search & CLI
+**Goal**: User can search the indexed library by meaning, filter by metadata, browse by structure, and see results with source citations -- all from a polished CLI interface
+**Depends on**: Phase 2
+**Requirements**: SRCH-01, SRCH-02, SRCH-03, SRCH-04, SRCH-05, SRCH-06, SRCH-07, SRCH-08, INTF-01, INTF-02, INTF-03, INTF-04, INTF-05, INTF-06, INTF-07
+**Success Criteria** (what must be TRUE):
+  1. Running `search "What is the Objectivist view of rights?"` returns semantically relevant results from across the library, ranked by relevance, with each result showing the source file name, course context, and a text excerpt -- not just file paths
+  2. Running `search "causality" --course "OPAR" --difficulty introductory` returns only results matching the metadata filters, demonstrating that semantic search and metadata filtering work together
+  3. Running `browse --course "History of Philosophy"` displays the structural hierarchy (years, quarters, weeks) and lets the user navigate without a search query
+  4. Every search result includes passage-level citation (specific text excerpt with source attribution) that traces back to the exact file and section in the library
+  5. The CLI uses Rich formatting (tables for results, panels for detail views, color-coded relevance scores) and provides `search`, `filter`, and `browse` commands via Typer with `--help` documentation
+**Plans**: TBD
+
+Plans:
+- [ ] 03-01: TBD
+- [ ] 03-02: TBD
+- [ ] 03-03: TBD
+
+### Phase 4: Quality Enhancements
+**Goal**: Search results are sharper (reranked for precision), answers synthesize across sources (with inline citations), and queries understand philosophical terminology -- transforming raw search into a research tool
+**Depends on**: Phase 3
+**Requirements**: ADVN-01, ADVN-02, ADVN-03, ADVN-04, ADVN-05, ADVN-06, ADVN-07
+**Success Criteria** (what must be TRUE):
+  1. Searching for a concept like "free will" returns results ordered with introductory explanations first and advanced treatments later -- the user sees a natural learning progression without manually filtering by difficulty
+  2. Running `search "What is the relationship between reason and emotion?" --synthesize` produces a multi-paragraph answer citing 5-10 specific passages with inline citations (e.g., "[OPAR Ch.4, p.12]"), where every claim traces to a quoted source
+  3. Searching for "egoism" also retrieves results about "rational self-interest" and related philosophical terminology, demonstrating query expansion without the user needing to know all synonyms
+  4. Running `search "concept formation" --track-evolution` shows how the concept develops from introductory (ITOE basics) through intermediate to advanced treatments, ordered by curriculum progression
+  5. The user can save a research session and resume it later, picking up where they left off with previous queries and results preserved
+**Plans**: TBD
+
+Plans:
+- [ ] 04-01: TBD
+- [ ] 04-02: TBD
+
+### Phase 5: Incremental Updates
+**Goal**: User can keep the search index current as the library grows -- detecting new or changed files and updating only what changed, without re-uploading the entire library
+**Depends on**: Phase 2 (pipeline), Phase 3 (CLI for sync command)
+**Requirements**: INCR-01, INCR-02, INCR-03, INCR-04, INCR-05
+**Success Criteria** (what must be TRUE):
+  1. After adding new files to the library directory, running `sync` detects the additions, uploads only the new files, and makes them searchable -- existing indexed files are untouched
+  2. After modifying a file's content, running `sync` detects the content hash change, removes the old version from the Gemini store, uploads the updated version, and the new content appears in search results
+  3. After deleting files from the library, running `sync` detects the removals and cleans up the corresponding Gemini store entries -- orphaned index entries do not pollute search results
+  4. Running `sync --force` re-processes all files regardless of change detection, providing a manual override for cases where the user wants a full re-index
+
+## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
+
+| Phase | Plans Complete | Status | Completed |
+|-------|---------------|--------|-----------|
+| 1. Foundation | 0/TBD | Not started | - |
+| 2. Upload Pipeline | 0/TBD | Not started | - |
+| 3. Search & CLI | 0/TBD | Not started | - |
+| 4. Quality Enhancements | 0/TBD | Not started | - |
+| 5. Incremental Updates | 0/TBD | Not started | - |
