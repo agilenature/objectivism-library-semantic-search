@@ -10,30 +10,30 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 Phase: 1 of 5 (Foundation)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-15 -- Completed 01-01-PLAN.md (Project Scaffolding and Database Layer)
+Last activity: 2026-02-15 -- Completed 01-02-PLAN.md (Metadata Extraction and File Scanner)
 
-Progress: [###.......] ~7% (1 plan of ~15 estimated total)
+Progress: [##........] ~13% (2 plans of ~15 estimated total)
 
-Phase 1 Progress: [###.......] 1/3 plans
+Phase 1 Progress: [######....] 2/3 plans
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
+- Total plans completed: 2
 - Average duration: 3 min
-- Total execution time: 3 min
+- Total execution time: 6 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-foundation | 1/3 | 3 min | 3 min |
+| 01-foundation | 2/3 | 6 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (3 min)
-- Trend: Starting
+- Last 5 plans: 01-01 (3 min), 01-02 (3 min)
+- Trend: Consistent
 
 *Updated after each plan completion*
 
@@ -51,6 +51,10 @@ Recent decisions affecting current work:
 - [01-01]: content_hash stored as TEXT hexdigest (readable in DB browsers)
 - [01-01]: UPSERT resets status to pending only when content_hash changes (CASE expression)
 - [01-01]: Used hatchling as build backend with src layout
+- [01-02]: Try COMPLEX_PATTERN before SIMPLE_PATTERN (more specific first avoids false matches)
+- [01-02]: Folder metadata merged with filename metadata; filename takes precedence on overlap
+- [01-02]: ChangeSet uses set[str] not set[Path] to match database file_path TEXT column
+- [01-02]: Extraction failures tracked by _unparsed_filename and _unparsed_folder flags in metadata
 
 ### Pending Todos
 
@@ -64,5 +68,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 01-01 (scaffolding + database layer), ready for 01-02 (file scanning and hashing)
-Resume file: .planning/phases/01-foundation/01-02-PLAN.md
+Stopped at: Completed 01-02 (metadata extraction + file scanner), ready for 01-03 (CLI commands and end-to-end integration)
+Resume file: .planning/phases/01-foundation/01-03-PLAN.md
