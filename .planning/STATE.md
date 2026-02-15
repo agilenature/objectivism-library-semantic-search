@@ -5,34 +5,34 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** Three equally critical pillars -- semantic search quality, metadata preservation, incremental updates
-**Current focus:** Phase 1: Foundation
+**Current focus:** Phase 1: Foundation -- COMPLETE
 
 ## Current Position
 
 Phase: 1 of 5 (Foundation)
-Plan: 2 of 3 in current phase
-Status: In progress
-Last activity: 2026-02-15 -- Completed 01-02-PLAN.md (Metadata Extraction and File Scanner)
+Plan: 3 of 3 in current phase
+Status: Phase complete
+Last activity: 2026-02-15 -- Completed 01-03-PLAN.md (CLI Interface and Test Suite)
 
-Progress: [##........] ~13% (2 plans of ~15 estimated total)
+Progress: [###.......] ~20% (3 plans of ~15 estimated total)
 
-Phase 1 Progress: [######....] 2/3 plans
+Phase 1 Progress: [##########] 3/3 plans -- COMPLETE
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2
-- Average duration: 3 min
-- Total execution time: 6 min
+- Total plans completed: 3
+- Average duration: 3.3 min
+- Total execution time: 10 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-foundation | 2/3 | 6 min | 3 min |
+| 01-foundation | 3/3 | 10 min | 3.3 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (3 min), 01-02 (3 min)
+- Last 5 plans: 01-01 (3 min), 01-02 (3 min), 01-03 (4 min)
 - Trend: Consistent
 
 *Updated after each plan completion*
@@ -55,6 +55,8 @@ Recent decisions affecting current work:
 - [01-02]: Folder metadata merged with filename metadata; filename takes precedence on overlap
 - [01-02]: ChangeSet uses set[str] not set[Path] to match database file_path TEXT column
 - [01-02]: Extraction failures tracked by _unparsed_filename and _unparsed_folder flags in metadata
+- [01-03]: Graceful degradation: unrecognized filenames get MINIMAL quality (topic from stem), not NONE
+- [01-03]: pythonpath added to pyproject.toml for pytest to find src layout
 
 ### Pending Todos
 
@@ -68,5 +70,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 01-02 (metadata extraction + file scanner), ready for 01-03 (CLI commands and end-to-end integration)
-Resume file: .planning/phases/01-foundation/01-03-PLAN.md
+Stopped at: Phase 1 COMPLETE. All 3 plans executed. Ready for Phase 2 planning.
+Resume file: Phase 2 planning needed next
