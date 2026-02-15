@@ -247,7 +247,8 @@ class MetadataExtractor:
             NONE: no recognizable fields extracted
         """
         has_course = bool(metadata.get("course"))
-        has_series = bool(metadata.get("series"))
+        series = metadata.get("series")
+        has_series = bool(series)
         has_topic = bool(metadata.get("topic"))
         has_lesson = bool(metadata.get("lesson_number"))
         has_hierarchy = all(
@@ -259,9 +260,9 @@ class MetadataExtractor:
         # COMPLETE: structured course content or series with identifying info
         if has_course and (has_lesson or has_hierarchy) and has_topic:
             return MetadataQuality.COMPLETE
-        if has_series == "MOTM" and has_date and has_topic:
+        if series == "MOTM" and has_date and has_topic:
             return MetadataQuality.COMPLETE
-        if has_series == "Peikoff Podcast" and has_episode:
+        if series == "Peikoff Podcast" and has_episode:
             return MetadataQuality.COMPLETE
 
         # PARTIAL: has main identifier + topic but missing structure
