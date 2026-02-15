@@ -30,12 +30,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Re-running the scanner on an unchanged library produces zero new inserts and zero hash changes (idempotent)
   4. Running the scanner after adding, modifying, or deleting files correctly detects each change type (new, modified, deleted) and updates the database accordingly
   5. The SQLite database schema includes upload status tracking (pending/uploading/uploaded/failed), Gemini file IDs, upload timestamps, and embedding model version -- ready for Phase 2 to consume
-**Plans**: TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
-- [ ] 01-03: TBD
+- [ ] 01-01-PLAN.md — Project scaffolding, data models, config, and SQLite database layer
+- [ ] 01-02-PLAN.md — Metadata extraction engine and file scanner with change detection
+- [ ] 01-03-PLAN.md — Typer CLI interface and comprehensive test suite
 
 ### Phase 2: Upload Pipeline
 **Goal**: User can upload the entire library to Gemini File Search reliably -- with rate limiting, resume from interruption, and progress visibility -- resulting in a fully indexed and queryable store
@@ -104,7 +104,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|---------------|--------|-----------|
-| 1. Foundation | 0/TBD | Not started | - |
+| 1. Foundation | 0/3 | Planning complete | - |
 | 2. Upload Pipeline | 0/TBD | Not started | - |
 | 3. Search & CLI | 0/TBD | Not started | - |
 | 4. Quality Enhancements | 0/TBD | Not started | - |
