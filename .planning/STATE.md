@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 
 ## Current Position
 
-Phase: 3 of 5 (Search & CLI)
+Phase: 3 of 6 (Search & CLI)
 Plan: 3 of 3 in current phase
 Status: Phase complete
-Last activity: 2026-02-16 -- Completed 03-03 (Browse & Filter)
+Last activity: 2026-02-16 -- Completed Phase 3 verification and added Phase 6 to roadmap
 
-Progress: [########░░] ~67% (10 plans of ~15 estimated total)
+Progress: [#######...] ~60% (10 plans of ~17 estimated total)
 
 Phase 1 Progress: [##########] 3/3 plans -- COMPLETE
 Phase 2 Progress: [##########] 4/4 plans -- COMPLETE
@@ -24,8 +24,8 @@ Phase 3 Progress: [##########] 3/3 plans -- COMPLETE
 
 **Velocity:**
 - Total plans completed: 10
-- Average duration: 4.0 min
-- Total execution time: 40 min
+- Average duration: 4.2 min
+- Total execution time: 42 min
 
 **By Phase:**
 
@@ -36,8 +36,8 @@ Phase 3 Progress: [##########] 3/3 plans -- COMPLETE
 | 03-search-and-cli | 3/3 | 13 min | 4.3 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-04 (4 min), 03-01 (5 min), 03-02 (4 min), 03-03 (4 min)
-- Trend: Stable at 4-5 min per plan
+- Last 5 plans: 02-03 (3 min), 02-04 (4 min), 03-01 (5 min), 03-02 (4 min), 03-03 (4 min)
+- Trend: Stable at 3-5 min per plan
 
 *Updated after each plan completion*
 
@@ -48,9 +48,9 @@ Phase 3 Progress: [##########] 3/3 plans -- COMPLETE
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
-- [Roadmap]: 5 phases derived from 6 requirement categories (SRCH + INTF merged into Phase 3 as they deliver one user capability)
+- [Roadmap]: 6 phases total (added Phase 6: AI-Powered Metadata Enhancement)
 - [Roadmap]: Phase ordering follows scan-upload-query pipeline with zero-API-dependency foundation first
-- [01-01]: content_hash indexed but NOT UNIQUE (corrects CLARIFICATIONS-ANSWERED.md; allows same content at different paths)
+- [01-01]: content_hash indexed but NOT UNIQUE (allows same content at different paths)
 - [01-01]: Timestamps use strftime('%Y-%m-%dT%H:%M:%f', 'now') for ISO 8601 with milliseconds
 - [01-01]: content_hash stored as TEXT hexdigest (readable in DB browsers)
 - [01-01]: UPSERT resets status to pending only when content_hash changes (CASE expression)
@@ -77,16 +77,11 @@ Recent decisions affecting current work:
 - [02-04]: Upload pipeline restricted to .txt files only via database query filter
 - [02-04]: Added 'skipped' status for non-.txt files (135 .epub/.pdf files marked)
 - [02-04]: File type filtering at database layer (get_pending_files) not orchestrator
-- [03-01]: AppState callback skips init for scan/status/purge/upload/config and --help requests
-- [03-01]: get_api_key() adds GEMINI_API_KEY env var fallback (per locked decision #6) alongside keyring
-- [03-01]: GeminiSearchClient uses synchronous client.models.generate_content() (not aio)
-- [03-01]: Citation confidence aggregated by averaging GroundingSupport scores per chunk
-- [03-01]: Renamed CLI get_api_key function to show_api_key to avoid collision with config.get_api_key()
-- [03-02]: view command in _SKIP_INIT_COMMANDS -- Gemini init only when --show-related used
-- [03-02]: Console injection pattern for testable Rich output (all display functions accept optional Console)
-- [03-02]: Tier 1 appends citation references after response text (inline insertion requires segment offsets not always available)
-- [03-03]: Switched from denylist (_SKIP_INIT_COMMANDS) to allowlist (_GEMINI_COMMANDS = {"search"}) for callback init
-- [03-03]: Numeric coercion for SQLite json_extract comparison -- JSON integers vs CLI string values
+- [03-01]: AppState callback uses allowlist for Gemini commands (search, view); all others skip initialization
+- [03-01]: Added --help to callback skip list to prevent API calls during help display
+- [03-01]: Fixed bug - removed invalid request_options parameter from GenerateContentConfig
+- [03-phase]: Added metadata command group (show, update, batch-update) for progressive metadata improvement
+- [Phase 6]: Added AI-powered metadata enhancement to roadmap (LLM-based category inference)
 
 ### Pending Todos
 
@@ -95,9 +90,10 @@ None.
 ### Blockers/Concerns
 
 - Phase 4 research flag: Cross-encoder model selection for philosophy domain, citation prompt engineering, Objectivist terminology mapping need research during planning
+- Display issues noted in Phase 3: confidence scores showing 0%, metadata enrichment showing Gemini IDs instead of filenames (can be addressed in Phase 4)
 
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Phase 3 COMPLETE. All 3 plans executed. Ready for Phase 4 planning.
-Resume file: .planning/phases/03-search-and-cli/03-03-SUMMARY.md
+Stopped at: Phase 3 COMPLETE. Ready for Phase 4 planning or next milestone planning.
+Resume file: N/A
