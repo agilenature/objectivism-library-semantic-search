@@ -5,37 +5,37 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** Three equally critical pillars -- semantic search quality, metadata preservation, incremental updates
-**Current focus:** Phase 2: Upload Pipeline -- In progress
+**Current focus:** Phase 2: Upload Pipeline -- COMPLETE
 
 ## Current Position
 
 Phase: 2 of 5 (Upload Pipeline)
-Plan: 2 of 3 in current phase
-Status: In progress
-Last activity: 2026-02-16 -- Completed 02-02-PLAN.md (Upload Orchestrator)
+Plan: 3 of 3 in current phase
+Status: Phase complete
+Last activity: 2026-02-16 -- Completed 02-03-PLAN.md (Keyring-Only API Key Support)
 
-Progress: [#####.....] ~33% (5 plans of ~15 estimated total)
+Progress: [######....] ~40% (6 plans of ~15 estimated total)
 
 Phase 1 Progress: [##########] 3/3 plans -- COMPLETE
-Phase 2 Progress: [######....] 2/3 plans
+Phase 2 Progress: [##########] 3/3 plans -- COMPLETE
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
-- Average duration: 4.0 min
-- Total execution time: 20 min
+- Total plans completed: 6
+- Average duration: 3.8 min
+- Total execution time: 23 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation | 3/3 | 10 min | 3.3 min |
-| 02-upload-pipeline | 2/3 | 10 min | 5.0 min |
+| 02-upload-pipeline | 3/3 | 13 min | 4.3 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-02 (3 min), 01-03 (4 min), 02-01 (5 min), 02-02 (5 min)
-- Trend: Stable at 5 min for Phase 2 (more complex async modules)
+- Last 5 plans: 01-03 (4 min), 02-01 (5 min), 02-02 (5 min), 02-03 (3 min)
+- Trend: Stable at 3-5 min per plan
 
 *Updated after each plan completion*
 
@@ -69,6 +69,9 @@ Recent decisions affecting current work:
 - [02-02]: Semaphore wraps only API call section, not DB writes
 - [02-02]: Heavy upload imports deferred to upload() command function for fast CLI startup
 - [02-02]: Circuit breaker OPEN skips files rather than blocking pipeline
+- [02-03]: Keyring service name: objlib-gemini, key name: api_key
+- [02-03]: API keys read exclusively from system keyring, never env vars or CLI flags
+- [02-03]: load_upload_config() also migrated to keyring for consistency
 
 ### Pending Todos
 
@@ -76,11 +79,10 @@ None.
 
 ### Blockers/Concerns
 
-- Phase 2 requires GEMINI_API_KEY environment variable for Plan 03 (user setup)
 - Phase 4 research flag: Cross-encoder model selection for philosophy domain, citation prompt engineering, Objectivist terminology mapping need research during planning
 
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Phase 2, Plan 2 COMPLETE. Ready for Plan 02-03 (Resume/Recovery and E2E Testing).
-Resume file: .planning/phases/02-upload-pipeline/02-03-PLAN.md
+Stopped at: Phase 2 COMPLETE. Ready for Phase 3 planning.
+Resume file: N/A -- begin Phase 3 planning
