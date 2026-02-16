@@ -96,7 +96,7 @@ echo ""
 
 echo "View with --show-related flag (finding related documents):"
 echo ""
-python -m objlib --store objectivism-library-test view "Ayn  Rand - The Virtue of Selfishness-Signet (1964).txt" --show-related --limit 3
+python -m objlib view "Ayn  Rand - The Virtue of Selfishness-Signet (1964).txt" --show-related --store objectivism-library-test --limit 3
 echo ""
 
 # Summary
