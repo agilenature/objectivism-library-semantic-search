@@ -5,30 +5,30 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** Three equally critical pillars -- semantic search quality, metadata preservation, incremental updates
-**Current focus:** Phase 6: AI-Powered Metadata -- Executing
+**Current focus:** Phase 6: AI-Powered Metadata -- COMPLETE
 **Execution strategy:** Phase 6 before full upload (1,721 files) to enrich metadata first
 
 ## Current Position
 
-Phase: 6 of 7 (AI-Powered Metadata - executing out of order)
-Plan: 4 of 5
-Status: In progress
-Last activity: 2026-02-16 - Completed 06-04-PLAN.md (Production pipeline: validation, confidence, chunking, orchestrator)
+Phase: 6 of 7 (AI-Powered Metadata - COMPLETE)
+Plan: 5 of 5
+Status: Phase complete
+Last activity: 2026-02-16 - Completed 06-05-PLAN.md (CLI integration: extract, review, approve, stats)
 
-Progress: [########..] ~82% (14 plans of ~17 estimated total)
-**Note:** Executing Phase 6 next (not Phase 4) to enrich metadata before uploading 1,721 files
+Progress: [#########.] ~88% (15 plans of ~17 estimated total)
+**Note:** Phase 6 COMPLETE. Next: Phase 4 (enrichment upload) or Phase 5 (advanced search)
 
 Phase 1 Progress: [##########] 3/3 plans -- COMPLETE
 Phase 2 Progress: [##########] 4/4 plans -- COMPLETE
 Phase 3 Progress: [##########] 3/3 plans -- COMPLETE
-Phase 6 Progress: [########..] 4/5 plans
+Phase 6 Progress: [##########] 5/5 plans -- COMPLETE
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14
+- Total plans completed: 15
 - Average duration: 4.4 min
-- Total execution time: 61 min
+- Total execution time: 66 min
 
 **By Phase:**
 
@@ -37,10 +37,10 @@ Phase 6 Progress: [########..] 4/5 plans
 | 01-foundation | 3/3 | 10 min | 3.3 min |
 | 02-upload-pipeline | 4/4 | 17 min | 4.3 min |
 | 03-search-and-cli | 3/3 | 13 min | 4.3 min |
-| 06-ai-powered-metadata | 4/5 | 19 min | 4.8 min |
+| 06-ai-powered-metadata | 5/5 | 24 min | 4.8 min |
 
 **Recent Trend:**
-- Last 5 plans: 03-03 (4 min), 06-01 (4 min), 06-02 (4 min), 06-03 (5 min), 06-04 (6 min)
+- Last 5 plans: 06-01 (4 min), 06-02 (4 min), 06-03 (5 min), 06-04 (6 min), 06-05 (5 min)
 - Trend: Stable at 4-6 min per plan
 
 *Updated after each plan completion*
@@ -108,6 +108,10 @@ Recent decisions affecting current work:
 - [06-04]: Hallucination penalty: -0.15 for short transcripts (<800 chars) with high tier4 confidence
 - [06-04]: Head-tail chunking threshold: max_tokens * 1.5 boundary between head-tail and windowed
 - [06-04]: Production always uses temperature=1.0 regardless of Wave 1 strategy temperature
+- [06-05]: Interactive review uses $EDITOR (fallback vi) to edit metadata JSON via temp file
+- [06-05]: Auto-approve default threshold: 0.85 (85% confidence)
+- [06-05]: Stats coverage = (extracted+approved+needs_review) / total_unknown_txt
+- [06-05]: Extract command loads winning strategy from data/wave1_selection.json
 
 ### Pending Todos
 
@@ -121,5 +125,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Phase 6, Plan 04 COMPLETE. Production pipeline ready. Validator, confidence, chunker, orchestrator implemented. Ready for 06-05 CLI integration.
-Resume file: .planning/phases/06-ai-powered-metadata/06-05-PLAN.md
+Stopped at: Phase 6 COMPLETE (all 5 plans). Full AI metadata extraction pipeline ready. Next: run production extraction on ~453 files, then proceed to Phase 4 (enrichment upload) or Phase 5 (advanced search).
+Resume file: N/A - Phase 6 complete. Begin Phase 4 or 5 planning.
