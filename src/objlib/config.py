@@ -15,6 +15,9 @@ from objlib.models import UploadConfig
 SERVICE_NAME = "objlib-gemini"
 KEY_NAME = "api_key"
 
+MISTRAL_SERVICE_NAME = "objlib-mistral"
+MISTRAL_KEY_NAME = "api_key"
+
 
 def get_api_key() -> str:
     """Get Gemini API key: system keyring first, then GEMINI_API_KEY env var fallback.
@@ -60,6 +63,35 @@ def get_api_key_from_keyring() -> str:
         )
 
     return api_key
+
+
+def get_mistral_api_key() -> str:
+    """Get Mistral API key from system keyring.
+
+    Returns:
+        API key string.
+
+    Raises:
+        RuntimeError: If no key found, with actionable instructions.
+    """
+    api_key = keyring.get_password(MISTRAL_SERVICE_NAME, MISTRAL_KEY_NAME)
+    if not api_key:
+        raise RuntimeError(
+            "Mistral API key not found.\n"
+            "Set it with: objlib config set-mistral-key YOUR_KEY"
+        )
+    return api_key
+
+
+def get_mistral_api_key_from_keyring() -> str:
+    """Get Mistral API key from system keyring.
+
+    Alias matching the naming pattern of get_api_key_from_keyring().
+
+    Raises:
+        RuntimeError: If API key not found in keyring with helpful setup message.
+    """
+    return get_mistral_api_key()
 
 
 @dataclass

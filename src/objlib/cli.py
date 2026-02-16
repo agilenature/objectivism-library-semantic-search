@@ -1072,6 +1072,72 @@ def remove_api_key() -> None:
         raise typer.Exit(code=1)
 
 
+@config_app.command("set-mistral-key")
+def set_mistral_key(
+    key: Annotated[
+        str,
+        typer.Argument(help="Mistral API key to store in system keyring"),
+    ],
+) -> None:
+    """Store the Mistral API key in the system keyring (service: objlib-mistral)."""
+    if not key or key.strip() == "":
+        console.print("[red]Error:[/red] API key cannot be empty")
+        raise typer.Exit(code=1)
+
+    try:
+        keyring.set_password("objlib-mistral", "api_key", key)
+        console.print(
+            "[green]OK[/green] Mistral API key stored successfully in system keyring "
+            "(service: objlib-mistral)"
+        )
+    except Exception as e:
+        console.print(f"[red]Error:[/red] Failed to store Mistral API key: {e}")
+        raise typer.Exit(code=1)
+
+
+@config_app.command("get-mistral-key")
+def show_mistral_key() -> None:
+    """Retrieve and display the stored Mistral API key (masked)."""
+    api_key = keyring.get_password("objlib-mistral", "api_key")
+    if not api_key:
+        console.print(
+            "[yellow]No Mistral API key found in keyring.[/yellow]\n"
+            "Set it with: [bold]objlib config set-mistral-key YOUR_KEY[/bold]"
+        )
+        raise typer.Exit(code=1)
+
+    # Mask all but first 8 characters
+    if len(api_key) > 8:
+        masked = api_key[:8] + "*" * (len(api_key) - 8)
+    else:
+        masked = api_key[:2] + "*" * max(1, len(api_key) - 2)
+
+    console.print(f"[green]Mistral API key:[/green] {masked}")
+    console.print("[dim](stored in service: objlib-mistral)[/dim]")
+
+
+@config_app.command("remove-mistral-key")
+def remove_mistral_key() -> None:
+    """Delete the stored Mistral API key from the system keyring."""
+    try:
+        existing = keyring.get_password("objlib-mistral", "api_key")
+        if not existing:
+            console.print(
+                "[yellow]Warning:[/yellow] No Mistral API key found in keyring.\n"
+                "Nothing to remove."
+            )
+            return
+
+        keyring.delete_password("objlib-mistral", "api_key")
+        console.print(
+            "[green]OK[/green] Mistral API key removed from system keyring "
+            "(service: objlib-mistral)"
+        )
+    except Exception as e:
+        console.print(f"[red]Error:[/red] Failed to remove Mistral API key: {e}")
+        raise typer.Exit(code=1)
+
+
 @metadata_app.command("show")
 def metadata_show(
     filename: Annotated[
