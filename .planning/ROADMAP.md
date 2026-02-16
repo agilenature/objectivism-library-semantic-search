@@ -2,7 +2,7 @@
 
 ## Overview
 
-This roadmap transforms a 1,749-file Objectivism Library into a semantic search system using Google Gemini's File Search API. The journey follows the natural three-phase pipeline (scan, upload, query) dictated by the architecture, extended with quality enhancements, incremental updates, AI-powered metadata enrichment, and an interactive terminal interface. Each phase delivers a complete, independently verifiable capability: Phase 1 builds the foundation offline with zero API dependencies, Phase 2 gets files into Gemini reliably, Phase 3 delivers working search, Phase 4 sharpens result quality with reranking and synthesis, Phase 5 makes the system maintainable long-term with incremental updates, Phase 6 uses LLMs to automatically infer rich metadata from content, and Phase 7 wraps everything in a modern TUI for immersive research workflows.
+This roadmap transforms a 1,749-file Objectivism Library into a semantic search system using Google Gemini's File Search API. The journey follows the natural three-phase pipeline (scan, upload, query) dictated by the architecture, extended with quality enhancements, incremental updates, offline query mode, AI-powered metadata enrichment, and an interactive terminal interface. Each phase delivers a complete, independently verifiable capability: Phase 1 builds the foundation offline with zero API dependencies, Phase 2 gets files into Gemini reliably, Phase 3 delivers working search, Phase 4 sharpens result quality with reranking and synthesis, Phase 5 makes the system maintainable long-term with incremental updates and enables querying without source disk access, Phase 6 uses LLMs to automatically infer rich metadata from content, and Phase 7 wraps everything in a modern TUI for immersive research workflows.
 
 ## Phases
 
@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Upload Pipeline** - Reliable batch upload to Gemini File Search with rate limiting and resume
 - [x] **Phase 3: Search & CLI** - Semantic search, filtering, and CLI interface for querying the indexed library
 - [ ] **Phase 4: Quality Enhancements** - Reranking, synthesis, query expansion, and difficulty-aware ordering
-- [ ] **Phase 5: Incremental Updates** - Change detection, selective re-upload, and orphan cleanup
+- [ ] **Phase 5: Incremental Updates & Offline Mode** - Change detection, selective re-upload, and disk-independent querying
 - [ ] **Phase 6: AI-Powered Metadata** - LLM-based category inference, difficulty detection, and topic extraction
 - [ ] **Phase 7: Interactive TUI** - Modern terminal UI with live search, visual browsing, and session management
 
@@ -89,15 +89,19 @@ Plans:
 - [ ] 04-01: TBD
 - [ ] 04-02: TBD
 
-### Phase 5: Incremental Updates
-**Goal**: User can keep the search index current as the library grows -- detecting new or changed files and updating only what changed, without re-uploading the entire library
+### Phase 5: Incremental Updates & Offline Mode
+**Goal**: User can keep the search index current as the library grows AND query the library even when the source disk is disconnected -- detecting new or changed files and updating only what changed, while enabling full query functionality without filesystem access
 **Depends on**: Phase 2 (pipeline), Phase 3 (CLI for sync command)
-**Requirements**: INCR-01, INCR-02, INCR-03, INCR-04, INCR-05
+**Requirements**: INCR-01, INCR-02, INCR-03, INCR-04, INCR-05, OFFL-01, OFFL-02, OFFL-03
 **Success Criteria** (what must be TRUE):
   1. After adding new files to the library directory, running `sync` detects the additions, uploads only the new files, and makes them searchable -- existing indexed files are untouched
   2. After modifying a file's content, running `sync` detects the content hash change, removes the old version from the Gemini store, uploads the updated version, and the new content appears in search results
   3. After deleting files from the library, running `sync` detects the removals and cleans up the corresponding Gemini store entries -- orphaned index entries do not pollute search results
   4. Running `sync --force` re-processes all files regardless of change detection, providing a manual override for cases where the user wants a full re-index
+  5. With the source disk disconnected (library path unavailable), running `search`, `browse`, `filter`, and `view` (metadata only) commands work correctly using Gemini and SQLite -- query operations remain fully functional
+  6. When source disk is disconnected, running `view --full` gracefully degrades to metadata-only view with clear messaging ("Source disk required for full document view") -- no crashes or confusing errors
+  7. When source disk is disconnected, running `scan` or `upload` commands fail with clear, actionable error messages ("Library disk not connected at /Volumes/U32 Shadow/Objectivism Library") -- maintenance operations are explicitly disk-dependent
+  8. The system automatically detects disk availability and adjusts operation modes accordingly -- user doesn't need to manually specify offline mode
 
 ### Phase 6: AI-Powered Metadata Enhancement
 **Goal**: User can automatically infer and enhance metadata (categories, difficulty, topics) using LLM analysis of file content -- transforming generic "unknown" categories into rich, searchable metadata without manual effort
