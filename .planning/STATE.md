@@ -5,29 +5,30 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** Three equally critical pillars -- semantic search quality, metadata preservation, incremental updates
-**Current focus:** Phase 6: AI-Powered Metadata -- Next (Metadata-First Strategy)
+**Current focus:** Phase 6: AI-Powered Metadata -- Executing
 **Execution strategy:** Phase 6 before full upload (1,721 files) to enrich metadata first
 
 ## Current Position
 
 Phase: 6 of 7 (AI-Powered Metadata - executing out of order)
-Plan: Not started
-Status: Planning next
-Last activity: 2026-02-16 -- Adopted Metadata-First Strategy, will do Phase 6 before full upload
+Plan: 1 of 5
+Status: In progress
+Last activity: 2026-02-16 - Completed 06-01-PLAN.md (foundation: schemas, client, parser, migration)
 
-Progress: [#######...] ~60% (10 plans of ~17 estimated total)
+Progress: [########..] ~65% (11 plans of ~17 estimated total)
 **Note:** Executing Phase 6 next (not Phase 4) to enrich metadata before uploading 1,721 files
 
 Phase 1 Progress: [##########] 3/3 plans -- COMPLETE
 Phase 2 Progress: [##########] 4/4 plans -- COMPLETE
 Phase 3 Progress: [##########] 3/3 plans -- COMPLETE
+Phase 6 Progress: [##........] 1/5 plans
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10
-- Average duration: 4.2 min
-- Total execution time: 42 min
+- Total plans completed: 11
+- Average duration: 4.1 min
+- Total execution time: 46 min
 
 **By Phase:**
 
@@ -36,10 +37,11 @@ Phase 3 Progress: [##########] 3/3 plans -- COMPLETE
 | 01-foundation | 3/3 | 10 min | 3.3 min |
 | 02-upload-pipeline | 4/4 | 17 min | 4.3 min |
 | 03-search-and-cli | 3/3 | 13 min | 4.3 min |
+| 06-ai-powered-metadata | 1/5 | 4 min | 4.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-03 (3 min), 02-04 (4 min), 03-01 (5 min), 03-02 (4 min), 03-03 (4 min)
-- Trend: Stable at 3-5 min per plan
+- Last 5 plans: 02-04 (4 min), 03-01 (5 min), 03-02 (4 min), 03-03 (4 min), 06-01 (4 min)
+- Trend: Stable at 4-5 min per plan
 
 *Updated after each plan completion*
 
@@ -84,11 +86,15 @@ Recent decisions affecting current work:
 - [03-01]: Fixed bug - removed invalid request_options parameter from GenerateContentConfig
 - [03-phase]: Added metadata command group (show, update, batch-update) for progressive metadata improvement
 - [03-phase]: Filter comparison operators use CAST(json_extract() AS INTEGER) for numeric fields (year, week, quality_score) to enable proper >= <= > < comparisons
-- [03-phase]: Fixed Gemini citation display - added two-pass lookup (filename → Gemini ID fallback) to show actual filenames instead of file IDs
+- [03-phase]: Fixed Gemini citation display - added two-pass lookup (filename -> Gemini ID fallback) to show actual filenames instead of file IDs
 - [Phase 6]: Added AI-powered metadata enhancement to roadmap (LLM-based category inference)
 - [Phase 7]: Added Interactive TUI to roadmap (Textual-based terminal UI with live search, visual browsing, split-pane views)
 - [Phase 5]: Added offline query mode to Phase 5 (query operations work without source disk connected)
 - [Execution Order]: Adopted Metadata-First Strategy - executing Phase 6 before Phase 4/5 to enrich metadata (496 unknown files) before full library upload (1,721 files)
+- [06-01]: SDKError.status_code used for Mistral 402/429 detection (MistralError base provides it)
+- [06-01]: Regex JSON extraction supports 2 levels of brace nesting for semantic_description
+- [06-01]: Schema v3 migration uses try/except for ALTER TABLE (SQLite lacks IF NOT EXISTS for columns)
+- [06-01]: Mistral keyring service name: objlib-mistral, key name: api_key
 
 ### Pending Todos
 
@@ -102,5 +108,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Phase 3 COMPLETE. Ready for Phase 4 planning or next milestone planning.
-Resume file: N/A
+Stopped at: Phase 6, Plan 01 COMPLETE. Ready for 06-02 execution.
+Resume file: .planning/phases/06-ai-powered-metadata/06-02-PLAN.md
