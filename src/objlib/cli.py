@@ -780,6 +780,226 @@ def view(
         )
 
 
+@app.command()
+def browse(
+    category: Annotated[
+        str | None,
+        typer.Option("--category", "-c", help="Filter by category (course, motm, book, etc.)"),
+    ] = None,
+    course: Annotated[
+        str | None,
+        typer.Option("--course", help="Show files within a specific course"),
+    ] = None,
+    year: Annotated[
+        str | None,
+        typer.Option("--year", "-y", help="Filter by year (within a course)"),
+    ] = None,
+    db_path: Annotated[
+        Path,
+        typer.Option("--db", "-d", help="Path to SQLite database"),
+    ] = Path("data/library.db"),
+) -> None:
+    """Browse the library structure: categories, courses, and files.
+
+    Progressive drill-down:
+      objlib browse                              # Show categories
+      objlib browse --category course            # Show courses
+      objlib browse --course "OPAR"              # Show files in OPAR
+      objlib browse --course "OPAR" --year 2023  # Filter by year
+    """
+    if not db_path.exists():
+        console.print(
+            f"[yellow]Database not found:[/yellow] {db_path}\n"
+            "Run [bold]objlib scan --library /path/to/library[/bold] first."
+        )
+        raise typer.Exit(code=1)
+
+    with Database(db_path) as db:
+        # Level 3: Course specified -- show files within course
+        if course is not None:
+            files = db.get_files_by_course(course, year=year)
+
+            if not files:
+                msg = f"No files found for course '{course}'"
+                if year:
+                    msg += f" in year {year}"
+                console.print(f"[yellow]{msg}[/yellow]")
+                return
+
+            title = f"Files in {course}"
+            if year:
+                title += f" ({year})"
+
+            table = Table(title=title, show_header=True)
+            table.add_column("Filename", style="cyan", no_wrap=True)
+            table.add_column("Year", justify="right", style="green")
+            table.add_column("Quarter", justify="right")
+            table.add_column("Week", justify="right")
+            table.add_column("Difficulty", style="dim")
+
+            for f in files:
+                meta = f["metadata"]
+                table.add_row(
+                    f["filename"],
+                    str(meta.get("year", "")),
+                    str(meta.get("quarter", "")),
+                    str(meta.get("week", "")),
+                    str(meta.get("difficulty", "")),
+                )
+
+            console.print(table)
+            console.print(f"\n[dim]Found {len(files)} file(s)[/dim]")
+            return
+
+        # Level 2: Category specified
+        if category is not None:
+            if category == "course":
+                # Show course listing
+                courses = db.get_courses_with_counts()
+
+                if not courses:
+                    console.print("[yellow]No courses found.[/yellow]")
+                    return
+
+                table = Table(title="Courses", show_header=True)
+                table.add_column("Course", style="bold cyan")
+                table.add_column("Files", justify="right", style="green")
+
+                for name, count in courses:
+                    table.add_row(name or "unnamed", str(count))
+
+                console.print(table)
+                console.print(
+                    "\n[dim]Drill down: objlib browse --course <name>[/dim]"
+                )
+            else:
+                # Show files in non-course category
+                items = db.get_items_by_category(category)
+
+                if not items:
+                    console.print(
+                        f"[yellow]No files found in category '{category}'[/yellow]"
+                    )
+                    return
+
+                table = Table(title=f"Files in '{category}'", show_header=True)
+                table.add_column("Filename", style="cyan", no_wrap=True)
+                table.add_column("Year", justify="right", style="green")
+                table.add_column("Difficulty", style="dim")
+
+                for item in items:
+                    meta = item["metadata"]
+                    table.add_row(
+                        item["filename"],
+                        str(meta.get("year", "")),
+                        str(meta.get("difficulty", "")),
+                    )
+
+                console.print(table)
+                console.print(f"\n[dim]Found {len(items)} file(s)[/dim]")
+            return
+
+        # Level 1: No filters -- show top-level categories
+        categories = db.get_categories_with_counts()
+
+        if not categories:
+            console.print(
+                "[yellow]No files with metadata found in database.[/yellow]"
+            )
+            return
+
+        table = Table(title="Library Structure", show_header=True)
+        table.add_column("Category", style="bold cyan")
+        table.add_column("Files", justify="right", style="green")
+
+        for cat, count in categories:
+            table.add_row(cat or "uncategorized", str(count))
+
+        console.print(table)
+        console.print("\n[dim]Drill down: objlib browse --category <name>[/dim]")
+
+
+@app.command(name="filter")
+def filter_cmd(
+    filters: Annotated[
+        list[str],
+        typer.Argument(
+            help="Metadata filters as field:value pairs (e.g., course:OPAR year:2023)"
+        ),
+    ],
+    limit: Annotated[
+        int,
+        typer.Option("--limit", "-l", help="Max results"),
+    ] = 50,
+    db_path: Annotated[
+        Path,
+        typer.Option("--db", "-d", help="Path to SQLite database"),
+    ] = Path("data/library.db"),
+) -> None:
+    """List files matching metadata filters (no semantic search).
+
+    Queries local SQLite database only -- does not call Gemini API.
+    Supports fields: category, course, difficulty, quarter, date, year, week, quality_score.
+    Comparison operators: field:>value, field:>=value, field:<value, field:<=value.
+
+    Examples:
+      objlib filter course:OPAR
+      objlib filter course:OPAR year:2023
+      objlib filter year:>=2020 difficulty:introductory
+    """
+    if not db_path.exists():
+        console.print(
+            f"[yellow]Database not found:[/yellow] {db_path}\n"
+            "Run [bold]objlib scan --library /path/to/library[/bold] first."
+        )
+        raise typer.Exit(code=1)
+
+    # Parse filter strings into dict
+    filters_dict: dict[str, str] = {}
+    for f in filters:
+        if ":" not in f:
+            console.print(
+                f"[red]Error:[/red] Invalid filter format: '{f}'\n"
+                "Expected format: field:value (e.g., course:OPAR)"
+            )
+            raise typer.Exit(code=1)
+        field, value = f.split(":", 1)
+        filters_dict[field] = value
+
+    with Database(db_path) as db:
+        try:
+            results = db.filter_files_by_metadata(filters_dict, limit=limit)
+        except ValueError as e:
+            console.print(f"[red]Error:[/red] {e}")
+            raise typer.Exit(code=1)
+
+    if not results:
+        console.print("[yellow]No files match the given filters.[/yellow]")
+        return
+
+    # Display results as Rich table
+    filter_desc = ", ".join(f"{k}={v}" for k, v in filters_dict.items())
+    table = Table(title=f"Filter: {filter_desc}", show_header=True)
+    table.add_column("Filename", style="cyan", no_wrap=True)
+    table.add_column("Course", style="bold")
+    table.add_column("Year", justify="right", style="green")
+    table.add_column("Difficulty", style="dim")
+    table.add_column("Category")
+
+    for r in results:
+        meta = r["metadata"]
+        table.add_row(
+            r["filename"],
+            str(meta.get("course", "")),
+            str(meta.get("year", "")),
+            str(meta.get("difficulty", "")),
+            str(meta.get("category", "")),
+        )
+
+    console.print(table)
+    console.print(f"\n[dim]Found {len(results)} file(s) matching filters.[/dim]")
+
+
 @config_app.command("set-api-key")
 def set_api_key(
     key: Annotated[
