@@ -7,7 +7,33 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import keyring
+
 from objlib.models import UploadConfig
+
+
+SERVICE_NAME = "objlib-gemini"
+KEY_NAME = "api_key"
+
+
+def get_api_key_from_keyring() -> str:
+    """Get Gemini API key from system keyring.
+
+    Raises:
+        RuntimeError: If API key not found in keyring with helpful setup message.
+    """
+    api_key = keyring.get_password(SERVICE_NAME, KEY_NAME)
+
+    if not api_key:
+        raise RuntimeError(
+            f"Gemini API key not found in keyring.\n\n"
+            f"To set it, run:\n"
+            f"  keyring set {SERVICE_NAME} {KEY_NAME}\n\n"
+            f"Or use Python:\n"
+            f'  python -c \'import keyring; keyring.set_password("{SERVICE_NAME}", "{KEY_NAME}", "YOUR_API_KEY")\''
+        )
+
+    return api_key
 
 
 @dataclass
@@ -92,14 +118,14 @@ def load_upload_config(config_path: Path | None = None) -> UploadConfig:
 
     Reads from ``config/upload_config.json`` when *config_path* is ``None``.
     If the file does not exist, returns an ``UploadConfig`` with defaults.
-    When ``api_key`` is not set in the config file, falls back to the
-    ``GEMINI_API_KEY`` environment variable.
+    The API key is read exclusively from the system keyring
+    (service: ``objlib-gemini``, key: ``api_key``).
 
     Args:
         config_path: Optional explicit path to upload_config.json.
 
     Returns:
-        UploadConfig populated from file + env overrides.
+        UploadConfig populated from file + keyring overrides.
     """
     if config_path is None:
         config_path = Path("config/upload_config.json")
@@ -119,8 +145,8 @@ def load_upload_config(config_path: Path | None = None) -> UploadConfig:
 
     config = UploadConfig(**kwargs)
 
-    # Fall back to environment variable for API key
+    # Read API key from system keyring
     if config.api_key is None:
-        config.api_key = os.getenv("GEMINI_API_KEY")
+        config.api_key = keyring.get_password(SERVICE_NAME, KEY_NAME)
 
     return config

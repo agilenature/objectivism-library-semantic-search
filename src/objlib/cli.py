@@ -314,18 +314,12 @@ def upload(
         bool,
         typer.Option("--dry-run", help="Show what would be uploaded without uploading"),
     ] = False,
-    api_key: Annotated[
-        str | None,
-        typer.Option(
-            "--api-key",
-            help="Gemini API key (default: GEMINI_API_KEY env var)",
-            envvar="GEMINI_API_KEY",
-        ),
-    ] = None,
 ) -> None:
-    """Upload pending files to Gemini File Search store with progress tracking."""
-    import os
+    """Upload pending files to Gemini File Search store with progress tracking.
 
+    The Gemini API key is read from the system keyring (service: objlib-gemini).
+    To set it:  keyring set objlib-gemini api_key
+    """
     # Validate database exists
     if not db_path.exists():
         console.print(
@@ -388,14 +382,13 @@ def upload(
             )
         return
 
-    # Validate API key
-    resolved_api_key = api_key or os.environ.get("GEMINI_API_KEY")
-    if not resolved_api_key:
-        console.print(
-            "[red]Error:[/red] Gemini API key not provided.\n"
-            "Set the [bold]GEMINI_API_KEY[/bold] environment variable or "
-            "pass [bold]--api-key[/bold]."
-        )
+    # Get API key from system keyring
+    try:
+        from objlib.config import get_api_key_from_keyring
+
+        api_key = get_api_key_from_keyring()
+    except RuntimeError as e:
+        console.print(f"[red]{e}[/red]")
         raise typer.Exit(code=1)
 
     # Import upload modules here to keep CLI startup fast for scan/status
@@ -412,7 +405,7 @@ def upload(
     # Build configuration
     config = UploadConfig(
         store_name=store_name,
-        api_key=resolved_api_key,
+        api_key=api_key,
         max_concurrent_uploads=max_concurrent,
         batch_size=batch_size,
         db_path=str(db_path),
@@ -443,7 +436,7 @@ def upload(
     rate_limiter_config = RateLimiterConfig(tier=config.rate_limit_tier)
     rate_limiter = AdaptiveRateLimiter(rate_limiter_config, circuit_breaker)
     client = GeminiFileSearchClient(
-        api_key=resolved_api_key,
+        api_key=api_key,
         circuit_breaker=circuit_breaker,
         rate_limiter=rate_limiter,
     )
