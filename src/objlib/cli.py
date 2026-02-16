@@ -1,10 +1,11 @@
 """CLI entry point for the Objectivism Library tools.
 
-Provides four commands:
+Provides five commands:
   - scan: Discover files, extract metadata, persist to SQLite
   - status: Display database statistics (counts by status and quality)
   - purge: Remove old LOCAL_DELETE records from the database
   - upload: Upload pending files to Gemini File Search store
+  - config: Manage configuration (API keys, settings)
 """
 
 from __future__ import annotations
@@ -13,6 +14,7 @@ import sys
 from pathlib import Path
 from typing import Annotated
 
+import keyring
 import typer
 from rich.console import Console
 from rich.panel import Panel
@@ -28,6 +30,10 @@ app = typer.Typer(
     rich_markup_mode="rich",
 )
 console = Console()
+
+# Config command group
+config_app = typer.Typer(help="Manage configuration (API keys, settings)")
+app.add_typer(config_app, name="config")
 
 
 @app.command()
@@ -469,3 +475,71 @@ def upload(
     summary_table.add_row("Pending", str(result["pending"]))
 
     console.print(Panel(summary_table, title="Upload Complete"))
+
+
+@config_app.command("set-api-key")
+def set_api_key(
+    key: Annotated[
+        str,
+        typer.Argument(help="Gemini API key to store in system keyring"),
+    ],
+) -> None:
+    """Store the Gemini API key in the system keyring (service: objlib-gemini)."""
+    # Validate key is not empty
+    if not key or key.strip() == "":
+        console.print("[red]Error:[/red] API key cannot be empty")
+        raise typer.Exit(code=1)
+
+    try:
+        keyring.set_password("objlib-gemini", "api_key", key)
+        console.print(
+            "[green]✓[/green] API key stored successfully in system keyring "
+            "(service: objlib-gemini)"
+        )
+    except Exception as e:
+        console.print(f"[red]Error:[/red] Failed to store API key: {e}")
+        raise typer.Exit(code=1)
+
+
+@config_app.command("get-api-key")
+def get_api_key() -> None:
+    """Retrieve and display the stored Gemini API key (masked)."""
+    api_key = keyring.get_password("objlib-gemini", "api_key")
+    if not api_key:
+        console.print(
+            "[yellow]No API key found in keyring.[/yellow]\n"
+            "Set it with: [bold]objlib config set-api-key YOUR_KEY[/bold]"
+        )
+        raise typer.Exit(code=1)
+
+    # Mask all but first 8 characters
+    if len(api_key) > 8:
+        masked = api_key[:8] + "*" * (len(api_key) - 8)
+    else:
+        masked = api_key[:2] + "*" * max(1, len(api_key) - 2)
+
+    console.print(f"[green]API key:[/green] {masked}")
+    console.print("[dim](stored in service: objlib-gemini)[/dim]")
+
+
+@config_app.command("remove-api-key")
+def remove_api_key() -> None:
+    """Delete the stored Gemini API key from the system keyring."""
+    try:
+        # Check if key exists first
+        existing = keyring.get_password("objlib-gemini", "api_key")
+        if not existing:
+            console.print(
+                "[yellow]Warning:[/yellow] No API key found in keyring.\n"
+                "Nothing to remove."
+            )
+            return
+
+        keyring.delete_password("objlib-gemini", "api_key")
+        console.print(
+            "[green]✓[/green] API key removed from system keyring "
+            "(service: objlib-gemini)"
+        )
+    except Exception as e:
+        console.print(f"[red]Error:[/red] Failed to remove API key: {e}")
+        raise typer.Exit(code=1)
