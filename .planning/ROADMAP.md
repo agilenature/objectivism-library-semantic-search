@@ -122,6 +122,31 @@ Plans:
 - [ ] 06-04-PLAN.md — Wave 2 production pipeline: validation engine, confidence scoring, adaptive chunking, production orchestrator
 - [ ] 06-05-PLAN.md — Wave 2 CLI & review: production extract/review/approve/stats commands, Rich 4-tier panels, human review checkpoint
 
+### Phase 6.1: Entity Extraction & Name Normalization (INSERTED)
+
+**Goal**: User can automatically extract and normalize person names mentioned in transcripts against a canonical list of Objectivist philosophers and ARI instructors -- transforming raw text mentions into structured, searchable entity metadata
+**Depends on**: Phase 6 (AI metadata extraction)
+**Plans:** 2 plans
+
+Plans:
+- [ ] 06.1-01-PLAN.md -- Schema v4 migration, person registry, entity extraction engine with TDD
+- [ ] 06.1-02-PLAN.md -- CLI commands (extract, stats, report) and database persistence methods
+
+**Details:**
+Extracts person name entities from transcripts, fuzzy matches against canonical list (Ayn Rand, Leonard Peikoff, Onkar Ghate, Robert Mayhew, Tara Smith, Ben Bayer, Mike Mazza, Aaron Smith, Tristan de Liège, Gregory Salmieri, Harry Binswanger, Jean Moroney, Yaron Brook, Don Watkins, Keith Lockitch), normalizes spelling variations, stores mention counts and normalized names as additional metadata for inclusion in Gemini upload.
+
+### Phase 6.2: Metadata-Enriched Gemini Upload (INSERTED)
+
+**Goal**: User can upload all files to Gemini File Search with enriched 4-tier metadata (category, difficulty, topics, aspects, descriptions) plus entity mentions -- enabling powerful metadata-based filtering and semantic search with full philosophical context
+**Depends on**: Phase 6.1 (entity extraction), Phase 2 (upload pipeline)
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 6.2 to break down)
+
+**Details:**
+Extends Phase 2 upload pipeline to include 4-tier metadata from Phase 6 extraction and entity mentions from Phase 6.1. Flattens nested structures (semantic_description) into Gemini custom_metadata format (7 searchable fields). Implements parallel upload (3-5 concurrent), tracks per-file upload status, handles failures gracefully. Tests with ~280 already-extracted files first, then processes new files as extraction completes.
+
 ### Phase 7: Interactive TUI
 **Goal**: User can interact with the library through a modern terminal UI with keyboard/mouse navigation, live search, visual browsing, split-pane views, and session management -- transforming the CLI into an immersive research environment
 **Depends on**: Phase 3 (search & CLI), Phase 4 (synthesis), Phase 6 (metadata)
