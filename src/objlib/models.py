@@ -77,3 +77,37 @@ class UploadConfig:
     rate_limit_tier: str = "tier1"
     recovery_timeout_seconds: int = 14400
     db_path: str = "data/library.db"
+
+
+@dataclass
+class Citation:
+    """A single citation extracted from Gemini grounding metadata."""
+
+    index: int  # 1-based display index
+    title: str  # display_name from upload (matches filename column)
+    uri: str | None  # Gemini file URI
+    text: str  # Retrieved passage text
+    document_name: str | None  # Full Gemini resource name
+    confidence: float  # Aggregated confidence score (0.0-1.0)
+    file_path: str | None = None  # Local file path from SQLite (enriched)
+    metadata: dict | None = None  # Full metadata from SQLite (enriched)
+
+
+@dataclass
+class SearchResult:
+    """Complete search result from a Gemini query."""
+
+    response_text: str  # Gemini's generated response
+    citations: list[Citation]  # Extracted and enriched citations
+    query: str  # Original query string
+    metadata_filter: str | None  # AIP-160 filter applied, if any
+
+
+@dataclass
+class AppState:
+    """Shared state across all CLI commands. Initialized in app callback."""
+
+    gemini_client: object  # genai.Client (use object to avoid import at module level)
+    store_resource_name: str  # Resolved Gemini store resource name
+    db_path: str  # Path to SQLite database
+    terminal_width: int  # Current terminal width for adaptive display

@@ -16,6 +16,32 @@ SERVICE_NAME = "objlib-gemini"
 KEY_NAME = "api_key"
 
 
+def get_api_key() -> str:
+    """Get Gemini API key: system keyring first, then GEMINI_API_KEY env var fallback.
+
+    Returns:
+        API key string.
+
+    Raises:
+        RuntimeError: If no key found anywhere, with actionable instructions.
+    """
+    # Try keyring (consistent with Phase 2: service=objlib-gemini, key=api_key)
+    api_key = keyring.get_password(SERVICE_NAME, KEY_NAME)
+    if api_key:
+        return api_key
+
+    # Fallback to environment variable (per locked decision #6)
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if api_key:
+        return api_key
+
+    raise RuntimeError(
+        "Gemini API key not found.\n"
+        "Set it with: objlib config set-api-key YOUR_KEY\n"
+        "Or: export GEMINI_API_KEY=your-key"
+    )
+
+
 def get_api_key_from_keyring() -> str:
     """Get Gemini API key from system keyring.
 

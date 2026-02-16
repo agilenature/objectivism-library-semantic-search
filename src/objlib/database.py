@@ -331,6 +331,38 @@ class Database:
                 (file_path, folder_name, filename),
             )
 
+    def get_file_metadata_by_filenames(self, filenames: list[str]) -> dict[str, dict]:
+        """Return metadata for files matching the given filenames.
+
+        Used to enrich Gemini citations (which provide display_name/title)
+        with local metadata (course, year, difficulty, etc).
+
+        Args:
+            filenames: List of filename strings to look up.
+
+        Returns:
+            Dict mapping filename -> {"file_path": str, "metadata": dict}
+        """
+        if not filenames:
+            return {}
+        placeholders = ",".join("?" * len(filenames))
+        rows = self.conn.execute(
+            f"SELECT filename, file_path, metadata_json FROM files "
+            f"WHERE filename IN ({placeholders}) AND status != 'LOCAL_DELETE'",
+            filenames,
+        ).fetchall()
+
+        import json
+
+        result = {}
+        for row in rows:
+            meta = json.loads(row["metadata_json"]) if row["metadata_json"] else {}
+            result[row["filename"]] = {
+                "file_path": row["file_path"],
+                "metadata": meta,
+            }
+        return result
+
     def get_pending_files(self, limit: int = 200) -> list[sqlite3.Row]:
         """Return files with status='pending' for upload processing.
 
