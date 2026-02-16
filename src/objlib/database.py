@@ -752,6 +752,141 @@ class Database:
             })
         return results
 
+    def get_ai_metadata_stats(self) -> dict[str, int]:
+        """Return count of files grouped by AI metadata status.
+
+        Only counts files where ai_metadata_status is not NULL.
+
+        Returns:
+            Dictionary mapping ai_metadata_status -> count.
+        """
+        rows = self.conn.execute(
+            "SELECT ai_metadata_status, COUNT(*) as cnt FROM files "
+            "WHERE ai_metadata_status IS NOT NULL "
+            "GROUP BY ai_metadata_status"
+        ).fetchall()
+        return {row["ai_metadata_status"]: row["cnt"] for row in rows}
+
+    def get_files_by_ai_status(self, status: str, limit: int = 50) -> list[dict]:
+        """Return files with a specific AI metadata status.
+
+        Joins files with file_metadata_ai (where is_current=1) to include
+        the parsed metadata from the AI extraction.
+
+        Args:
+            status: AI metadata status to filter by (e.g., 'extracted', 'needs_review').
+            limit: Maximum number of results to return.
+
+        Returns:
+            List of dicts with file_path, filename, ai_metadata_status,
+            ai_confidence_score, and metadata (parsed dict from file_metadata_ai).
+        """
+        import json as json_module
+
+        rows = self.conn.execute(
+            """SELECT f.file_path, f.filename, f.ai_metadata_status,
+                      f.ai_confidence_score, m.metadata_json as ai_metadata_json
+               FROM files f
+               LEFT JOIN file_metadata_ai m
+                   ON f.file_path = m.file_path AND m.is_current = 1
+               WHERE f.ai_metadata_status = ?
+               ORDER BY f.ai_confidence_score DESC
+               LIMIT ?""",
+            (status, limit),
+        ).fetchall()
+
+        results = []
+        for row in rows:
+            metadata = {}
+            if row["ai_metadata_json"]:
+                try:
+                    metadata = json_module.loads(row["ai_metadata_json"])
+                except (json_module.JSONDecodeError, TypeError):
+                    pass
+            results.append({
+                "file_path": row["file_path"],
+                "filename": row["filename"],
+                "ai_metadata_status": row["ai_metadata_status"],
+                "ai_confidence_score": row["ai_confidence_score"],
+                "metadata": metadata,
+            })
+        return results
+
+    def approve_files_by_confidence(self, min_confidence: float) -> int:
+        """Bulk-approve files with confidence at or above the threshold.
+
+        Updates ai_metadata_status to 'approved' for files currently
+        in 'extracted' or 'needs_review' status with confidence >= threshold.
+
+        Args:
+            min_confidence: Minimum confidence score for approval.
+
+        Returns:
+            Count of files approved.
+        """
+        with self.conn:
+            cursor = self.conn.execute(
+                "UPDATE files SET ai_metadata_status = 'approved' "
+                "WHERE ai_metadata_status IN ('extracted', 'needs_review') "
+                "AND ai_confidence_score >= ?",
+                (min_confidence,),
+            )
+            return cursor.rowcount
+
+    def set_ai_metadata_status(self, file_path: str, status: str) -> None:
+        """Set the AI metadata status for a single file.
+
+        Args:
+            file_path: Primary key of the file to update.
+            status: New ai_metadata_status value.
+        """
+        with self.conn:
+            self.conn.execute(
+                "UPDATE files SET ai_metadata_status = ? WHERE file_path = ?",
+                (status, file_path),
+            )
+
+    def get_extraction_summary(self) -> dict:
+        """Return comprehensive statistics about AI metadata extraction.
+
+        Returns:
+            Dict with keys: total_unknown_txt, extracted, approved,
+            needs_review, failed, avg_confidence, min_confidence,
+            max_confidence.
+        """
+        # Total unknown TXT files (extraction candidates)
+        row = self.conn.execute(
+            "SELECT COUNT(*) as cnt FROM files "
+            "WHERE filename LIKE '%.txt' "
+            "AND json_extract(metadata_json, '$.category') = 'unknown'"
+        ).fetchone()
+        total_unknown = row["cnt"] if row else 0
+
+        # Counts by AI status
+        stats = self.get_ai_metadata_stats()
+
+        # Confidence stats for extracted/approved files
+        conf_row = self.conn.execute(
+            "SELECT AVG(ai_confidence_score) as avg_conf, "
+            "MIN(ai_confidence_score) as min_conf, "
+            "MAX(ai_confidence_score) as max_conf "
+            "FROM files "
+            "WHERE ai_metadata_status IN ('extracted', 'approved', 'needs_review') "
+            "AND ai_confidence_score IS NOT NULL"
+        ).fetchone()
+
+        return {
+            "total_unknown_txt": total_unknown,
+            "extracted": stats.get("extracted", 0),
+            "approved": stats.get("approved", 0),
+            "needs_review": stats.get("needs_review", 0),
+            "failed": stats.get("failed_validation", 0) + stats.get("failed_json", 0),
+            "pending": stats.get("pending", 0),
+            "avg_confidence": round(conf_row["avg_conf"], 2) if conf_row and conf_row["avg_conf"] else 0.0,
+            "min_confidence": round(conf_row["min_conf"], 2) if conf_row and conf_row["min_conf"] else 0.0,
+            "max_confidence": round(conf_row["max_conf"], 2) if conf_row and conf_row["max_conf"] else 0.0,
+        }
+
     def close(self) -> None:
         """Close the database connection."""
         self.conn.close()
