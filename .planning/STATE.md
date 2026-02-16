@@ -10,22 +10,22 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 Phase: 3 of 5 (Search & CLI)
-Plan: 1 of 4 in current phase
+Plan: 2 of 4 in current phase
 Status: In progress
-Last activity: 2026-02-16 -- Completed 03-01 (Search Query Layer)
+Last activity: 2026-02-16 -- Completed 03-02 (Rich Display Layer)
 
-Progress: [########..] ~53% (8 plans of ~15 estimated total)
+Progress: [########░░] ~60% (9 plans of ~15 estimated total)
 
 Phase 1 Progress: [##########] 3/3 plans -- COMPLETE
 Phase 2 Progress: [##########] 4/4 plans -- COMPLETE
-Phase 3 Progress: [###.......] 1/4 plans
+Phase 3 Progress: [#####.....] 2/4 plans
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8
+- Total plans completed: 9
 - Average duration: 4.0 min
-- Total execution time: 32 min
+- Total execution time: 36 min
 
 **By Phase:**
 
@@ -33,10 +33,10 @@ Phase 3 Progress: [###.......] 1/4 plans
 |-------|-------|-------|----------|
 | 01-foundation | 3/3 | 10 min | 3.3 min |
 | 02-upload-pipeline | 4/4 | 17 min | 4.3 min |
-| 03-search-and-cli | 1/4 | 5 min | 5.0 min |
+| 03-search-and-cli | 2/4 | 9 min | 4.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-02 (5 min), 02-03 (3 min), 02-04 (4 min), 03-01 (5 min)
+- Last 5 plans: 02-03 (3 min), 02-04 (4 min), 03-01 (5 min), 03-02 (4 min)
 - Trend: Stable at 3-5 min per plan
 
 *Updated after each plan completion*
@@ -82,6 +82,9 @@ Recent decisions affecting current work:
 - [03-01]: GeminiSearchClient uses synchronous client.models.generate_content() (not aio)
 - [03-01]: Citation confidence aggregated by averaging GroundingSupport scores per chunk
 - [03-01]: Renamed CLI get_api_key function to show_api_key to avoid collision with config.get_api_key()
+- [03-02]: view command in _SKIP_INIT_COMMANDS -- Gemini init only when --show-related used
+- [03-02]: Console injection pattern for testable Rich output (all display functions accept optional Console)
+- [03-02]: Tier 1 appends citation references after response text (inline insertion requires segment offsets not always available)
 
 ### Pending Todos
 
@@ -94,5 +97,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Phase 3, Plan 1 COMPLETE. Ready for Plan 02 (display formatting).
-Resume file: .planning/phases/03-search-and-cli/03-01-SUMMARY.md
+Stopped at: Phase 3, Plan 2 COMPLETE. Ready for Plan 03 (browse/filter commands).
+Resume file: .planning/phases/03-search-and-cli/03-02-SUMMARY.md
