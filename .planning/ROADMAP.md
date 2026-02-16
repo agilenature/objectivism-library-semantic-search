@@ -47,12 +47,12 @@ Plans:
   3. When Gemini returns 429 rate-limit errors, the system backs off automatically (exponential with jitter) and reduces concurrency, without user intervention, eventually completing the batch
   4. After upload completes, every file in the SQLite database shows status "uploaded" with a valid Gemini file ID, and the Gemini File Search store reports the correct file count
   5. Each uploaded file carries its full metadata (20-30 fields) attached to the Gemini file record, preserving the pedagogical structure for downstream filtering
-**Plans**: TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 02-01: TBD
-- [ ] 02-02: TBD
-- [ ] 02-03: TBD
+- [ ] 02-01-PLAN.md — Dependencies, schema extensions, Gemini client wrapper, circuit breaker, and rate limiter
+- [ ] 02-02-PLAN.md — Async state manager, upload orchestrator, Rich progress tracking, and CLI upload command
+- [ ] 02-03-PLAN.md — Crash recovery protocol, unit test suite, and real-API verification
 
 ### Phase 3: Search & CLI
 **Goal**: User can search the indexed library by meaning, filter by metadata, browse by structure, and see results with source citations -- all from a polished CLI interface
@@ -104,8 +104,8 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|---------------|--------|-----------|
-| 1. Foundation | 0/3 | Planning complete | - |
-| 2. Upload Pipeline | 0/TBD | Not started | - |
+| 1. Foundation | 3/3 | Complete | 2026-02-15 |
+| 2. Upload Pipeline | 0/3 | Planning complete | - |
 | 3. Search & CLI | 0/TBD | Not started | - |
 | 4. Quality Enhancements | 0/TBD | Not started | - |
 | 5. Incremental Updates | 0/TBD | Not started | - |
