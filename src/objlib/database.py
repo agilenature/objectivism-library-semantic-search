@@ -138,6 +138,51 @@ CREATE TABLE IF NOT EXISTS upload_locks (
 );
 """
 
+MIGRATION_V3_SQL = """
+-- Versioned AI metadata storage (append-only with is_current flag)
+CREATE TABLE IF NOT EXISTS file_metadata_ai (
+    metadata_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    file_path TEXT NOT NULL,
+    metadata_json TEXT NOT NULL,
+    model TEXT NOT NULL,
+    model_version TEXT,
+    prompt_version TEXT NOT NULL,
+    extraction_config_hash TEXT,
+    is_current BOOLEAN DEFAULT 1,
+    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')),
+    FOREIGN KEY (file_path) REFERENCES files(file_path)
+);
+
+CREATE INDEX IF NOT EXISTS idx_metadata_ai_current
+    ON file_metadata_ai(file_path, is_current);
+
+-- Fast filtering on controlled vocabulary (Tier 2 primary topics)
+CREATE TABLE IF NOT EXISTS file_primary_topics (
+    file_path TEXT NOT NULL,
+    topic_tag TEXT NOT NULL,
+    PRIMARY KEY (file_path, topic_tag),
+    FOREIGN KEY (file_path) REFERENCES files(file_path)
+);
+
+CREATE INDEX IF NOT EXISTS idx_primary_topic_tag
+    ON file_primary_topics(topic_tag);
+
+-- Wave 1 competitive strategy comparison results
+CREATE TABLE IF NOT EXISTS wave1_results (
+    result_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    file_path TEXT NOT NULL,
+    strategy TEXT NOT NULL,
+    metadata_json TEXT NOT NULL,
+    raw_response TEXT,
+    token_count INTEGER,
+    latency_ms INTEGER,
+    confidence_score REAL,
+    human_edit_distance REAL,
+    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')),
+    FOREIGN KEY (file_path) REFERENCES files(file_path)
+);
+"""
+
 UPSERT_SQL = """
 INSERT INTO files(file_path, content_hash, filename, file_size,
                   metadata_json, metadata_quality, status)
@@ -192,9 +237,32 @@ class Database:
             logger.warning("WAL mode not enabled, got: %s", result)
 
     def _setup_schema(self) -> None:
-        """Create tables, indexes, and triggers if they don't exist."""
+        """Create tables, indexes, and triggers if they don't exist.
+
+        Handles migration from v2 to v3:
+        - Adds ai_metadata_status and ai_confidence_score columns to files
+        - Creates file_metadata_ai, file_primary_topics, wave1_results tables
+        """
         self.conn.executescript(SCHEMA_SQL)
-        self.conn.execute("PRAGMA user_version = 2")
+
+        version = self.conn.execute("PRAGMA user_version").fetchone()[0]
+
+        if version < 3:
+            # Add new columns to files table (use try/except because
+            # ALTER TABLE ADD COLUMN fails if column already exists)
+            for alter_sql in [
+                "ALTER TABLE files ADD COLUMN ai_metadata_status TEXT DEFAULT 'pending'",
+                "ALTER TABLE files ADD COLUMN ai_confidence_score REAL",
+            ]:
+                try:
+                    self.conn.execute(alter_sql)
+                except sqlite3.OperationalError:
+                    pass  # Column already exists
+
+            # Create new tables (IF NOT EXISTS handles idempotency)
+            self.conn.executescript(MIGRATION_V3_SQL)
+
+        self.conn.execute("PRAGMA user_version = 3")
 
     def upsert_file(self, record: FileRecord) -> None:
         """Insert or update a single file record.
