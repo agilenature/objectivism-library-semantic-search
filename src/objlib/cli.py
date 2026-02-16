@@ -1377,6 +1377,299 @@ def metadata_batch_update(
         console.print(f"\n[green]✓[/green] Updated {len(rows)} file(s)")
         for key, value in updates.items():
             console.print(f"  {key}: [bold]{value}[/bold]")
-        
+
         if set_pending:
             console.print("\n[dim]Status set to 'pending' - run 'objlib upload' to sync with Gemini[/dim]")
+
+
+@metadata_app.command("extract-wave1")
+def extract_wave1(
+    resume: Annotated[
+        bool,
+        typer.Option("--resume", help="Resume from checkpoint after credit exhaustion"),
+    ] = False,
+    db_path: Annotated[
+        Path,
+        typer.Option("--db", "-d", help="Path to SQLite database"),
+    ] = Path("data/library.db"),
+    debug_store_raw: Annotated[
+        bool,
+        typer.Option("--debug-store-raw", help="Store raw API responses for debugging"),
+    ] = False,
+) -> None:
+    """Run Wave 1 competitive discovery: 3 strategies x 20 test files.
+
+    Executes three prompt strategies (Minimalist, Teacher, Reasoner)
+    against a stratified sample of 20 test files. Results are saved
+    to the wave1_results table for comparison.
+
+    If credits are exhausted during execution, a checkpoint is saved
+    automatically. Use --resume to continue from where it left off.
+
+    After completion, run 'objlib metadata wave1-report' to compare results.
+    """
+    import asyncio
+    import time as time_mod
+
+    from objlib.config import get_mistral_api_key
+    from objlib.extraction.checkpoint import CheckpointManager
+    from objlib.extraction.client import MistralClient
+    from objlib.extraction.orchestrator import ExtractionConfig, ExtractionOrchestrator
+    from objlib.extraction.sampler import select_test_files
+    from objlib.extraction.strategies import WAVE1_STRATEGIES
+
+    # Load Mistral API key
+    try:
+        api_key = get_mistral_api_key()
+    except RuntimeError as e:
+        console.print(f"[red]{e}[/red]")
+        raise typer.Exit(code=1)
+
+    if not db_path.exists():
+        console.print(f"[red]Error:[/red] Database not found: {db_path}")
+        raise typer.Exit(code=1)
+
+    checkpoint = CheckpointManager()
+
+    with Database(db_path) as db:
+        # Determine test files
+        if resume and checkpoint.exists:
+            checkpoint_data = checkpoint.load()
+            if checkpoint_data:
+                console.print(
+                    Panel(
+                        f"[bold]Resuming Wave 1[/bold] from checkpoint\n"
+                        f"Saved: {checkpoint_data.get('timestamp', 'unknown')}\n"
+                        f"Prompt version: {checkpoint_data.get('prompt_version', 'unknown')}",
+                        title="Resume",
+                        border_style="yellow",
+                    )
+                )
+                # Show per-lane progress
+                for lane_name, lane_data in checkpoint_data.get("lanes", {}).items():
+                    completed = len(lane_data.get("completed", []))
+                    failed = len(lane_data.get("failed", []))
+                    console.print(
+                        f"  {lane_name}: {completed} completed, {failed} failed"
+                    )
+            # Still need full test file list for the orchestrator
+            test_files = select_test_files(db, n=20)
+        else:
+            if resume:
+                console.print(
+                    "[yellow]No checkpoint found. Starting fresh Wave 1 run.[/yellow]"
+                )
+            test_files = select_test_files(db, n=20)
+
+        if not test_files:
+            console.print("[yellow]No eligible test files found in database.[/yellow]")
+            raise typer.Exit(code=1)
+
+        # Display selection summary
+        console.print(
+            Panel(
+                f"[bold]Wave 1 Discovery[/bold]\n"
+                f"Test files: {len(test_files)}\n"
+                f"Strategies: {', '.join(WAVE1_STRATEGIES.keys())}\n"
+                f"Total API calls: ~{len(test_files) * len(WAVE1_STRATEGIES)}",
+                title="Extraction",
+                border_style="cyan",
+            )
+        )
+
+        # Create orchestrator
+        client = MistralClient(api_key=api_key)
+        config = ExtractionConfig()
+        orchestrator = ExtractionOrchestrator(
+            client=client, db=db, checkpoint=checkpoint, config=config
+        )
+
+        # Run Wave 1
+        start_time = time_mod.monotonic()
+        summary = asyncio.run(
+            orchestrator.run_wave1(test_files, WAVE1_STRATEGIES)
+        )
+        elapsed = time_mod.monotonic() - start_time
+
+        # Display summary
+        console.print("\n")
+        summary_table = Table(title="Wave 1 Execution Summary")
+        summary_table.add_column("Strategy", style="cyan bold")
+        summary_table.add_column("Completed", justify="right", style="green")
+        summary_table.add_column("Failed", justify="right", style="red")
+        summary_table.add_column("Total Tokens", justify="right")
+        summary_table.add_column("Avg Latency (ms)", justify="right")
+
+        total_tokens_all = 0
+        for name, data in summary.items():
+            summary_table.add_row(
+                name,
+                str(data.get("completed", 0)),
+                str(data.get("failed", 0)),
+                f"{data.get('total_tokens', 0):,}",
+                f"{data.get('avg_latency_ms', 0):,.0f}",
+            )
+            total_tokens_all += data.get("total_tokens", 0)
+
+        console.print(summary_table)
+
+        # Cost estimate
+        estimated_cost = (total_tokens_all / 1000) * 0.007
+        console.print(f"\n  Total tokens: [bold]{total_tokens_all:,}[/bold]")
+        console.print(f"  Estimated cost: [bold]${estimated_cost:.2f}[/bold]")
+        console.print(f"  Time elapsed: [bold]{elapsed:.1f}s[/bold]")
+
+        console.print(
+            "\n[bold]Next step:[/bold] Run [cyan]objlib metadata wave1-report[/cyan] "
+            "to compare results"
+        )
+
+
+@metadata_app.command("wave1-report")
+def wave1_report(
+    db_path: Annotated[
+        Path,
+        typer.Option("--db", "-d", help="Path to SQLite database"),
+    ] = Path("data/library.db"),
+    export_csv: Annotated[
+        Path | None,
+        typer.Option("--export-csv", help="Export results to CSV file"),
+    ] = None,
+    file: Annotated[
+        str | None,
+        typer.Option("--file", "-f", help="Show single file comparison across strategies"),
+    ] = None,
+) -> None:
+    """Compare Wave 1 strategy results with metrics and quality gate evaluation.
+
+    Shows a comparison table of all strategies with metrics: avg tokens,
+    avg latency, avg confidence, validation pass rate, and failed count.
+
+    Quality gates are evaluated against the best strategy to determine
+    Wave 2 readiness.
+
+    Use --file to see side-by-side comparison for a specific file.
+    Use --export-csv to export all results for detailed offline analysis.
+    """
+    from objlib.extraction.quality_gates import (
+        display_gate_results,
+        evaluate_quality_gates,
+        recommend_strategy,
+    )
+    from objlib.extraction.report import (
+        display_file_comparison,
+        display_wave1_report,
+        export_wave1_csv,
+        generate_wave1_report,
+    )
+
+    if not db_path.exists():
+        console.print(f"[red]Error:[/red] Database not found: {db_path}")
+        raise typer.Exit(code=1)
+
+    with Database(db_path) as db:
+        if file:
+            display_file_comparison(db, file, console)
+            return
+
+        # Generate and display main report
+        report = generate_wave1_report(db)
+
+        if not report:
+            console.print(
+                "[yellow]No Wave 1 results found.[/yellow]\n"
+                "Run [bold]objlib metadata extract-wave1[/bold] first."
+            )
+            raise typer.Exit(code=1)
+
+        display_wave1_report(report, console)
+
+        # Quality gates
+        console.print()
+        all_passed, gates = evaluate_quality_gates(report)
+        display_gate_results(gates, console)
+
+        # Strategy recommendation
+        rec = recommend_strategy(report)
+        console.print(
+            f"\n[bold]Recommended strategy:[/bold] [green bold]{rec}[/green bold]"
+        )
+
+        # Export CSV if requested
+        if export_csv:
+            export_wave1_csv(db, export_csv)
+
+        # Next step guidance
+        console.print()
+        if all_passed:
+            console.print(
+                "[bold]Quality gates PASSED.[/bold] Select strategy:\n"
+                f"  [cyan]objlib metadata wave1-select {rec}[/cyan]"
+            )
+        else:
+            console.print(
+                "[bold yellow]Quality gates FAILED.[/bold yellow] "
+                "Consider Wave 1.5 or manual adjustments."
+            )
+
+
+@metadata_app.command("wave1-select")
+def wave1_select(
+    strategy: Annotated[
+        str,
+        typer.Argument(help="Strategy to use for Wave 2 (minimalist, teacher, reasoner, or hybrid)"),
+    ],
+    db_path: Annotated[
+        Path,
+        typer.Option("--db", "-d", help="Path to SQLite database"),
+    ] = Path("data/library.db"),
+) -> None:
+    """Select the winning strategy for Wave 2 production processing.
+
+    After reviewing Wave 1 results with 'wave1-report', select the
+    strategy to use for processing all remaining files.
+
+    Valid strategies: minimalist, teacher, reasoner, hybrid.
+    If 'hybrid' is selected, a combined template will be constructed
+    from the best elements of each strategy during Wave 2 setup.
+    """
+    import json as json_mod
+    from datetime import datetime, timezone
+
+    from objlib.extraction.prompts import PROMPT_VERSION
+
+    valid_strategies = {"minimalist", "teacher", "reasoner", "hybrid"}
+    if strategy not in valid_strategies:
+        console.print(
+            f"[red]Error:[/red] Invalid strategy: '{strategy}'\n"
+            f"Valid options: {', '.join(sorted(valid_strategies))}"
+        )
+        raise typer.Exit(code=1)
+
+    if strategy == "hybrid":
+        console.print(
+            "[yellow]Hybrid selected:[/yellow] A combined template will be "
+            "constructed from the best elements of each strategy during "
+            "Wave 2 setup."
+        )
+
+    # Save selection to JSON
+    selection = {
+        "strategy": strategy,
+        "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+        "prompt_version": PROMPT_VERSION,
+    }
+
+    selection_path = Path("data/wave1_selection.json")
+    selection_path.parent.mkdir(parents=True, exist_ok=True)
+    selection_path.write_text(json_mod.dumps(selection, indent=2))
+
+    console.print(
+        f"\n[green]OK[/green] Strategy [bold]'{strategy}'[/bold] selected "
+        f"for Wave 2 production processing."
+    )
+    console.print(f"[dim]Saved to: {selection_path}[/dim]")
+    console.print(
+        "\n[bold]Next step:[/bold] Run [cyan]objlib metadata extract[/cyan] "
+        "to process remaining files with the selected strategy."
+    )
