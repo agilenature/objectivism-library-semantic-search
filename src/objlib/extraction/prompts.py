@@ -4,11 +4,17 @@ Provides system prompts for 3 competitive strategy lanes (Minimalist, Teacher,
 Reasoner), user prompt framing, and JSON schema injection with controlled
 vocabulary and category enumeration.
 
+Also provides production prompt builder and config hashing for Wave 2
+batch processing with versioned metadata persistence.
+
 Prompt version tracks breaking changes for reproducibility.
 See DECISION-HYBRID-TAXONOMY.md for the 4-tier metadata structure.
 """
 
 from __future__ import annotations
+
+import hashlib
+import json
 
 from objlib.extraction.schemas import CONTROLLED_VOCABULARY, Category, Difficulty, ExtractedMetadata
 
@@ -181,3 +187,49 @@ def build_user_prompt(transcript_text: str, strategy: str) -> str:
             f"Unknown strategy: {strategy!r}. "
             f"Must be 'minimalist', 'teacher', or 'reasoner'."
         )
+
+
+def build_production_prompt(strategy: str, schema: str) -> str:
+    """Build the production system prompt for Wave 2 batch processing.
+
+    Uses the winning strategy template with the provided schema.
+    Production always uses temperature=1.0 (magistral requirement).
+
+    Args:
+        strategy: Winning strategy name ('minimalist', 'teacher', or 'reasoner').
+        schema: JSON schema string for prompt injection.
+
+    Returns:
+        Complete system prompt string for production use.
+    """
+    return build_system_prompt(strategy)
+
+
+def hash_extraction_config(
+    temperature: float,
+    timeout: int,
+    schema_version: str,
+    vocab_hash: str,
+) -> str:
+    """Create a deterministic hash of the extraction configuration.
+
+    Used for prompt versioning (W2.A10 decision) to track which
+    configuration produced each extraction result.
+
+    Args:
+        temperature: Sampling temperature used.
+        timeout: API timeout in seconds.
+        schema_version: Schema version string (e.g., '1.0').
+        vocab_hash: Hash of the controlled vocabulary.
+
+    Returns:
+        SHA256 hexdigest truncated to 16 characters.
+    """
+    config = {
+        "temperature": temperature,
+        "timeout": timeout,
+        "schema_version": schema_version,
+        "vocab_hash": vocab_hash,
+    }
+    canonical = json.dumps(config, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode()).hexdigest()[:16]
