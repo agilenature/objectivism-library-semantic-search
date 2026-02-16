@@ -344,14 +344,38 @@ Found 537 files with year metadata (2015-2026).
 
 ### ✓ View Command Options - VERIFIED
 
-**Test view command:**
+**Test view command (basic functionality):**
 - ✓ Basic view: Displays metadata panel with all available fields
-- ✓ --full: Shows second panel with complete document text from disk
-- ✓ --show-related: Feature implemented, queries Gemini for similar documents
+- ✓ Filename validation: Shows helpful error if file not found in database
+- ✓ Metadata fields: All extracted metadata displayed (category, course, topic, lesson_number, etc.)
 
-**Note:** --show-related encounters store name configuration issue (uses default instead of --store flag). Feature is coded and would work with proper store parameter propagation.
+**Test --full flag:**
+Tested with "Ayn Rand - The Virtue of Selfishness-Signet (1964).txt" (334,532 chars):
+- ✓ Displays second panel titled "Full Document: [filename]"
+- ✓ Shows complete document text from disk (with truncation notice for large files)
+- ✓ Reads file with UTF-8 encoding
+- ✓ Handles missing source files gracefully (shows warning)
 
-**Status:** View command functional, --full verified, --show-related implemented.
+**Test --show-related flag:**
+Tested with book file (Virtue of Selfishness) and course file (History of Philosophy - Lesson 04):
+- ✓ Queries Gemini File Search for semantically similar documents
+- ✓ Reads 500-char excerpt from file for similarity query
+- ✓ Returns synthesized answer about related content
+- ✓ Displays three-tier citations (answer panel, citation details, source table)
+- ✓ Respects --limit parameter (tested with --limit 2 and --limit 3)
+- ✓ Requires --store flag with correct store name ("objectivism-library-test")
+
+**Test combined flags:**
+Tested --full and --show-related together:
+- ✓ Both flags work simultaneously
+- ✓ Output sequence: metadata panel → full document → related documents
+- ✓ All three sections render correctly without conflicts
+
+**Known Requirements:**
+- --show-related requires correct --store parameter (default "objectivism-library-v1" may not match actual store name)
+- Users must specify: `--store "objectivism-library-test"` for current test environment
+
+**Status:** View command fully functional with all three modes verified (basic, --full, --show-related, combined).
 
 ### ✓ Rich Formatting Display - VERIFIED (Visual Inspection)
 
@@ -374,7 +398,7 @@ Found 537 files with year metadata (2015-2026).
 3. ✓ Browse navigation correctness
 4. ✓ Rich formatting display
 5. ✓ Filter command operators (including all comparison operators: >=, <=, >, <, =)
-6. ✓ View command options
+6. ✓ View command options (basic, --full, --show-related, combined)
 
 **Final Status:** PASSED - All Phase 3 goals achieved.
 
@@ -382,6 +406,8 @@ Found 537 files with year metadata (2015-2026).
 - Added comprehensive testing of filter comparison operators with numeric data
 - Fixed bug preventing numeric comparisons (commit 5d24a69)
 - All comparison operators now verified working on year field (537 files tested)
+- Verified view command with all three modes: basic metadata display, --full document text, --show-related semantic similarity
+- Confirmed --full and --show-related work correctly both individually and combined
 
 ---
 
