@@ -142,14 +142,26 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
+Phases execute in strategic order (not strictly numeric):
+
+**Standard order:** 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
+
+**Actual execution (Metadata-First Strategy):**
+1 -> 2 -> 3 -> **6** -> [FULL UPLOAD] -> 4 -> 5 -> 7
+
+**Rationale:** Phase 6 (metadata enhancement) done BEFORE full library upload to:
+- Infer categories for 496 "unknown" files (~28% of library)
+- Upload with enriched metadata from day one
+- Avoid re-uploading 1,721 files just to update metadata
+- Better search filtering quality from the start
 
 | Phase | Plans Complete | Status | Completed |
 |-------|---------------|--------|-----------|
 | 1. Foundation | 3/3 | Complete | 2026-02-15 |
 | 2. Upload Pipeline | 4/4 | Complete | 2026-02-16 |
 | 3. Search & CLI | 3/3 | Complete | 2026-02-16 |
-| 4. Quality Enhancements | 0/TBD | Not started | - |
-| 5. Incremental Updates | 0/TBD | Not started | - |
-| 6. AI-Powered Metadata | 0/TBD | Not started | - |
-| 7. Interactive TUI | 0/TBD | Not started | - |
+| **6. AI-Powered Metadata** | **0/TBD** | **Next** | **-** |
+| **[FULL UPLOAD: 1,721 files]** | **-** | **After Phase 6** | **-** |
+| 4. Quality Enhancements | 0/TBD | Deferred | - |
+| 5. Incremental Updates | 0/TBD | Deferred | - |
+| 7. Interactive TUI | 0/TBD | Deferred | - |
