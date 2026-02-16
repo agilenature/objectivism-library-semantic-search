@@ -73,7 +73,6 @@ class GeminiSearchClient:
                     )
                 )
             ],
-            request_options={"timeout": 30},
         )
 
         return self._client.models.generate_content(
