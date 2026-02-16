@@ -23,9 +23,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from objlib.extraction.batch_client import BatchRequest, MistralBatchClient
+from objlib.extraction.confidence import calculate_confidence
 from objlib.extraction.parser import parse_magistral_response
 from objlib.extraction.prompts import build_system_prompt, build_user_prompt
-from objlib.extraction.validator import validate_and_score
+from objlib.extraction.validator import validate_extraction
 
 if TYPE_CHECKING:
     from objlib.database import Database
@@ -217,26 +218,47 @@ class BatchExtractionOrchestrator:
                     # Response should have choices[0].message.content with JSON
                     metadata_dict = self._extract_metadata_from_response(result.response)
 
-                    # Validate using existing validator
-                    validation_result = validate_and_score(
-                        metadata_dict,
-                        Path(file_path).read_text(encoding="utf-8"),
-                    )
+                    # Read transcript for confidence calculation
+                    transcript_text = Path(file_path).read_text(encoding="utf-8")
+                    transcript_length = len(transcript_text)
 
-                    if validation_result["validation_status"] == "extracted":
-                        # Success - save to database
+                    # Validate extraction
+                    validation = validate_extraction(metadata_dict)
+
+                    if not validation.hard_failures:
+                        # Passed validation (extracted or needs_review)
+                        # Calculate confidence score
+                        try:
+                            model_confidence = float(metadata_dict.get("confidence_score", 0))
+                        except (TypeError, ValueError):
+                            model_confidence = 0.0
+
+                        confidence = calculate_confidence(
+                            model_confidence=model_confidence,
+                            validation=validation,
+                            transcript_length=transcript_length,
+                        )
+
+                        # Determine status based on confidence and soft failures
+                        if validation.soft_failures or confidence < 0.85:
+                            status = "needs_review"
+                        else:
+                            status = "extracted"
+
+                        # Save to database
                         self._save_extracted_metadata(
                             file_path,
-                            validation_result["metadata"],
-                            validation_result["confidence_score"],
+                            metadata_dict,
+                            confidence,
+                            status,
                         )
                         succeeded_count += 1
-                        logger.info("✓ Saved: %s (conf: %.1f%%)", Path(file_path).name, validation_result["confidence_score"] * 100)
+                        logger.info("✓ Saved: %s (conf: %.1f%%, status=%s)", Path(file_path).name, confidence * 100, status)
                     else:
-                        # Validation failed
-                        logger.warning("Validation failed for %s: %s", file_path, validation_result)
+                        # Hard validation failures - reject
+                        logger.warning("Hard validation failures for %s: %s", file_path, validation.hard_failures)
                         failed_files.append(file_path)
-                        self._mark_failed(file_path, f"Validation failed: {validation_result}")
+                        self._mark_failed(file_path, f"Validation failed: {', '.join(validation.hard_failures)}")
 
                 except Exception as e:
                     logger.error("Failed to process result for %s: %s", file_path, e)
@@ -322,6 +344,7 @@ class BatchExtractionOrchestrator:
         file_path: str,
         metadata: dict,
         confidence_score: float,
+        status: str = "extracted",
     ) -> None:
         """Save extracted metadata to database."""
         import json
@@ -330,12 +353,12 @@ class BatchExtractionOrchestrator:
             """
             UPDATE files
             SET ai_metadata_json = ?,
-                ai_metadata_status = 'extracted',
+                ai_metadata_status = ?,
                 ai_confidence_score = ?,
                 updated_at = strftime('%Y-%m-%dT%H:%M:%f', 'now')
             WHERE file_path = ?
             """,
-            (json.dumps(metadata), confidence_score, file_path),
+            (json.dumps(metadata), status, confidence_score, file_path),
         )
         self._db.conn.commit()
 

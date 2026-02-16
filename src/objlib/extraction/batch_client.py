@@ -237,7 +237,7 @@ class MistralBatchClient:
         Raises:
             SDKError: On API errors.
         """
-        job = await self._client.batch.jobs.get_async(batch_id)
+        job = await self._client.batch.jobs.get_async(job_id=batch_id)
 
         return {
             "id": job.id,
@@ -328,7 +328,7 @@ class MistralBatchClient:
             RuntimeError: If job is not complete or has no output file.
         """
         # Get job details
-        job = await self._client.batch.jobs.get_async(batch_id)
+        job = await self._client.batch.jobs.get_async(job_id=batch_id)
 
         if job.status != "SUCCESS":
             raise RuntimeError(
@@ -341,7 +341,10 @@ class MistralBatchClient:
         logger.info("Downloading output file: %s", job.output_file)
 
         # Download output file
-        output_content = await self._client.files.download_async(job.output_file)
+        output_response = await self._client.files.download_async(file_id=job.output_file)
+
+        # Read content from streaming response
+        output_content = await output_response.aread()
 
         # Parse JSONL results
         # Note: Response structure is {custom_id, response: {body: {...}}}
