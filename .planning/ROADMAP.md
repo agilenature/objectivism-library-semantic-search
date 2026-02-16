@@ -2,7 +2,7 @@
 
 ## Overview
 
-This roadmap transforms a 1,749-file Objectivism Library into a semantic search system using Google Gemini's File Search API. The journey follows the natural three-phase pipeline (scan, upload, query) dictated by the architecture, extended with quality enhancements, incremental updates, and AI-powered metadata enrichment. Each phase delivers a complete, independently verifiable capability: Phase 1 builds the foundation offline with zero API dependencies, Phase 2 gets files into Gemini reliably, Phase 3 delivers working search, Phase 4 sharpens result quality with reranking and synthesis, Phase 5 makes the system maintainable long-term with incremental updates, and Phase 6 uses LLMs to automatically infer rich metadata from content.
+This roadmap transforms a 1,749-file Objectivism Library into a semantic search system using Google Gemini's File Search API. The journey follows the natural three-phase pipeline (scan, upload, query) dictated by the architecture, extended with quality enhancements, incremental updates, AI-powered metadata enrichment, and an interactive terminal interface. Each phase delivers a complete, independently verifiable capability: Phase 1 builds the foundation offline with zero API dependencies, Phase 2 gets files into Gemini reliably, Phase 3 delivers working search, Phase 4 sharpens result quality with reranking and synthesis, Phase 5 makes the system maintainable long-term with incremental updates, Phase 6 uses LLMs to automatically infer rich metadata from content, and Phase 7 wraps everything in a modern TUI for immersive research workflows.
 
 ## Phases
 
@@ -14,10 +14,11 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation** - SQLite state tracking and library scanning with metadata extraction
 - [x] **Phase 2: Upload Pipeline** - Reliable batch upload to Gemini File Search with rate limiting and resume
-- [ ] **Phase 3: Search & CLI** - Semantic search, filtering, and CLI interface for querying the indexed library
+- [x] **Phase 3: Search & CLI** - Semantic search, filtering, and CLI interface for querying the indexed library
 - [ ] **Phase 4: Quality Enhancements** - Reranking, synthesis, query expansion, and difficulty-aware ordering
 - [ ] **Phase 5: Incremental Updates** - Change detection, selective re-upload, and orphan cleanup
 - [ ] **Phase 6: AI-Powered Metadata** - LLM-based category inference, difficulty detection, and topic extraction
+- [ ] **Phase 7: Interactive TUI** - Modern terminal UI with live search, visual browsing, and session management
 
 ## Phase Details
 
@@ -114,10 +115,30 @@ Plans:
 - [ ] 06-01: TBD
 - [ ] 06-02: TBD
 
+### Phase 7: Interactive TUI
+**Goal**: User can interact with the library through a modern terminal UI with keyboard/mouse navigation, live search, visual browsing, split-pane views, and session management -- transforming the CLI into an immersive research environment
+**Depends on**: Phase 3 (search & CLI), Phase 4 (synthesis), Phase 6 (metadata)
+**Requirements**: TUI-01, TUI-02, TUI-03, TUI-04, TUI-05, TUI-06, TUI-07, TUI-08
+**Success Criteria** (what must be TRUE):
+  1. Running `objlib tui` launches an interactive terminal interface with live search input that updates results as you type -- no more typing `objlib search "query"` repeatedly
+  2. The browse mode displays a navigable tree view (categories → courses → files) with keyboard controls (↑↓ arrows to navigate, Enter to drill down, Esc to go back) and file count badges -- visual exploration replaces memorizing browse command syntax
+  3. The interface uses split-pane layout with search/navigation on the left, results in the middle, and document preview on the right -- user can see context without switching views
+  4. Interactive filters provide checkboxes and sliders for category, difficulty, year ranges instead of command-line filter syntax -- metadata filtering becomes visual and discoverable
+  5. The TUI preserves search history (accessible with ↑↓ arrows), allows bookmarking files and searches, and can save/load research sessions -- enabling iterative research workflows
+  6. Document viewer supports scrolling, search term highlighting, and citation linking (click [1] to jump to source) -- seamless navigation between synthesis and sources
+  7. The TUI supports both keyboard shortcuts (for power users) and mouse interaction (for discoverability) -- accessible to different user preferences
+  8. All existing CLI functionality (search, browse, filter, view, metadata commands) is accessible through the TUI -- no regression in capabilities
+**Plans**: TBD
+
+Plans:
+- [ ] 07-01: TBD
+- [ ] 07-02: TBD
+- [ ] 07-03: TBD
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|---------------|--------|-----------|
@@ -127,3 +148,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 4. Quality Enhancements | 0/TBD | Not started | - |
 | 5. Incremental Updates | 0/TBD | Not started | - |
 | 6. AI-Powered Metadata | 0/TBD | Not started | - |
+| 7. Interactive TUI | 0/TBD | Not started | - |
