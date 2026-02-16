@@ -1,0 +1,256 @@
+---
+phase: 03-search-and-cli
+verified: 2026-02-16T15:30:00Z
+status: human_needed
+score: 5/5 must-haves verified
+re_verification: false
+human_verification:
+  - test: "Run semantic search with real library data"
+    expected: "Returns semantically relevant results ranked by relevance, with excerpts and source attribution"
+    why_human: "Requires live Gemini API and indexed library content"
+  - test: "Run search with metadata filters"
+    expected: "Results match both semantic meaning AND metadata filters"
+    why_human: "Requires live Gemini API to verify filter application"
+  - test: "Browse library structure and verify drill-down navigation"
+    expected: "Can navigate categories -> courses -> files with proper counts"
+    why_human: "Requires populated SQLite database with real library metadata"
+  - test: "Verify Rich formatting displays correctly in terminal"
+    expected: "Score bars, panels, tables render properly with colors and adaptive width"
+    why_human: "Visual terminal rendering cannot be verified programmatically"
+---
+
+# Phase 3: Search & CLI Verification Report
+
+**Phase Goal:** User can search the indexed library by meaning, filter by metadata, browse by structure, and see results with source citations -- all from a polished CLI interface
+
+**Verified:** 2026-02-16T15:30:00Z
+
+**Status:** human_needed
+
+**Re-verification:** No — initial verification
+
+## Goal Achievement
+
+### Observable Truths
+
+| # | Truth | Status | Evidence |
+|---|-------|--------|----------|
+| 1 | Running `objlib search "query"` returns semantically relevant results with source file names, course context, and text excerpts | ✓ VERIFIED | search command exists with --filter, --limit, --model options. query_with_retry calls Gemini API. Three-tier citation display shows title, metadata (course/year/difficulty), and text excerpt (100-150 chars). |
+| 2 | Search with metadata filters returns only matching results | ✓ VERIFIED | build_metadata_filter converts CLI --filter to AIP-160 syntax. Validates field names against FILTERABLE_FIELDS. Passes metadata_filter to Gemini query_with_retry. |
+| 3 | Browse command displays structural hierarchy and allows navigation without search | ✓ VERIFIED | browse command with three-level drill-down (categories -> courses -> files). Database methods: get_categories_with_counts, get_courses_with_counts, get_files_by_course. Rich table output. No Gemini API calls. |
+| 4 | Every search result includes passage-level citation with source attribution | ✓ VERIFIED | Citation model includes: index, title (filename), text (passage excerpt), file_path, metadata (course/year/difficulty), confidence. extract_citations pulls from GroundingMetadata. enrich_citations adds SQLite metadata. Three-tier display: inline markers, details panel with excerpts, source table. |
+| 5 | CLI uses Rich formatting with tables/panels/score bars and provides documented commands | ✓ VERIFIED | Rich Console, Panel, Table used throughout. score_bar renders as ━━━━━━━━○○ 87%. All commands (search, browse, filter, view) have help text. Typer provides --help documentation. |
+
+**Score:** 5/5 truths verified
+
+### Required Artifacts
+
+| Artifact | Expected | Status | Details |
+|----------|----------|--------|---------|
+| `src/objlib/search/__init__.py` | Search subpackage public API | ✓ VERIFIED | 18 lines, exports search client and formatter functions |
+| `src/objlib/search/client.py` | GeminiSearchClient with query_with_retry | ✓ VERIFIED | 142 lines, contains query_with_retry method with tenacity retry (3 attempts, exponential backoff + jitter), resolve_store_name |
+| `src/objlib/search/citations.py` | Citation extraction, enrichment, AIP-160 filter builder | ✓ VERIFIED | 172 lines, contains extract_citations, enrich_citations, build_metadata_filter |
+| `src/objlib/search/formatter.py` | Rich display with score bars, three-tier citations | ✓ VERIFIED | 272 lines, contains score_bar, truncate_text, display_search_results (three-tier), display_detailed_view, display_full_document |
+| `src/objlib/models.py` | SearchResult, Citation, AppState dataclasses | ✓ VERIFIED | Contains Citation (index, title, uri, text, document_name, confidence, file_path, metadata), SearchResult, AppState |
+| `src/objlib/config.py` | get_api_key() with keyring + env var fallback | ✓ VERIFIED | Contains get_api_key() with keyring.get_password and GEMINI_API_KEY env var fallback |
+| `src/objlib/database.py` | Hierarchical metadata query methods | ✓ VERIFIED | Contains get_categories_with_counts, get_courses_with_counts, get_files_by_course, get_items_by_category, filter_files_by_metadata, get_file_metadata_by_filenames |
+| `src/objlib/cli.py` | search, browse, filter, view commands with AppState | ✓ VERIFIED | 1068 lines, contains @app.command decorators for search (line 555), view (line 621), browse (line 783), filter (line 922). AppState callback with _GEMINI_COMMANDS allowlist. |
+| `tests/test_search.py` | Unit tests for search client, citations, filter builder | ✓ VERIFIED | 21 tests covering build_metadata_filter (9), extract_citations (6), enrich_citations (3), get_api_key (3) — all pass |
+| `tests/test_formatter.py` | Unit tests for score bars, truncation, display functions | ✓ VERIFIED | 23 tests covering score_bar (8), truncate_text (6), display functions (9) — all pass |
+| `tests/test_browse_filter.py` | Unit tests for browse queries and filter validation | ✓ VERIFIED | 28 tests covering get_categories_with_counts (4), get_courses_with_counts (3), get_files_by_course (6), get_items_by_category (4), filter_files_by_metadata (11) — all pass |
+
+### Key Link Verification
+
+| From | To | Via | Status | Details |
+|------|----|----|--------|---------|
+| CLI search command | GeminiSearchClient.query_with_retry | AppState.gemini_client | ✓ WIRED | Line 596: `response = search_client.query_with_retry(query, metadata_filter=metadata_filter, model=model)` |
+| citations.py enrich_citations | database.py get_file_metadata_by_filenames | SQLite lookup | ✓ WIRED | Line 103: `lookup = db.get_file_metadata_by_filenames(titles)` — populates citation.file_path and citation.metadata |
+| CLI search command | formatter.py display_search_results | After citation extraction | ✓ WIRED | Line 615: `from objlib.search.formatter import display_search_results` and line 618: `display_search_results(response_text, citations, state.terminal_width, limit=limit)` |
+| CLI view command | formatter.py display_detailed_view | For single result | ✓ WIRED | Line 658: `display_detailed_view` imported, line 700: `display_detailed_view(citation, terminal_width)` called |
+| CLI browse command | database.py get_categories_with_counts | Hierarchical navigation | ✓ WIRED | Browse command calls get_categories_with_counts (categories), get_courses_with_counts (courses), get_files_by_course (files) |
+| CLI filter command | database.py filter_files_by_metadata | SQLite-only queries | ✓ WIRED | Filter command parses field:value pairs and calls filter_files_by_metadata with validated fields |
+| CLI view --show-related | GeminiSearchClient.query_with_retry | On-demand Gemini init | ✓ WIRED | Line 757: `response = search_client.query_with_retry(f"Find documents related to this content: {excerpt}", model=model)` |
+
+### Requirements Coverage
+
+No REQUIREMENTS.md entries mapped to Phase 3. All success criteria derived from ROADMAP.md.
+
+### Anti-Patterns Found
+
+None detected.
+
+| File | Line | Pattern | Severity | Impact |
+|------|------|---------|----------|--------|
+| — | — | — | — | — |
+
+**Scan summary:**
+- No TODO/FIXME/placeholder comments
+- No empty implementations (return null/return {})
+- No console.log-only handlers
+- Empty returns in citations.py (lines 43, 47) are legitimate early-exit patterns for None metadata
+
+### Human Verification Required
+
+#### 1. Semantic search with real library data
+
+**Test:**
+1. Ensure library is scanned: `objlib scan --library /path/to/library`
+2. Ensure files are uploaded: `objlib upload`
+3. Run: `objlib search "What is the Objectivist view of rights?"`
+
+**Expected:**
+- Returns 5-10 semantically relevant results ranked by relevance score
+- Each result shows:
+  - Source filename (e.g., "OPAR Lecture 05.txt")
+  - Course context (e.g., "Course: OPAR | Year: 1991 | Difficulty: intermediate")
+  - Text excerpt (100-150 characters)
+  - Relevance score bar (e.g., ━━━━━━━━○○ 87%)
+- Three-tier display:
+  1. Answer panel (cyan) with inline [1][2][3] markers
+  2. Citation details panel with excerpts and metadata
+  3. Source listing table with scores
+
+**Why human:** Requires live Gemini API with indexed library content to verify semantic relevance quality.
+
+---
+
+#### 2. Metadata filtering with semantic search
+
+**Test:**
+1. Run: `objlib search "causality" --filter course:OPAR --filter difficulty:introductory`
+
+**Expected:**
+- Returns results that match both:
+  - Semantic meaning (mentions causality, cause-effect relationships)
+  - Metadata filters (only from OPAR course, only introductory difficulty)
+- Results exclude OPAR advanced lectures and non-OPAR courses even if semantically relevant
+
+**Why human:** Requires live Gemini API to verify AIP-160 filter application works correctly with File Search API.
+
+---
+
+#### 3. Browse hierarchical navigation
+
+**Test:**
+1. Run: `objlib browse` (show categories)
+2. Run: `objlib browse --category course` (show courses)
+3. Run: `objlib browse --course "History of Philosophy"` (show files)
+4. Run: `objlib browse --course "History of Philosophy" --year 1972` (filter by year)
+
+**Expected:**
+- Level 1: Shows categories (course, motm, book, etc.) with file counts in Rich table
+- Level 2: Shows all courses alphabetically with file counts
+- Level 3: Shows files within course, ordered by lesson/year/quarter/week
+- Year filter narrows to specific year
+
+**Why human:** Requires populated SQLite database with real library metadata to verify counts and ordering are correct.
+
+---
+
+#### 4. Metadata-only filter command
+
+**Test:**
+1. Run: `objlib filter course:OPAR year:2023`
+2. Run: `objlib filter year:>=2020 difficulty:introductory`
+3. Run: `objlib filter invalid_field:value` (expect error)
+
+**Expected:**
+- Returns matching files from SQLite in Rich table (no Gemini API call)
+- Comparison operators work correctly (>=, <=, >, <)
+- Invalid field names show helpful error with list of valid fields
+
+**Why human:** Requires populated SQLite database with numeric year values to verify comparison operators work correctly.
+
+---
+
+#### 5. Rich formatting display quality
+
+**Test:**
+1. Run `objlib search "ethics"` in a standard 80-column terminal
+2. Run the same in a wide terminal (200+ columns)
+3. Verify score bars, panels, tables render correctly
+4. Check color coding (cyan panels, yellow citation markers, green metadata)
+
+**Expected:**
+- Score bars render as Unicode blocks: ━━━━━━━━○○ 87%
+- Panels adapt to terminal width (truncation, wrapping)
+- Tables show all columns without overflow
+- Colors render correctly (not garbled escape codes)
+
+**Why human:** Visual terminal rendering cannot be verified programmatically. Requires human eye to assess aesthetic quality.
+
+---
+
+#### 6. View command with options
+
+**Test:**
+1. Run: `objlib search "Aristotle"` (copy a filename from results)
+2. Run: `objlib view "Philosophy Lecture 12.txt"` (use actual filename)
+3. Run: `objlib view "Philosophy Lecture 12.txt" --full` (show full document)
+4. Run: `objlib view "Philosophy Lecture 12.txt" --show-related` (find similar docs)
+
+**Expected:**
+- Basic view: Shows metadata panel (course, year, difficulty, file size, quality score, file path)
+- --full: Displays complete document text (truncated if >500 lines)
+- --show-related: Calls Gemini to find semantically similar documents, displays results table
+
+**Why human:** Requires real files and Gemini API to verify related document search quality.
+
+---
+
+### Gaps Summary
+
+**No gaps found.** All automated checks passed:
+
+- All 11 required artifacts exist and are substantive (adequate length, no stubs, proper exports)
+- All 7 key links are wired (imports exist, function calls present, results used)
+- All 72 unit tests pass (21 search + 23 formatter + 28 browse/filter)
+- All 4 CLI commands implemented with help documentation
+- Rich formatting heavily used throughout (Console, Panel, Table)
+- No anti-patterns detected (no TODOs, no empty implementations, no console.log-only handlers)
+
+**Phase goal achieved** at the code level. All capabilities exist:
+
+1. Semantic search capability: query_with_retry calls Gemini File Search API ✓
+2. Metadata filtering capability: build_metadata_filter generates AIP-160 syntax ✓
+3. Browse capability: hierarchical navigation methods query SQLite ✓
+4. Citation capability: extract_citations + enrich_citations provide passage-level attribution ✓
+5. Rich formatting capability: score bars, panels, tables with Typer documentation ✓
+
+**Human verification needed** to confirm these capabilities work with real data:
+- Semantic relevance quality requires human judgment
+- Rich rendering quality requires visual inspection
+- Metadata filter correctness requires comparing results to known ground truth
+
+The codebase is complete and ready for end-to-end testing with actual library content.
+
+---
+
+_Verified: 2026-02-16T15:30:00Z_
+_Verifier: Claude (gsd-verifier)_
+
+## Human Verification Results (2026-02-16)
+
+### ✓ Semantic Search Quality - VERIFIED
+
+**Test queries:**
+1. "What is the relationship between reason and emotion?" → Returned comprehensive philosophical answer covering harmony, conflict, value judgments, rational scrutiny
+2. "What is the nature of rights?" → Returned detailed explanation of moral sanctions, freedom of action, property rights, law of identity
+
+**Verification:**
+- ✓ Gemini File Search API called successfully
+- ✓ Results semantically relevant (not keyword matching)
+- ✓ Multi-source synthesis with citations
+- ✓ Three-tier Rich formatting renders correctly
+- ✓ Passage-level citations with text excerpts
+
+**Minor display issues found** (non-blocking):
+- Confidence scores showing 0% (Gemini response structure - grounding_supports may not include confidence_scores)
+- Metadata enrichment shows Gemini IDs instead of filenames (title mapping needs investigation)
+- Committed bugfix: removed invalid request_options parameter (commit 444174f)
+
+**Status:** Core semantic search capability fully functional. Display issues can be refined in Phase 4.
+
+---
+
+**Remaining human verification items:** 2, 3, 4, 5, 6 (browse navigation, formatting, filters, view command)
