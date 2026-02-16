@@ -64,12 +64,12 @@ Plans:
   3. Running `browse --course "History of Philosophy"` displays the structural hierarchy (years, quarters, weeks) and lets the user navigate without a search query
   4. Every search result includes passage-level citation (specific text excerpt with source attribution) that traces back to the exact file and section in the library
   5. The CLI uses Rich formatting (tables for results, panels for detail views, color-coded relevance scores) and provides `search`, `filter`, and `browse` commands via Typer with `--help` documentation
-**Plans**: TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 03-01: TBD
-- [ ] 03-02: TBD
-- [ ] 03-03: TBD
+- [ ] 03-01-PLAN.md -- Query layer: Gemini search client, citation extraction, AppState, search command
+- [ ] 03-02-PLAN.md -- Display layer: Three-tier Rich formatting, score bars, view command
+- [ ] 03-03-PLAN.md -- Navigation layer: Browse and filter commands with SQLite metadata queries
 
 ### Phase 4: Quality Enhancements
 **Goal**: Search results are sharper (reranked for precision), answers synthesize across sources (with inline citations), and queries understand philosophical terminology -- transforming raw search into a research tool
