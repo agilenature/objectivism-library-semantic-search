@@ -83,18 +83,20 @@ class AsyncUploadStateManager:
     async def get_pending_files(self, limit: int = 200) -> list[dict]:
         """Return files with ``status = 'pending'``, ordered by path.
 
+        Filters to .txt files only -- other file types are skipped.
+
         Args:
             limit: Maximum rows to return.
 
         Returns:
             List of dicts with file_path, content_hash, filename,
-            file_size, metadata_json keys.
+            file_size, metadata_json keys (only .txt files).
         """
         db = self._ensure_connected()
         cursor = await db.execute(
             """SELECT file_path, content_hash, filename, file_size, metadata_json
                FROM files
-               WHERE status = 'pending'
+               WHERE status = 'pending' AND filename LIKE '%.txt'
                ORDER BY file_path
                LIMIT ?""",
             (limit,),

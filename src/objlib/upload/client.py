@@ -284,6 +284,23 @@ class GeminiFileSearchClient:
 
         return operation
 
+    async def delete_file(self, file_name: str) -> None:
+        """Delete a file from Gemini File API.
+
+        Args:
+            file_name: The Gemini file resource name (e.g., 'files/xyz123').
+
+        Raises:
+            RateLimitError: If the API returns a 429 response.
+            TransientError: On 5xx server errors.
+            PermanentError: On 4xx client errors (except 429).
+        """
+        await self._safe_call(
+            self._client.aio.files.delete,
+            name=file_name,
+        )
+        logger.info("Deleted file %s from Gemini", file_name)
+
     # ------------------------------------------------------------------
     # Metadata helper
     # ------------------------------------------------------------------
@@ -344,10 +361,15 @@ class GeminiFileSearchClient:
 
     async def close(self) -> None:
         """Close the underlying genai client if it supports closing."""
-        if hasattr(self._client, "close"):
-            await self._client.close()
-        elif hasattr(self._client, "aclose"):
-            await self._client.aclose()
+        if hasattr(self._client, "close") and callable(self._client.close):
+            result = self._client.close()
+            # Only await if it returns a coroutine
+            if result is not None and hasattr(result, "__await__"):
+                await result
+        elif hasattr(self._client, "aclose") and callable(self._client.aclose):
+            result = self._client.aclose()
+            if result is not None and hasattr(result, "__await__"):
+                await result
 
     # ------------------------------------------------------------------
     # Internal: safe API call with circuit breaker integration

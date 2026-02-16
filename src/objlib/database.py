@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS files (
 
     -- State management
     status TEXT NOT NULL DEFAULT 'pending'
-        CHECK(status IN ('pending', 'uploading', 'uploaded', 'failed', 'LOCAL_DELETE')),
+        CHECK(status IN ('pending', 'uploading', 'uploaded', 'failed', 'skipped', 'LOCAL_DELETE')),
     error_message TEXT,
 
     -- API integration (null in Phase 1)
@@ -334,17 +334,19 @@ class Database:
     def get_pending_files(self, limit: int = 200) -> list[sqlite3.Row]:
         """Return files with status='pending' for upload processing.
 
+        Filters to .txt files only -- other file types are skipped.
+
         Args:
             limit: Maximum number of rows to return.
 
         Returns:
             List of sqlite3.Row with file_path, content_hash, filename,
-            file_size, and metadata_json columns.
+            file_size, and metadata_json columns (only .txt files).
         """
         return self.conn.execute(
             """SELECT file_path, content_hash, filename, file_size, metadata_json
                FROM files
-               WHERE status = ?
+               WHERE status = ? AND filename LIKE '%.txt'
                ORDER BY file_path
                LIMIT ?""",
             (FileStatus.PENDING.value, limit),

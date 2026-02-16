@@ -14,6 +14,7 @@ class FileStatus(str, Enum):
     UPLOADING = "uploading"
     UPLOADED = "uploaded"
     FAILED = "failed"
+    SKIPPED = "skipped"
     LOCAL_DELETE = "LOCAL_DELETE"
 
 
