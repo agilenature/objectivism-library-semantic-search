@@ -10,31 +10,31 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 Phase: 2 of 5 (Upload Pipeline)
-Plan: 3 of 3 in current phase
+Plan: 4 of 4 in current phase
 Status: Phase complete
-Last activity: 2026-02-16 -- Completed 02-03-PLAN.md (Keyring-Only API Key Support)
+Last activity: 2026-02-16 -- Completed 02-04 (Restrict Uploads to .txt Files)
 
-Progress: [######....] ~40% (6 plans of ~15 estimated total)
+Progress: [######....] ~47% (7 plans of ~15 estimated total)
 
 Phase 1 Progress: [##########] 3/3 plans -- COMPLETE
-Phase 2 Progress: [##########] 3/3 plans -- COMPLETE
+Phase 2 Progress: [##########] 4/4 plans -- COMPLETE
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
-- Average duration: 3.8 min
-- Total execution time: 23 min
+- Total plans completed: 7
+- Average duration: 3.9 min
+- Total execution time: 27 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation | 3/3 | 10 min | 3.3 min |
-| 02-upload-pipeline | 3/3 | 13 min | 4.3 min |
+| 02-upload-pipeline | 4/4 | 17 min | 4.3 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-03 (4 min), 02-01 (5 min), 02-02 (5 min), 02-03 (3 min)
+- Last 5 plans: 02-01 (5 min), 02-02 (5 min), 02-03 (3 min), 02-04 (4 min)
 - Trend: Stable at 3-5 min per plan
 
 *Updated after each plan completion*
@@ -72,6 +72,9 @@ Recent decisions affecting current work:
 - [02-03]: Keyring service name: objlib-gemini, key name: api_key
 - [02-03]: API keys read exclusively from system keyring, never env vars or CLI flags
 - [02-03]: load_upload_config() also migrated to keyring for consistency
+- [02-04]: Upload pipeline restricted to .txt files only via database query filter
+- [02-04]: Added 'skipped' status for non-.txt files (135 .epub/.pdf files marked)
+- [02-04]: File type filtering at database layer (get_pending_files) not orchestrator
 
 ### Pending Todos
 
