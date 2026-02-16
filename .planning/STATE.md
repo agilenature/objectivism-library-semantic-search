@@ -81,6 +81,7 @@ Recent decisions affecting current work:
 - [03-01]: Added --help to callback skip list to prevent API calls during help display
 - [03-01]: Fixed bug - removed invalid request_options parameter from GenerateContentConfig
 - [03-phase]: Added metadata command group (show, update, batch-update) for progressive metadata improvement
+- [03-phase]: Filter comparison operators use CAST(json_extract() AS INTEGER) for numeric fields (year, week, quality_score) to enable proper >= <= > < comparisons
 - [Phase 6]: Added AI-powered metadata enhancement to roadmap (LLM-based category inference)
 
 ### Pending Todos
