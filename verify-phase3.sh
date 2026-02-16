@@ -13,7 +13,7 @@ echo "1. SEMANTIC SEARCH QUALITY"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "Query: 'What is the nature of rights?'"
 echo ""
-python -m objlib search "What is the nature of rights?" --store objectivism-library-test --limit 3
+python -m objlib --store objectivism-library-test search "What is the nature of rights?" --limit 3
 echo ""
 read -p "Press Enter to continue..."
 echo ""
@@ -24,7 +24,7 @@ echo "2. METADATA FILTER ACCURACY"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "Query: 'selfishness' with category:book filter"
 echo ""
-python -m objlib search "selfishness" --store objectivism-library-test --filter "category:book" --limit 3
+python -m objlib --store objectivism-library-test search "selfishness" --filter "category:book" --limit 3
 echo ""
 read -p "Press Enter to continue..."
 echo ""
@@ -96,7 +96,7 @@ echo ""
 
 echo "View with --show-related flag (finding related documents):"
 echo ""
-python -m objlib view "Ayn  Rand - The Virtue of Selfishness-Signet (1964).txt" --show-related --store objectivism-library-test --limit 3
+python -m objlib --store objectivism-library-test view "Ayn  Rand - The Virtue of Selfishness-Signet (1964).txt" --show-related --limit 3
 echo ""
 
 # Summary
