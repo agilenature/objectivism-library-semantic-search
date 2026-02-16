@@ -34,9 +34,14 @@ COMPLEX_PATTERN = re.compile(
 MOTM_PATTERN = re.compile(
     r"^MOTM_(?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})_(?P<topic>.+?)\.txt$"
 )
-# Peikoff Podcast pattern: Episode 356 [1000332668759].txt
+# Peikoff Podcast patterns:
+# Pattern 1: Episode 356 [1000332668759].txt
+# Pattern 2: Episode 097 – 2/1/2010 [1000386969198].txt
 PODCAST_PATTERN = re.compile(
     r"^Episode (?P<episode>\d+) \[(?P<id>\d+)\]\.txt$"
+)
+PODCAST_PATTERN_WITH_DATE = re.compile(
+    r"^Episode (?P<episode>\d+) – (?P<date>[\d/]+) \[(?P<id>\d+)\]\.txt$"
 )
 # Folder detection for complex pattern: Year{N}/Q{N}/ subfolders
 YEAR_FOLDER = re.compile(r"^Year\s*(\d+)$")
@@ -212,6 +217,16 @@ class MetadataExtractor:
                 "month": match.group("month"),
                 "day": match.group("day"),
                 "topic": topic,
+            }
+
+        # Try Peikoff Podcast pattern with date: Episode N – M/D/YYYY [ID].txt
+        match = PODCAST_PATTERN_WITH_DATE.match(filename)
+        if match:
+            return {
+                "series": "Peikoff Podcast",
+                "episode_number": match.group("episode"),
+                "episode_date": match.group("date"),
+                "episode_id": match.group("id"),
             }
 
         # Try Peikoff Podcast pattern: Episode N [ID].txt
