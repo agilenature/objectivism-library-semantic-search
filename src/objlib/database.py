@@ -97,6 +97,45 @@ CREATE TABLE IF NOT EXISTS _skipped_files (
     file_size INTEGER,
     timestamp TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now'))
 );
+
+-- Upload operations tracking (Phase 2)
+CREATE TABLE IF NOT EXISTS upload_operations (
+    operation_name TEXT PRIMARY KEY,
+    file_path TEXT NOT NULL,
+    gemini_file_name TEXT,
+    operation_state TEXT NOT NULL DEFAULT 'pending'
+        CHECK(operation_state IN ('pending', 'in_progress', 'succeeded', 'failed', 'timeout')),
+    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')),
+    last_polled_at TEXT,
+    completed_at TEXT,
+    error_message TEXT,
+    retry_count INTEGER DEFAULT 0,
+    FOREIGN KEY (file_path) REFERENCES files(file_path)
+);
+
+CREATE INDEX IF NOT EXISTS idx_upload_ops_state ON upload_operations(operation_state);
+CREATE INDEX IF NOT EXISTS idx_upload_ops_file ON upload_operations(file_path);
+
+-- Logical batch tracking
+CREATE TABLE IF NOT EXISTS upload_batches (
+    batch_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    batch_number INTEGER NOT NULL,
+    file_count INTEGER NOT NULL,
+    succeeded_count INTEGER DEFAULT 0,
+    failed_count INTEGER DEFAULT 0,
+    status TEXT DEFAULT 'pending'
+        CHECK(status IN ('pending', 'in_progress', 'completed', 'failed')),
+    started_at TEXT,
+    completed_at TEXT
+);
+
+-- Single-writer lock (max one row enforced by CHECK)
+CREATE TABLE IF NOT EXISTS upload_locks (
+    lock_id INTEGER PRIMARY KEY CHECK(lock_id = 1),
+    instance_id TEXT NOT NULL,
+    acquired_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')),
+    last_heartbeat TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now'))
+);
 """
 
 UPSERT_SQL = """
@@ -155,7 +194,7 @@ class Database:
     def _setup_schema(self) -> None:
         """Create tables, indexes, and triggers if they don't exist."""
         self.conn.executescript(SCHEMA_SQL)
-        self.conn.execute("PRAGMA user_version = 1")
+        self.conn.execute("PRAGMA user_version = 2")
 
     def upsert_file(self, record: FileRecord) -> None:
         """Insert or update a single file record.
@@ -291,6 +330,48 @@ class Database:
                 "INSERT INTO _extraction_failures(file_path, unparsed_folder_name, unparsed_filename) VALUES (?, ?, ?)",
                 (file_path, folder_name, filename),
             )
+
+    def get_pending_files(self, limit: int = 200) -> list[sqlite3.Row]:
+        """Return files with status='pending' for upload processing.
+
+        Args:
+            limit: Maximum number of rows to return.
+
+        Returns:
+            List of sqlite3.Row with file_path, content_hash, filename,
+            file_size, and metadata_json columns.
+        """
+        return self.conn.execute(
+            """SELECT file_path, content_hash, filename, file_size, metadata_json
+               FROM files
+               WHERE status = ?
+               ORDER BY file_path
+               LIMIT ?""",
+            (FileStatus.PENDING.value, limit),
+        ).fetchall()
+
+    def update_file_status(self, file_path: str, status: FileStatus, **kwargs: object) -> None:
+        """Update a file's status and optional additional columns.
+
+        Args:
+            file_path: Primary key of the file to update.
+            status: New FileStatus value.
+            **kwargs: Additional column=value pairs to set (e.g.,
+                gemini_file_uri, gemini_file_id, upload_timestamp,
+                error_message).
+        """
+        set_parts = ["status = ?"]
+        params: list[object] = [status.value]
+
+        for col, val in kwargs.items():
+            set_parts.append(f"{col} = ?")
+            params.append(val)
+
+        params.append(file_path)
+        sql = f"UPDATE files SET {', '.join(set_parts)} WHERE file_path = ?"
+
+        with self.conn:
+            self.conn.execute(sql, params)
 
     def get_file_count(self) -> int:
         """Return total count of files (all statuses).

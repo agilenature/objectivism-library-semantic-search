@@ -2,6 +2,13 @@
 
 __version__ = "0.1.0"
 
-from objlib.models import FileRecord, FileStatus, MetadataQuality
+from objlib.models import FileRecord, FileStatus, MetadataQuality, OperationState, UploadConfig
 
-__all__ = ["FileRecord", "FileStatus", "MetadataQuality", "__version__"]
+__all__ = [
+    "FileRecord",
+    "FileStatus",
+    "MetadataQuality",
+    "OperationState",
+    "UploadConfig",
+    "__version__",
+]

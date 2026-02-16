@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
+
+from objlib.models import UploadConfig
 
 
 @dataclass
@@ -82,3 +85,42 @@ def load_metadata_mappings(mappings_path: Path) -> dict:
     """
     with open(mappings_path) as f:
         return json.load(f)
+
+
+def load_upload_config(config_path: Path | None = None) -> UploadConfig:
+    """Load upload pipeline configuration from JSON, falling back to defaults.
+
+    Reads from ``config/upload_config.json`` when *config_path* is ``None``.
+    If the file does not exist, returns an ``UploadConfig`` with defaults.
+    When ``api_key`` is not set in the config file, falls back to the
+    ``GEMINI_API_KEY`` environment variable.
+
+    Args:
+        config_path: Optional explicit path to upload_config.json.
+
+    Returns:
+        UploadConfig populated from file + env overrides.
+    """
+    if config_path is None:
+        config_path = Path("config/upload_config.json")
+
+    data: dict = {}
+    if config_path.exists():
+        with open(config_path) as f:
+            data = json.load(f)
+
+    # Build kwargs from JSON data, only including recognised fields
+    field_names = {f.name for f in UploadConfig.__dataclass_fields__.values()}
+    kwargs = {k: v for k, v in data.items() if k in field_names}
+
+    # Require store_name (fall back to a sensible default if missing)
+    if "store_name" not in kwargs:
+        kwargs["store_name"] = data.get("store_name", "objectivism-library-v1")
+
+    config = UploadConfig(**kwargs)
+
+    # Fall back to environment variable for API key
+    if config.api_key is None:
+        config.api_key = os.getenv("GEMINI_API_KEY")
+
+    return config
