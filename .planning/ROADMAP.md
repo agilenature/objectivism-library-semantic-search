@@ -2,7 +2,7 @@
 
 ## Overview
 
-This roadmap transforms a 1,749-file Objectivism Library into a semantic search system using Google Gemini's File Search API. The journey follows the natural three-phase pipeline (scan, upload, query) dictated by the architecture, extended with quality enhancements and incremental update capability. Each phase delivers a complete, independently verifiable capability: Phase 1 builds the foundation offline with zero API dependencies, Phase 2 gets files into Gemini reliably, Phase 3 delivers working search, Phase 4 sharpens result quality with reranking and synthesis, and Phase 5 makes the system maintainable long-term with incremental updates.
+This roadmap transforms a 1,749-file Objectivism Library into a semantic search system using Google Gemini's File Search API. The journey follows the natural three-phase pipeline (scan, upload, query) dictated by the architecture, extended with quality enhancements, incremental updates, and AI-powered metadata enrichment. Each phase delivers a complete, independently verifiable capability: Phase 1 builds the foundation offline with zero API dependencies, Phase 2 gets files into Gemini reliably, Phase 3 delivers working search, Phase 4 sharpens result quality with reranking and synthesis, Phase 5 makes the system maintainable long-term with incremental updates, and Phase 6 uses LLMs to automatically infer rich metadata from content.
 
 ## Phases
 
@@ -12,11 +12,12 @@ This roadmap transforms a 1,749-file Objectivism Library into a semantic search 
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation** - SQLite state tracking and library scanning with metadata extraction
-- [ ] **Phase 2: Upload Pipeline** - Reliable batch upload to Gemini File Search with rate limiting and resume
+- [x] **Phase 1: Foundation** - SQLite state tracking and library scanning with metadata extraction
+- [x] **Phase 2: Upload Pipeline** - Reliable batch upload to Gemini File Search with rate limiting and resume
 - [ ] **Phase 3: Search & CLI** - Semantic search, filtering, and CLI interface for querying the indexed library
 - [ ] **Phase 4: Quality Enhancements** - Reranking, synthesis, query expansion, and difficulty-aware ordering
 - [ ] **Phase 5: Incremental Updates** - Change detection, selective re-upload, and orphan cleanup
+- [ ] **Phase 6: AI-Powered Metadata** - LLM-based category inference, difficulty detection, and topic extraction
 
 ## Phase Details
 
@@ -97,15 +98,32 @@ Plans:
   3. After deleting files from the library, running `sync` detects the removals and cleans up the corresponding Gemini store entries -- orphaned index entries do not pollute search results
   4. Running `sync --force` re-processes all files regardless of change detection, providing a manual override for cases where the user wants a full re-index
 
+### Phase 6: AI-Powered Metadata Enhancement
+**Goal**: User can automatically infer and enhance metadata (categories, difficulty, topics) using LLM analysis of file content -- transforming generic "unknown" categories into rich, searchable metadata without manual effort
+**Depends on**: Phase 1 (database schema), Phase 3 (metadata commands)
+**Requirements**: META-01, META-02, META-03, META-04, META-05
+**Success Criteria** (what must be TRUE):
+  1. Running `metadata infer-categories` analyzes file content with a cost-effective LLM (Gemini Flash, Mixtral, or Haiku) and assigns appropriate categories (course, book, qa_session, philosophy_comparison, cultural_commentary, etc.) -- files with category="unknown" get meaningful classifications
+  2. Running `metadata infer-difficulty` analyzes philosophical content complexity and assigns difficulty levels (introductory, intermediate, advanced) based on vocabulary, concept density, and prerequisite knowledge -- enabling difficulty-based search filtering
+  3. The inference process provides a review/approval workflow showing proposed changes before applying them, with batch accept/reject options -- user maintains control over automated categorization
+  4. Running `metadata infer --batch --auto-approve` processes the entire library unattended, with a summary report showing categorization statistics and low-confidence items flagged for manual review
+  5. All inferred metadata is saved to SQLite and can optionally trigger re-upload to Gemini with `--set-pending` flag -- metadata improvements flow through to search results
+**Plans**: TBD
+
+Plans:
+- [ ] 06-01: TBD
+- [ ] 06-02: TBD
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|---------------|--------|-----------|
 | 1. Foundation | 3/3 | Complete | 2026-02-15 |
-| 2. Upload Pipeline | 0/3 | Planning complete | - |
-| 3. Search & CLI | 0/TBD | Not started | - |
+| 2. Upload Pipeline | 4/4 | Complete | 2026-02-16 |
+| 3. Search & CLI | 3/3 | Verification in progress | - |
 | 4. Quality Enhancements | 0/TBD | Not started | - |
 | 5. Incremental Updates | 0/TBD | Not started | - |
+| 6. AI-Powered Metadata | 0/TBD | Not started | - |
