@@ -5,27 +5,27 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** Three equally critical pillars -- semantic search quality, metadata preservation, incremental updates
-**Current focus:** Phase 3: Search & CLI -- In Progress
+**Current focus:** Phase 3: Search & CLI -- COMPLETE
 
 ## Current Position
 
 Phase: 3 of 5 (Search & CLI)
-Plan: 2 of 4 in current phase
-Status: In progress
-Last activity: 2026-02-16 -- Completed 03-02 (Rich Display Layer)
+Plan: 3 of 3 in current phase
+Status: Phase complete
+Last activity: 2026-02-16 -- Completed 03-03 (Browse & Filter)
 
-Progress: [########░░] ~60% (9 plans of ~15 estimated total)
+Progress: [########░░] ~67% (10 plans of ~15 estimated total)
 
 Phase 1 Progress: [##########] 3/3 plans -- COMPLETE
 Phase 2 Progress: [##########] 4/4 plans -- COMPLETE
-Phase 3 Progress: [#####.....] 2/4 plans
+Phase 3 Progress: [##########] 3/3 plans -- COMPLETE
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 9
+- Total plans completed: 10
 - Average duration: 4.0 min
-- Total execution time: 36 min
+- Total execution time: 40 min
 
 **By Phase:**
 
@@ -33,11 +33,11 @@ Phase 3 Progress: [#####.....] 2/4 plans
 |-------|-------|-------|----------|
 | 01-foundation | 3/3 | 10 min | 3.3 min |
 | 02-upload-pipeline | 4/4 | 17 min | 4.3 min |
-| 03-search-and-cli | 2/4 | 9 min | 4.5 min |
+| 03-search-and-cli | 3/3 | 13 min | 4.3 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-03 (3 min), 02-04 (4 min), 03-01 (5 min), 03-02 (4 min)
-- Trend: Stable at 3-5 min per plan
+- Last 5 plans: 02-04 (4 min), 03-01 (5 min), 03-02 (4 min), 03-03 (4 min)
+- Trend: Stable at 4-5 min per plan
 
 *Updated after each plan completion*
 
@@ -85,6 +85,8 @@ Recent decisions affecting current work:
 - [03-02]: view command in _SKIP_INIT_COMMANDS -- Gemini init only when --show-related used
 - [03-02]: Console injection pattern for testable Rich output (all display functions accept optional Console)
 - [03-02]: Tier 1 appends citation references after response text (inline insertion requires segment offsets not always available)
+- [03-03]: Switched from denylist (_SKIP_INIT_COMMANDS) to allowlist (_GEMINI_COMMANDS = {"search"}) for callback init
+- [03-03]: Numeric coercion for SQLite json_extract comparison -- JSON integers vs CLI string values
 
 ### Pending Todos
 
@@ -97,5 +99,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Phase 3, Plan 2 COMPLETE. Ready for Plan 03 (browse/filter commands).
-Resume file: .planning/phases/03-search-and-cli/03-02-SUMMARY.md
+Stopped at: Phase 3 COMPLETE. All 3 plans executed. Ready for Phase 4 planning.
+Resume file: .planning/phases/03-search-and-cli/03-03-SUMMARY.md
