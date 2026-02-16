@@ -5,26 +5,27 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** Three equally critical pillars -- semantic search quality, metadata preservation, incremental updates
-**Current focus:** Phase 2: Upload Pipeline -- COMPLETE
+**Current focus:** Phase 3: Search & CLI -- In Progress
 
 ## Current Position
 
-Phase: 2 of 5 (Upload Pipeline)
-Plan: 4 of 4 in current phase
-Status: Phase complete
-Last activity: 2026-02-16 -- Completed 02-04 (Restrict Uploads to .txt Files)
+Phase: 3 of 5 (Search & CLI)
+Plan: 1 of 4 in current phase
+Status: In progress
+Last activity: 2026-02-16 -- Completed 03-01 (Search Query Layer)
 
-Progress: [######....] ~47% (7 plans of ~15 estimated total)
+Progress: [########..] ~53% (8 plans of ~15 estimated total)
 
 Phase 1 Progress: [##########] 3/3 plans -- COMPLETE
 Phase 2 Progress: [##########] 4/4 plans -- COMPLETE
+Phase 3 Progress: [###.......] 1/4 plans
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7
-- Average duration: 3.9 min
-- Total execution time: 27 min
+- Total plans completed: 8
+- Average duration: 4.0 min
+- Total execution time: 32 min
 
 **By Phase:**
 
@@ -32,9 +33,10 @@ Phase 2 Progress: [##########] 4/4 plans -- COMPLETE
 |-------|-------|-------|----------|
 | 01-foundation | 3/3 | 10 min | 3.3 min |
 | 02-upload-pipeline | 4/4 | 17 min | 4.3 min |
+| 03-search-and-cli | 1/4 | 5 min | 5.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-01 (5 min), 02-02 (5 min), 02-03 (3 min), 02-04 (4 min)
+- Last 5 plans: 02-02 (5 min), 02-03 (3 min), 02-04 (4 min), 03-01 (5 min)
 - Trend: Stable at 3-5 min per plan
 
 *Updated after each plan completion*
@@ -75,6 +77,11 @@ Recent decisions affecting current work:
 - [02-04]: Upload pipeline restricted to .txt files only via database query filter
 - [02-04]: Added 'skipped' status for non-.txt files (135 .epub/.pdf files marked)
 - [02-04]: File type filtering at database layer (get_pending_files) not orchestrator
+- [03-01]: AppState callback skips init for scan/status/purge/upload/config and --help requests
+- [03-01]: get_api_key() adds GEMINI_API_KEY env var fallback (per locked decision #6) alongside keyring
+- [03-01]: GeminiSearchClient uses synchronous client.models.generate_content() (not aio)
+- [03-01]: Citation confidence aggregated by averaging GroundingSupport scores per chunk
+- [03-01]: Renamed CLI get_api_key function to show_api_key to avoid collision with config.get_api_key()
 
 ### Pending Todos
 
@@ -87,5 +94,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Phase 2 COMPLETE. Ready for Phase 3 planning.
-Resume file: N/A -- begin Phase 3 planning
+Stopped at: Phase 3, Plan 1 COMPLETE. Ready for Plan 02 (display formatting).
+Resume file: .planning/phases/03-search-and-cli/03-01-SUMMARY.md
