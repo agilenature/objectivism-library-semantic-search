@@ -82,7 +82,9 @@ Recent decisions affecting current work:
 - [03-01]: Fixed bug - removed invalid request_options parameter from GenerateContentConfig
 - [03-phase]: Added metadata command group (show, update, batch-update) for progressive metadata improvement
 - [03-phase]: Filter comparison operators use CAST(json_extract() AS INTEGER) for numeric fields (year, week, quality_score) to enable proper >= <= > < comparisons
+- [03-phase]: Fixed Gemini citation display - added two-pass lookup (filename → Gemini ID fallback) to show actual filenames instead of file IDs
 - [Phase 6]: Added AI-powered metadata enhancement to roadmap (LLM-based category inference)
+- [Phase 7]: Added Interactive TUI to roadmap (Textual-based terminal UI with live search, visual browsing, split-pane views)
 
 ### Pending Todos
 
