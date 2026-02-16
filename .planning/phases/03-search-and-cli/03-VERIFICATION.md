@@ -288,10 +288,11 @@ _Verifier: Claude (gsd-verifier)_
 
 ### Items Deferred to Phase 4
 - Confidence score display (0% issue - Gemini API response structure)
-- Metadata enrichment (filename mapping needs investigation)
 
 ### Issues Found & Fixed
 - Bug: Invalid `request_options` parameter in GeminiSearchClient (fixed in commit 444174f)
+- Bug: Numeric comparison operators failed without CAST (fixed in commit 5d24a69)
+- Bug: Gemini IDs showing instead of filenames (fixed in commit 1fa4562)
 
 ### Conclusion
 Phase 3 goal achieved: User can search by meaning, filter by metadata, browse by structure, and see results with source citations from a polished CLI interface. Core functionality verified with real data. Minor display issues do not block phase completion.
@@ -408,6 +409,9 @@ Tested --full and --show-related together:
 - All comparison operators now verified working on year field (537 files tested)
 - Verified view command with all three modes: basic metadata display, --full document text, --show-related semantic similarity
 - Confirmed --full and --show-related work correctly both individually and combined
+- Fixed display issue: Gemini IDs replaced with actual filenames (commit 1fa4562)
+  - Citations now show "Ayn Rand - Atlas Shrugged (1971).txt" instead of "e0x3xq9wtglq"
+  - Added two-pass lookup: filename first, then Gemini file ID fallback
 
 ---
 
