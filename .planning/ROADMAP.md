@@ -113,11 +113,14 @@ Plans:
   3. The inference process provides a review/approval workflow showing proposed changes before applying them, with batch accept/reject options -- user maintains control over automated categorization
   4. Running `metadata infer --batch --auto-approve` processes the entire library unattended, with a summary report showing categorization statistics and low-confidence items flagged for manual review
   5. All inferred metadata is saved to SQLite and can optionally trigger re-upload to Gemini with `--set-pending` flag -- metadata improvements flow through to search results
-**Plans**: TBD
+**Plans:** 5 plans
 
 Plans:
-- [ ] 06-01: TBD
-- [ ] 06-02: TBD
+- [ ] 06-01-PLAN.md — Foundation: schema migration v3, Pydantic 4-tier models, Mistral client, response parser, API key management
+- [ ] 06-02-PLAN.md — Wave 1 infrastructure: prompt strategies, test file sampler, competitive orchestrator, checkpoint/resume
+- [ ] 06-03-PLAN.md — Wave 1 execution: CLI commands (extract-wave1, wave1-report, wave1-select), quality gates, human review checkpoint
+- [ ] 06-04-PLAN.md — Wave 2 production pipeline: validation engine, confidence scoring, adaptive chunking, production orchestrator
+- [ ] 06-05-PLAN.md — Wave 2 CLI & review: production extract/review/approve/stats commands, Rich 4-tier panels, human review checkpoint
 
 ### Phase 7: Interactive TUI
 **Goal**: User can interact with the library through a modern terminal UI with keyboard/mouse navigation, live search, visual browsing, split-pane views, and session management -- transforming the CLI into an immersive research environment
