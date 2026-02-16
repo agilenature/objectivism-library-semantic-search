@@ -23,6 +23,7 @@ from typing import Any
 from objlib.models import UploadConfig
 from objlib.upload.circuit_breaker import CircuitState, RollingWindowCircuitBreaker
 from objlib.upload.client import GeminiFileSearchClient, RateLimitError
+from objlib.upload.recovery import RecoveryManager
 from objlib.upload.state import AsyncUploadStateManager
 
 logger = logging.getLogger(__name__)
@@ -119,6 +120,16 @@ class UploadOrchestrator:
             Summary dict with total, succeeded, failed, skipped counts.
         """
         self.setup_signal_handlers()
+
+        # Step 0: Run crash recovery
+        recovery = RecoveryManager(self._client, self._state, self._config)
+        recovery_result = await recovery.run()
+        if recovery_result.recovered_operations > 0 or recovery_result.reset_to_pending > 0:
+            logger.info(
+                "Recovery: %d ops recovered, %d files reset to pending",
+                recovery_result.recovered_operations,
+                recovery_result.reset_to_pending,
+            )
 
         # Step 1: Ensure store exists
         logger.info("Ensuring store '%s' exists...", store_display_name)

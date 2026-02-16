@@ -10,6 +10,8 @@ Public API
 .. autoclass:: AsyncUploadStateManager
 .. autoclass:: UploadOrchestrator
 .. autoclass:: UploadProgressTracker
+.. autoclass:: RecoveryManager
+.. autoclass:: RecoveryResult
 """
 
 from objlib.upload.circuit_breaker import CircuitState, RollingWindowCircuitBreaker
@@ -22,6 +24,7 @@ from objlib.upload.client import (
 from objlib.upload.orchestrator import UploadOrchestrator
 from objlib.upload.progress import UploadProgressTracker
 from objlib.upload.rate_limiter import AdaptiveRateLimiter, RateLimiterConfig
+from objlib.upload.recovery import RecoveryManager, RecoveryResult, RecoveryTimeoutError
 from objlib.upload.state import AsyncUploadStateManager
 
 __all__ = [
@@ -32,6 +35,9 @@ __all__ = [
     "PermanentError",
     "RateLimitError",
     "RateLimiterConfig",
+    "RecoveryManager",
+    "RecoveryResult",
+    "RecoveryTimeoutError",
     "RollingWindowCircuitBreaker",
     "TransientError",
     "UploadOrchestrator",
