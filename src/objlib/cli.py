@@ -1,9 +1,10 @@
-"""CLI entry point for the Objectivism Library scanner.
+"""CLI entry point for the Objectivism Library tools.
 
-Provides three commands:
+Provides four commands:
   - scan: Discover files, extract metadata, persist to SQLite
   - status: Display database statistics (counts by status and quality)
   - purge: Remove old LOCAL_DELETE records from the database
+  - upload: Upload pending files to Gemini File Search store
 """
 
 from __future__ import annotations
@@ -289,3 +290,189 @@ def purge(
             )
 
         console.print(f"[green]Purged {count} record(s).[/green]")
+
+
+@app.command()
+def upload(
+    store_name: Annotated[
+        str,
+        typer.Option("--store", "-s", help="Gemini File Search store display name"),
+    ] = "objectivism-library-v1",
+    db_path: Annotated[
+        Path,
+        typer.Option("--db", "-d", help="Path to SQLite database file"),
+    ] = Path("data/library.db"),
+    batch_size: Annotated[
+        int,
+        typer.Option("--batch-size", "-b", help="Files per logical batch (100-200)"),
+    ] = 150,
+    max_concurrent: Annotated[
+        int,
+        typer.Option("--concurrency", "-n", help="Max concurrent uploads (3-10)"),
+    ] = 7,
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run", help="Show what would be uploaded without uploading"),
+    ] = False,
+    api_key: Annotated[
+        str | None,
+        typer.Option(
+            "--api-key",
+            help="Gemini API key (default: GEMINI_API_KEY env var)",
+            envvar="GEMINI_API_KEY",
+        ),
+    ] = None,
+) -> None:
+    """Upload pending files to Gemini File Search store with progress tracking."""
+    import os
+
+    # Validate database exists
+    if not db_path.exists():
+        console.print(
+            f"[red]Error:[/red] Database not found: {db_path}\n"
+            "Run [bold]objlib scan --library /path/to/library[/bold] first."
+        )
+        raise typer.Exit(code=1)
+
+    # Dry-run mode: show pending files without uploading
+    if dry_run:
+        with Database(db_path) as db:
+            pending = db.get_pending_files(limit=10000)
+            count = len(pending)
+
+            if count == 0:
+                console.print("[green]No pending files to upload.[/green]")
+                return
+
+            console.print(
+                Panel(
+                    f"[bold]{count}[/bold] files pending upload to "
+                    f"[bold]{store_name}[/bold]",
+                    title="Dry Run",
+                )
+            )
+
+            # Show first 20 files in a table
+            preview_table = Table(title=f"Pending Files (showing first {min(20, count)})")
+            preview_table.add_column("File Path", style="cyan", no_wrap=True)
+            preview_table.add_column("Size", justify="right")
+            preview_table.add_column("Quality", style="green")
+
+            for row in pending[:20]:
+                size_kb = row["file_size"] / 1024
+                size_str = f"{size_kb:.1f} KB" if size_kb < 1024 else f"{size_kb / 1024:.1f} MB"
+                # Extract quality from metadata if available
+                quality = "unknown"
+                try:
+                    cursor = db.conn.execute(
+                        "SELECT metadata_quality FROM files WHERE file_path = ?",
+                        (row["file_path"],),
+                    )
+                    qrow = cursor.fetchone()
+                    if qrow:
+                        quality = qrow["metadata_quality"]
+                except Exception:
+                    pass
+                preview_table.add_row(row["file_path"], size_str, quality)
+
+            if count > 20:
+                preview_table.add_row(
+                    f"... and {count - 20} more", "", ""
+                )
+
+            console.print(preview_table)
+
+            console.print(
+                f"\nRun [bold]objlib upload --store {store_name} --db {db_path}[/bold] "
+                "to start uploading."
+            )
+        return
+
+    # Validate API key
+    resolved_api_key = api_key or os.environ.get("GEMINI_API_KEY")
+    if not resolved_api_key:
+        console.print(
+            "[red]Error:[/red] Gemini API key not provided.\n"
+            "Set the [bold]GEMINI_API_KEY[/bold] environment variable or "
+            "pass [bold]--api-key[/bold]."
+        )
+        raise typer.Exit(code=1)
+
+    # Import upload modules here to keep CLI startup fast for scan/status
+    import asyncio
+
+    from objlib.models import UploadConfig
+    from objlib.upload.circuit_breaker import RollingWindowCircuitBreaker
+    from objlib.upload.client import GeminiFileSearchClient
+    from objlib.upload.orchestrator import UploadOrchestrator
+    from objlib.upload.progress import UploadProgressTracker
+    from objlib.upload.rate_limiter import AdaptiveRateLimiter, RateLimiterConfig
+    from objlib.upload.state import AsyncUploadStateManager
+
+    # Build configuration
+    config = UploadConfig(
+        store_name=store_name,
+        api_key=resolved_api_key,
+        max_concurrent_uploads=max_concurrent,
+        batch_size=batch_size,
+        db_path=str(db_path),
+    )
+
+    # Get pending file count for progress tracker
+    with Database(db_path) as db:
+        pending_count = len(db.get_pending_files(limit=10000))
+
+    if pending_count == 0:
+        console.print("[green]No pending files to upload.[/green]")
+        return
+
+    total_batches = (pending_count + batch_size - 1) // batch_size
+
+    console.print(
+        Panel(
+            f"Uploading [bold]{pending_count}[/bold] files to "
+            f"[bold]{store_name}[/bold]\n"
+            f"Batches: {total_batches} x {batch_size} | "
+            f"Concurrency: {max_concurrent}",
+            title="Upload Pipeline",
+        )
+    )
+
+    # Create components
+    circuit_breaker = RollingWindowCircuitBreaker()
+    rate_limiter_config = RateLimiterConfig(tier=config.rate_limit_tier)
+    rate_limiter = AdaptiveRateLimiter(rate_limiter_config, circuit_breaker)
+    client = GeminiFileSearchClient(
+        api_key=resolved_api_key,
+        circuit_breaker=circuit_breaker,
+        rate_limiter=rate_limiter,
+    )
+    progress = UploadProgressTracker(
+        total_files=pending_count, total_batches=total_batches
+    )
+
+    async def _run_upload() -> dict[str, int]:
+        async with AsyncUploadStateManager(str(db_path)) as state:
+            orchestrator = UploadOrchestrator(
+                client=client,
+                state=state,
+                circuit_breaker=circuit_breaker,
+                config=config,
+                progress=progress,
+            )
+            return await orchestrator.run(store_name)
+
+    result = asyncio.run(_run_upload())
+
+    # Print final summary
+    summary_table = Table(title="Upload Summary")
+    summary_table.add_column("Metric", style="bold")
+    summary_table.add_column("Count", justify="right")
+
+    summary_table.add_row("Total files", str(result["total"]))
+    summary_table.add_row("Succeeded", f"[green]{result['succeeded']}[/green]")
+    summary_table.add_row("Failed", f"[red]{result['failed']}[/red]")
+    summary_table.add_row("Skipped", f"[yellow]{result['skipped']}[/yellow]")
+    summary_table.add_row("Pending", str(result["pending"]))
+
+    console.print(Panel(summary_table, title="Upload Complete"))
