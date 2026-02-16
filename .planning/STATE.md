@@ -10,32 +10,32 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 Phase: 2 of 5 (Upload Pipeline)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-16 -- Completed 02-01-PLAN.md (Upload Foundation Layer)
+Last activity: 2026-02-16 -- Completed 02-02-PLAN.md (Upload Orchestrator)
 
-Progress: [####......] ~27% (4 plans of ~15 estimated total)
+Progress: [#####.....] ~33% (5 plans of ~15 estimated total)
 
 Phase 1 Progress: [##########] 3/3 plans -- COMPLETE
-Phase 2 Progress: [###.......] 1/3 plans
+Phase 2 Progress: [######....] 2/3 plans
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 3.8 min
-- Total execution time: 15 min
+- Total plans completed: 5
+- Average duration: 4.0 min
+- Total execution time: 20 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation | 3/3 | 10 min | 3.3 min |
-| 02-upload-pipeline | 1/3 | 5 min | 5.0 min |
+| 02-upload-pipeline | 2/3 | 10 min | 5.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (3 min), 01-02 (3 min), 01-03 (4 min), 02-01 (5 min)
-- Trend: Slight increase (new dependencies and more complex modules)
+- Last 5 plans: 01-02 (3 min), 01-03 (4 min), 02-01 (5 min), 02-02 (5 min)
+- Trend: Stable at 5 min for Phase 2 (more complex async modules)
 
 *Updated after each plan completion*
 
@@ -64,6 +64,11 @@ Recent decisions affecting current work:
 - [02-01]: Rate limiter defaults to Tier 1 (20 RPM, 3s interval) with 3x delay multiplier when OPEN
 - [02-01]: MetadataQuality to numeric mapping: complete=100, partial=75, minimal=50, none=25, unknown=0
 - [02-01]: Schema v2 backward compatible via CREATE TABLE IF NOT EXISTS
+- [02-02]: State writes commit immediately -- no transactions held across await boundaries (aiosqlite pitfall)
+- [02-02]: Upload intent recorded BEFORE API call, result AFTER -- crash recovery anchor
+- [02-02]: Semaphore wraps only API call section, not DB writes
+- [02-02]: Heavy upload imports deferred to upload() command function for fast CLI startup
+- [02-02]: Circuit breaker OPEN skips files rather than blocking pipeline
 
 ### Pending Todos
 
@@ -71,11 +76,11 @@ None.
 
 ### Blockers/Concerns
 
-- Phase 2 requires GEMINI_API_KEY environment variable for Plans 02 and 03 (user setup)
+- Phase 2 requires GEMINI_API_KEY environment variable for Plan 03 (user setup)
 - Phase 4 research flag: Cross-encoder model selection for philosophy domain, citation prompt engineering, Objectivist terminology mapping need research during planning
 
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Phase 2, Plan 1 COMPLETE. Ready for Plan 02-02 (Upload Orchestrator).
-Resume file: .planning/phases/02-upload-pipeline/02-02-PLAN.md
+Stopped at: Phase 2, Plan 2 COMPLETE. Ready for Plan 02-03 (Resume/Recovery and E2E Testing).
+Resume file: .planning/phases/02-upload-pipeline/02-03-PLAN.md
