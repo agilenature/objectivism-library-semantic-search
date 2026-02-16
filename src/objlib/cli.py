@@ -6,6 +6,9 @@ Provides commands:
   - purge: Remove old LOCAL_DELETE records from the database
   - upload: Upload pending files to Gemini File Search store
   - search: Semantic search across the library via Gemini File Search
+  - view: View detailed info about a document by filename
+  - browse: Hierarchical exploration of library structure
+  - filter: Metadata-only file queries against SQLite
   - config: Manage configuration (API keys, settings)
 """
 
@@ -35,8 +38,10 @@ app = typer.Typer(
 )
 console = Console()
 
-# Commands that do NOT need Gemini client initialization
-_SKIP_INIT_COMMANDS = {None, "scan", "status", "purge", "upload", "config"}
+# Commands that NEED Gemini client initialization via callback
+# All other commands (scan, status, purge, upload, config, view, browse, filter)
+# either don't need Gemini or handle their own initialization.
+_GEMINI_COMMANDS = {"search"}
 
 
 @app.callback(invoke_without_command=True)
@@ -51,8 +56,8 @@ def app_callback(
         typer.Option("--db", "-d", help="Path to SQLite database"),
     ] = Path("data/library.db"),
 ) -> None:
-    """Initialize shared state for search/browse/filter commands."""
-    if ctx.invoked_subcommand in _SKIP_INIT_COMMANDS:
+    """Initialize shared state for search commands."""
+    if ctx.invoked_subcommand not in _GEMINI_COMMANDS:
         # Skip AppState init for commands that don't need Gemini
         return
 
@@ -606,35 +611,173 @@ def search(
     with Database(state.db_path) as db:
         enrich_citations(citations, db)
 
-    # Basic display (Plan 02 adds rich formatting)
+    # Three-tier Rich display
+    from objlib.search.formatter import display_search_results
+
     response_text = response.text or "(No response text)"
-    console.print()
-    console.print(Panel(response_text, title="Results", border_style="cyan"))
+    display_search_results(response_text, citations, state.terminal_width, limit=limit)
 
-    if not citations:
-        console.print("[dim]No sources cited.[/dim]")
-        return
 
-    # Basic citation list (Plan 02 replaces with three-tier display)
-    console.print()
-    for cite in citations[:limit]:
-        meta = cite.metadata or {}
-        course = meta.get("course", "")
-        year = meta.get("year", "")
-        score_pct = int(cite.confidence * 100)
+@app.command()
+def view(
+    ctx: typer.Context,
+    filename: Annotated[
+        str,
+        typer.Argument(help="Filename to view (e.g., 'Introduction to Objectivism.txt')"),
+    ],
+    full: Annotated[
+        bool, typer.Option("--full", help="Show full document text")
+    ] = False,
+    show_related: Annotated[
+        bool,
+        typer.Option("--show-related", help="Show related documents via semantic similarity"),
+    ] = False,
+    limit: Annotated[
+        int, typer.Option("--limit", "-l", help="Max related results")
+    ] = 5,
+    model: Annotated[
+        str, typer.Option("--model", "-m", help="Gemini model")
+    ] = "gemini-2.5-flash",
+    db_path: Annotated[
+        Path,
+        typer.Option("--db", "-d", help="Path to SQLite database"),
+    ] = Path("data/library.db"),
+    store: Annotated[
+        str,
+        typer.Option("--store", "-s", help="Gemini File Search store display name"),
+    ] = "objectivism-library-v1",
+) -> None:
+    """View detailed information about a document by filename.
+
+    Copy the filename from search results and pass it here. No session state needed.
+    """
+    import shutil
+
+    from objlib.models import Citation
+    from objlib.search.formatter import (
+        display_detailed_view,
+        display_full_document,
+        display_search_results,
+    )
+
+    terminal_width = shutil.get_terminal_size().columns
+
+    if not db_path.exists():
         console.print(
-            f"[yellow][{cite.index}][/yellow] [bold]{cite.title}[/bold]  "
-            f"[green]{score_pct}%[/green]"
-            + (f"  | {course}" if course else "")
-            + (f", {year}" if year else "")
+            f"[red]Error:[/red] Database not found: {db_path}\n"
+            "Run [bold]objlib scan --library /path/to/library[/bold] first."
         )
-        if cite.text:
-            excerpt = (
-                cite.text[:150].rsplit(" ", 1)[0] + "..."
-                if len(cite.text) > 150
-                else cite.text
+        raise typer.Exit(code=1)
+
+    # Look up file by filename in SQLite
+    with Database(db_path) as db:
+        lookup = db.get_file_metadata_by_filenames([filename])
+
+    if not lookup or filename not in lookup:
+        console.print(
+            f"[red]Error:[/red] File not found: [bold]{filename}[/bold]\n"
+            "Check the filename spelling. Use [bold]objlib search[/bold] to find files."
+        )
+        raise typer.Exit(code=1)
+
+    match = lookup[filename]
+    file_path = match["file_path"]
+    metadata = match["metadata"] or {}
+
+    # Build a Citation object for the formatter
+    citation = Citation(
+        index=1,
+        title=filename,
+        uri=None,
+        text="",  # No passage text for direct view
+        document_name=None,
+        confidence=metadata.get("quality_score", 0) / 100.0 if metadata.get("quality_score") else 0.0,
+        file_path=file_path,
+        metadata=metadata,
+    )
+
+    # Show detailed view
+    display_detailed_view(citation, terminal_width)
+
+    # --full: read and display the actual file content
+    if full:
+        source_path = Path(file_path)
+        if source_path.exists():
+            try:
+                content = source_path.read_text(encoding="utf-8")
+                display_full_document(filename, content, terminal_width)
+            except Exception as e:
+                console.print(f"[red]Error reading file:[/red] {e}")
+        else:
+            console.print(
+                f"[yellow]Warning:[/yellow] Source file not found on disk: {file_path}\n"
+                "[dim]The file may have been moved or deleted.[/dim]"
             )
-            console.print(f"    [dim]{excerpt}[/dim]")
+
+    # --show-related: query Gemini for similar documents
+    if show_related:
+        from objlib.config import get_api_key
+        from objlib.search.citations import enrich_citations, extract_citations
+        from objlib.search.client import GeminiSearchClient
+
+        try:
+            api_key = get_api_key()
+        except RuntimeError as e:
+            console.print(f"[red]{e}[/red]")
+            raise typer.Exit(code=1)
+
+        from google import genai
+
+        client = genai.Client(api_key=api_key)
+
+        try:
+            resource_name = GeminiSearchClient.resolve_store_name(client, store)
+        except Exception as e:
+            console.print(f"[red]Failed to resolve store '{store}':[/red] {e}")
+            raise typer.Exit(code=1)
+
+        search_client = GeminiSearchClient(client, resource_name)
+
+        # Read a brief excerpt from the file for the similarity query
+        excerpt = ""
+        source_path = Path(file_path)
+        if source_path.exists():
+            try:
+                content = source_path.read_text(encoding="utf-8")
+                excerpt = content[:500]
+            except Exception:
+                pass
+
+        if not excerpt:
+            excerpt = filename  # Fallback to filename as query
+
+        console.print("\n[dim]Finding related documents...[/dim]")
+
+        try:
+            response = search_client.query_with_retry(
+                f"Find documents related to this content: {excerpt}",
+                model=model,
+            )
+        except Exception as e:
+            console.print(f"[red]Related document search failed:[/red] {e}")
+            raise typer.Exit(code=1)
+
+        # Extract and enrich citations
+        grounding = None
+        if response.candidates:
+            grounding = response.candidates[0].grounding_metadata
+
+        related_citations = extract_citations(grounding)
+
+        with Database(db_path) as db:
+            enrich_citations(related_citations, db)
+
+        response_text = response.text or "(Related documents)"
+        console.print()
+        console.print(Panel("[bold]Related Documents[/bold]", border_style="magenta"))
+        display_search_results(
+            response_text, related_citations, terminal_width, limit=limit
+        )
 
 
 @config_app.command("set-api-key")
