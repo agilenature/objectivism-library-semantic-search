@@ -1673,3 +1673,335 @@ def wave1_select(
         "\n[bold]Next step:[/bold] Run [cyan]objlib metadata extract[/cyan] "
         "to process remaining files with the selected strategy."
     )
+
+
+@metadata_app.command("extract")
+def extract_production(
+    resume: Annotated[
+        bool,
+        typer.Option("--resume", help="Resume from checkpoint after credit exhaustion"),
+    ] = False,
+    db_path: Annotated[
+        Path,
+        typer.Option("--db", "-d", help="Path to SQLite database"),
+    ] = Path("data/library.db"),
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run", help="Show file count and cost estimate without processing"),
+    ] = False,
+    set_pending: Annotated[
+        bool,
+        typer.Option("--set-pending", help="Set upload status to pending for re-upload with enriched metadata"),
+    ] = False,
+) -> None:
+    """Run Wave 2 production extraction on remaining unknown files.
+
+    Processes ~453 files with the winning strategy selected via 'wave1-select'.
+    Uses validated prompt template, two-level validation, multi-dimensional
+    confidence scoring, and versioned metadata persistence.
+
+    Use --dry-run to preview file count and estimated cost.
+    Use --resume to continue after credit exhaustion.
+    Use --set-pending to mark extracted files for re-upload with enriched metadata.
+    """
+    import asyncio
+    import json as json_mod
+    import time as time_mod
+
+    from objlib.config import get_mistral_api_key
+    from objlib.extraction.checkpoint import CheckpointManager
+    from objlib.extraction.client import MistralClient
+    from objlib.extraction.orchestrator import ExtractionConfig, ExtractionOrchestrator
+
+    # Load Mistral API key
+    try:
+        api_key = get_mistral_api_key()
+    except RuntimeError as e:
+        console.print(f"[red]{e}[/red]")
+        raise typer.Exit(code=1)
+
+    if not db_path.exists():
+        console.print(f"[red]Error:[/red] Database not found: {db_path}")
+        raise typer.Exit(code=1)
+
+    # Load winning strategy
+    selection_path = Path("data/wave1_selection.json")
+    if not selection_path.exists():
+        console.print(
+            "[red]Error:[/red] No strategy selected.\n"
+            "Run [bold]objlib metadata extract-wave1[/bold] and "
+            "[bold]objlib metadata wave1-select[/bold] first."
+        )
+        raise typer.Exit(code=1)
+
+    selection = json_mod.loads(selection_path.read_text())
+    strategy_name = selection["strategy"]
+
+    with Database(db_path) as db:
+        # Get pending extraction files
+        checkpoint = CheckpointManager()
+        config = ExtractionConfig()
+        client = MistralClient(api_key=api_key)
+        orchestrator = ExtractionOrchestrator(
+            client=client, db=db, checkpoint=checkpoint, config=config
+        )
+
+        pending_files = orchestrator._get_pending_extraction_files()
+        count = len(pending_files)
+
+        if count == 0:
+            console.print("[green]No pending files for extraction.[/green]")
+            return
+
+        # Dry-run mode
+        if dry_run:
+            estimated_cost = count * 0.02
+            estimated_time = count * 3  # ~3 seconds per file average
+            console.print(
+                Panel(
+                    f"[bold]{count}[/bold] files pending extraction\n"
+                    f"Strategy: [cyan]{strategy_name}[/cyan]\n"
+                    f"Estimated cost: [yellow]${estimated_cost:.2f}[/yellow]\n"
+                    f"Estimated time: ~{estimated_time // 60} min {estimated_time % 60} sec",
+                    title="Dry Run",
+                    border_style="yellow",
+                )
+            )
+            return
+
+        # Production extraction
+        console.print(
+            Panel(
+                f"Processing [bold]{count}[/bold] files with "
+                f"strategy [cyan]'{strategy_name}'[/cyan]\n"
+                f"Prompt version: {selection.get('prompt_version', 'unknown')}",
+                title="Wave 2 Production Extraction",
+                border_style="green",
+            )
+        )
+
+        start_time = time_mod.monotonic()
+        summary = asyncio.run(
+            orchestrator.run_production(pending_files, strategy_name)
+        )
+        elapsed = time_mod.monotonic() - start_time
+
+        # Display summary
+        summary_table = Table(title="Extraction Summary")
+        summary_table.add_column("Metric", style="bold")
+        summary_table.add_column("Value", justify="right")
+
+        summary_table.add_row("Extracted", f"[green]{summary.get('extracted', 0)}[/green]")
+        summary_table.add_row("Needs Review", f"[yellow]{summary.get('needs_review', 0)}[/yellow]")
+        summary_table.add_row("Failed", f"[red]{summary.get('failed', 0)}[/red]")
+        summary_table.add_row("Total Tokens", f"{summary.get('total_tokens', 0):,}")
+        summary_table.add_row("Estimated Cost", f"${summary.get('estimated_cost', 0):.2f}")
+        summary_table.add_row("Avg Latency", f"{summary.get('avg_latency_ms', 0):,.0f} ms")
+        summary_table.add_row("Time Elapsed", f"{elapsed:.1f}s")
+
+        console.print(summary_table)
+
+        # Set pending for re-upload if requested
+        if set_pending:
+            with db.conn:
+                cursor = db.conn.execute(
+                    "UPDATE files SET status = 'pending' "
+                    "WHERE ai_metadata_status IN ('extracted', 'approved')"
+                )
+                pending_count = cursor.rowcount
+            console.print(
+                f"\n[green]Set {pending_count} file(s) to pending for re-upload.[/green]"
+            )
+
+        console.print(
+            "\n[bold]Next steps:[/bold]\n"
+            "  Run [cyan]objlib metadata review[/cyan] to check results\n"
+            "  Run [cyan]objlib metadata approve --min-confidence 0.85[/cyan] to auto-approve"
+        )
+
+
+@metadata_app.command("review")
+def review_metadata(
+    db_path: Annotated[
+        Path,
+        typer.Option("--db", "-d", help="Path to SQLite database"),
+    ] = Path("data/library.db"),
+    status: Annotated[
+        str | None,
+        typer.Option("--status", "-s", help="Filter by ai_metadata_status"),
+    ] = None,
+    interactive: Annotated[
+        bool,
+        typer.Option("--interactive", "-i", help="Interactive review with Accept/Edit/Rerun/Skip/Quit"),
+    ] = False,
+    limit: Annotated[
+        int,
+        typer.Option("--limit", "-l", help="Max files to display"),
+    ] = 50,
+) -> None:
+    """Review AI-extracted metadata with Rich 4-tier panels.
+
+    Non-interactive mode shows a summary table. Interactive mode lets you
+    Accept, Edit, Rerun, Skip, or Quit for each file.
+
+    Use --status to filter: extracted, needs_review, approved, failed_validation.
+    """
+    from objlib.extraction.review import (
+        display_review_table,
+        interactive_review,
+    )
+
+    if not db_path.exists():
+        console.print(f"[red]Error:[/red] Database not found: {db_path}")
+        raise typer.Exit(code=1)
+
+    with Database(db_path) as db:
+        if interactive:
+            interactive_review(db, console, status_filter=status)
+            return
+
+        # Non-interactive: display table
+        if status:
+            files = db.get_files_by_ai_status(status, limit=limit)
+        else:
+            # Show all extracted + needs_review
+            files = db.get_files_by_ai_status("extracted", limit=limit)
+            files.extend(db.get_files_by_ai_status("needs_review", limit=limit))
+
+        if not files:
+            console.print("[yellow]No files to review.[/yellow]")
+            return
+
+        display_review_table(files, console)
+
+        # Show stats
+        stats = db.get_ai_metadata_stats()
+        if stats:
+            console.print("\n[bold]AI Metadata Status:[/bold]")
+            for s, count in sorted(stats.items()):
+                console.print(f"  {s}: {count}")
+
+
+@metadata_app.command("approve")
+def approve_metadata(
+    min_confidence: Annotated[
+        float,
+        typer.Option("--min-confidence", "-c", help="Minimum confidence for auto-approval"),
+    ] = 0.85,
+    db_path: Annotated[
+        Path,
+        typer.Option("--db", "-d", help="Path to SQLite database"),
+    ] = Path("data/library.db"),
+    yes: Annotated[
+        bool,
+        typer.Option("--yes", "-y", help="Skip confirmation prompt"),
+    ] = False,
+) -> None:
+    """Auto-approve extracted metadata above a confidence threshold.
+
+    Files with confidence >= threshold are set to 'approved' status.
+    Default threshold is 0.85 (85%).
+    """
+    if not db_path.exists():
+        console.print(f"[red]Error:[/red] Database not found: {db_path}")
+        raise typer.Exit(code=1)
+
+    with Database(db_path) as db:
+        # Preview count
+        preview = db.conn.execute(
+            "SELECT COUNT(*) as cnt FROM files "
+            "WHERE ai_metadata_status IN ('extracted', 'needs_review') "
+            "AND ai_confidence_score >= ?",
+            (min_confidence,),
+        ).fetchone()
+        preview_count = preview["cnt"] if preview else 0
+
+        if preview_count == 0:
+            console.print(
+                f"[yellow]No files with confidence >= {min_confidence:.0%} "
+                f"to approve.[/yellow]"
+            )
+            return
+
+        console.print(
+            f"Found [bold]{preview_count}[/bold] file(s) with confidence "
+            f">= {min_confidence:.0%} ready for approval."
+        )
+
+        if not yes:
+            proceed = typer.confirm("Proceed with approval?")
+            if not proceed:
+                console.print("[yellow]Approval cancelled.[/yellow]")
+                return
+
+        count = db.approve_files_by_confidence(min_confidence)
+        console.print(
+            f"[green]Approved {count} file(s) with confidence "
+            f">= {min_confidence:.0%}.[/green]"
+        )
+
+
+@metadata_app.command("stats")
+def extraction_stats(
+    db_path: Annotated[
+        Path,
+        typer.Option("--db", "-d", help="Path to SQLite database"),
+    ] = Path("data/library.db"),
+) -> None:
+    """Show comprehensive AI metadata extraction statistics.
+
+    Displays status distribution, confidence metrics, and coverage percentage.
+    """
+    if not db_path.exists():
+        console.print(f"[red]Error:[/red] Database not found: {db_path}")
+        raise typer.Exit(code=1)
+
+    with Database(db_path) as db:
+        summary = db.get_extraction_summary()
+        stats = db.get_ai_metadata_stats()
+
+        # Status table
+        status_table = Table(title="AI Metadata Status Distribution")
+        status_table.add_column("Status", style="bold")
+        status_table.add_column("Count", justify="right")
+
+        status_styles = {
+            "extracted": "green",
+            "approved": "bold green",
+            "needs_review": "yellow",
+            "pending": "dim",
+            "failed_validation": "red",
+            "failed_json": "red",
+            "retry_scheduled": "yellow",
+        }
+
+        for s, count in sorted(stats.items()):
+            style = status_styles.get(s, "")
+            if style:
+                status_table.add_row(s, f"[{style}]{count}[/{style}]")
+            else:
+                status_table.add_row(s, str(count))
+
+        console.print(status_table)
+
+        # Summary panel
+        total_processed = summary["extracted"] + summary["approved"] + summary["needs_review"]
+        total_unknown = summary["total_unknown_txt"]
+        coverage = (total_processed / total_unknown * 100) if total_unknown > 0 else 0.0
+
+        console.print(
+            Panel(
+                f"Total unknown TXT files: [bold]{total_unknown}[/bold]\n"
+                f"Processed: [bold]{total_processed}[/bold] "
+                f"([green]{coverage:.1f}%[/green] coverage)\n"
+                f"Pending: {summary['pending']}\n"
+                f"Failed: [red]{summary['failed']}[/red]\n"
+                f"\n"
+                f"Confidence (extracted/approved/needs_review):\n"
+                f"  Average: [bold]{summary['avg_confidence']:.0%}[/bold]\n"
+                f"  Min: {summary['min_confidence']:.0%}  "
+                f"Max: {summary['max_confidence']:.0%}",
+                title="Extraction Summary",
+                border_style="cyan",
+            )
+        )
