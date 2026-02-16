@@ -11,24 +11,24 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 Phase: 6 of 7 (AI-Powered Metadata - executing out of order)
-Plan: 1 of 5
+Plan: 2 of 5
 Status: In progress
-Last activity: 2026-02-16 - Completed 06-01-PLAN.md (foundation: schemas, client, parser, migration)
+Last activity: 2026-02-16 - Completed 06-02-PLAN.md (Wave 1 discovery infrastructure: prompts, strategies, orchestrator, checkpoint)
 
-Progress: [########..] ~65% (11 plans of ~17 estimated total)
+Progress: [########..] ~71% (12 plans of ~17 estimated total)
 **Note:** Executing Phase 6 next (not Phase 4) to enrich metadata before uploading 1,721 files
 
 Phase 1 Progress: [##########] 3/3 plans -- COMPLETE
 Phase 2 Progress: [##########] 4/4 plans -- COMPLETE
 Phase 3 Progress: [##########] 3/3 plans -- COMPLETE
-Phase 6 Progress: [##........] 1/5 plans
+Phase 6 Progress: [####......] 2/5 plans
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11
-- Average duration: 4.1 min
-- Total execution time: 46 min
+- Total plans completed: 12
+- Average duration: 4.2 min
+- Total execution time: 50 min
 
 **By Phase:**
 
@@ -37,10 +37,10 @@ Phase 6 Progress: [##........] 1/5 plans
 | 01-foundation | 3/3 | 10 min | 3.3 min |
 | 02-upload-pipeline | 4/4 | 17 min | 4.3 min |
 | 03-search-and-cli | 3/3 | 13 min | 4.3 min |
-| 06-ai-powered-metadata | 1/5 | 4 min | 4.0 min |
+| 06-ai-powered-metadata | 2/5 | 8 min | 4.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-04 (4 min), 03-01 (5 min), 03-02 (4 min), 03-03 (4 min), 06-01 (4 min)
+- Last 5 plans: 03-01 (5 min), 03-02 (4 min), 03-03 (4 min), 06-01 (4 min), 06-02 (4 min)
 - Trend: Stable at 4-5 min per plan
 
 *Updated after each plan completion*
@@ -95,6 +95,10 @@ Recent decisions affecting current work:
 - [06-01]: Regex JSON extraction supports 2 levels of brace nesting for semantic_description
 - [06-01]: Schema v3 migration uses try/except for ALTER TABLE (SQLite lacks IF NOT EXISTS for columns)
 - [06-01]: Mistral keyring service name: objlib-mistral, key name: api_key
+- [06-02]: Temperature experiments: Minimalist=0.1, Teacher=0.3, Reasoner=0.5 (magistral requires 1.0 for production)
+- [06-02]: Size buckets adjusted: <10KB small (only 2 files <5KB), 10-30KB medium, 30-100KB large, >100KB very large
+- [06-02]: Checkpoint uses write-to-tmp-then-rename for atomic state persistence
+- [06-02]: Wave 1 results saved to DB per-file per-strategy immediately (not batched)
 
 ### Pending Todos
 
@@ -108,5 +112,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Phase 6, Plan 01 COMPLETE. Ready for 06-02 execution.
-Resume file: .planning/phases/06-ai-powered-metadata/06-02-PLAN.md
+Stopped at: Phase 6, Plan 02 COMPLETE. Ready for 06-03 execution.
+Resume file: .planning/phases/06-ai-powered-metadata/06-03-PLAN.md
