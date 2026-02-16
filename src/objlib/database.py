@@ -555,6 +555,7 @@ class Database:
         import json as json_module
 
         VALID_FIELDS = {"category", "course", "difficulty", "quarter", "date", "year", "week", "quality_score"}
+        NUMERIC_FIELDS = {"year", "week", "quality_score"}
 
         where_parts: list[str] = ["status != 'LOCAL_DELETE'", "metadata_json IS NOT NULL"]
         params: list = []
@@ -564,6 +565,7 @@ class Database:
                 raise ValueError(f"Unknown filter field: {field}. Valid: {', '.join(sorted(VALID_FIELDS))}")
 
             json_path = f"$.{field}"
+            is_numeric = field in NUMERIC_FIELDS
 
             def _coerce_numeric(val: str) -> int | str:
                 """Try to convert to int for proper numeric comparison in SQLite."""
@@ -574,22 +576,41 @@ class Database:
 
             # Check for comparison operators
             if value.startswith(">="):
-                where_parts.append("json_extract(metadata_json, ?) >= ?")
-                params.extend([json_path, _coerce_numeric(value[2:])])
+                if is_numeric:
+                    where_parts.append("CAST(json_extract(metadata_json, ?) AS INTEGER) >= ?")
+                    params.extend([json_path, int(value[2:])])
+                else:
+                    where_parts.append("json_extract(metadata_json, ?) >= ?")
+                    params.extend([json_path, value[2:]])
             elif value.startswith("<="):
-                where_parts.append("json_extract(metadata_json, ?) <= ?")
-                params.extend([json_path, _coerce_numeric(value[2:])])
+                if is_numeric:
+                    where_parts.append("CAST(json_extract(metadata_json, ?) AS INTEGER) <= ?")
+                    params.extend([json_path, int(value[2:])])
+                else:
+                    where_parts.append("json_extract(metadata_json, ?) <= ?")
+                    params.extend([json_path, value[2:]])
             elif value.startswith(">"):
-                where_parts.append("json_extract(metadata_json, ?) > ?")
-                params.extend([json_path, _coerce_numeric(value[1:])])
+                if is_numeric:
+                    where_parts.append("CAST(json_extract(metadata_json, ?) AS INTEGER) > ?")
+                    params.extend([json_path, int(value[1:])])
+                else:
+                    where_parts.append("json_extract(metadata_json, ?) > ?")
+                    params.extend([json_path, value[1:]])
             elif value.startswith("<"):
-                where_parts.append("json_extract(metadata_json, ?) < ?")
-                params.extend([json_path, _coerce_numeric(value[1:])])
+                if is_numeric:
+                    where_parts.append("CAST(json_extract(metadata_json, ?) AS INTEGER) < ?")
+                    params.extend([json_path, int(value[1:])])
+                else:
+                    where_parts.append("json_extract(metadata_json, ?) < ?")
+                    params.extend([json_path, value[1:]])
             else:
                 # Exact match (try numeric for year/week/quality_score)
                 try:
                     numeric_val = int(value)
-                    where_parts.append("json_extract(metadata_json, ?) = ?")
+                    if is_numeric:
+                        where_parts.append("CAST(json_extract(metadata_json, ?) AS INTEGER) = ?")
+                    else:
+                        where_parts.append("json_extract(metadata_json, ?) = ?")
                     params.extend([json_path, numeric_val])
                 except ValueError:
                     where_parts.append("json_extract(metadata_json, ?) = ?")
