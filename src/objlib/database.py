@@ -363,6 +363,53 @@ class Database:
             }
         return result
 
+    def get_file_metadata_by_gemini_ids(self, gemini_ids: list[str]) -> dict[str, dict]:
+        """Return metadata for files matching the given Gemini file IDs.
+
+        Used to enrich Gemini citations when the title field contains
+        the Gemini file ID instead of the display_name/filename.
+
+        Handles both formats: "e0x3xq9wtglq" and "files/e0x3xq9wtglq".
+
+        Args:
+            gemini_ids: List of Gemini file ID strings (e.g., "e0x3xq9wtglq").
+
+        Returns:
+            Dict mapping gemini_file_id -> {"filename": str, "file_path": str, "metadata": dict}
+        """
+        if not gemini_ids:
+            return {}
+
+        # Normalize IDs: add "files/" prefix if not present
+        normalized_ids = []
+        original_to_normalized = {}
+        for gid in gemini_ids:
+            normalized = gid if gid.startswith("files/") else f"files/{gid}"
+            normalized_ids.append(normalized)
+            original_to_normalized[gid] = normalized
+
+        placeholders = ",".join("?" * len(normalized_ids))
+        rows = self.conn.execute(
+            f"SELECT gemini_file_id, filename, file_path, metadata_json FROM files "
+            f"WHERE gemini_file_id IN ({placeholders}) AND status != 'LOCAL_DELETE'",
+            normalized_ids,
+        ).fetchall()
+
+        import json
+
+        result = {}
+        for row in rows:
+            meta = json.loads(row["metadata_json"]) if row["metadata_json"] else {}
+            # Map back to the original (un-normalized) ID that was passed in
+            for original_id, normalized_id in original_to_normalized.items():
+                if row["gemini_file_id"] == normalized_id:
+                    result[original_id] = {
+                        "filename": row["filename"],
+                        "file_path": row["file_path"],
+                        "metadata": meta,
+                    }
+        return result
+
     def get_pending_files(self, limit: int = 200) -> list[sqlite3.Row]:
         """Return files with status='pending' for upload processing.
 
