@@ -54,6 +54,8 @@ Recent decisions affecting current work:
 
 - [Roadmap]: 6 phases total (added Phase 6: AI-Powered Metadata Enhancement)
 - [Roadmap]: Phase ordering follows scan-upload-query pipeline with zero-API-dependency foundation first
+- [Roadmap]: Phase 6.1 inserted after Phase 6: Entity Extraction & Name Normalization (URGENT - canonical philosopher name matching)
+- [Roadmap]: Phase 6.2 inserted after Phase 6.1: Metadata-Enriched Gemini Upload (URGENT - upload with 4-tier metadata)
 - [01-01]: content_hash indexed but NOT UNIQUE (allows same content at different paths)
 - [01-01]: Timestamps use strftime('%Y-%m-%dT%H:%M:%f', 'now') for ISO 8601 with milliseconds
 - [01-01]: content_hash stored as TEXT hexdigest (readable in DB browsers)

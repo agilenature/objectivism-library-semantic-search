@@ -2005,3 +2005,137 @@ def extraction_stats(
                 border_style="cyan",
             )
         )
+
+
+@metadata_app.command("batch-extract")
+def batch_extract_metadata(
+    max_files: Annotated[
+        int | None,
+        typer.Option("--max", "-n", help="Maximum files to process (default: all pending)"),
+    ] = None,
+    job_name: Annotated[
+        str | None,
+        typer.Option("--name", help="Descriptive name for batch job"),
+    ] = None,
+    poll_interval: Annotated[
+        int,
+        typer.Option("--poll", "-p", help="Seconds between status checks"),
+    ] = 30,
+    db_path: Annotated[
+        Path,
+        typer.Option("--db", "-d", help="Path to SQLite database"),
+    ] = Path("data/library.db"),
+) -> None:
+    """Extract metadata using Mistral Batch API (50% cost savings, no rate limits).
+
+    Uses Mistral's async Batch API for bulk extraction:
+    - 50% lower cost than synchronous extraction
+    - Zero rate limiting issues (perfect for 116-1,093 pending files)
+    - Submits all requests as one batch job
+    - Polls for completion (typically 20-60 minutes)
+    - Updates database with results
+    - Tracks failed requests for retry
+
+    Examples:
+        # Extract all pending files
+        objlib metadata batch-extract
+
+        # Extract first 50 files
+        objlib metadata batch-extract --max 50
+
+        # Custom job name
+        objlib metadata batch-extract --name "unknown-files-batch-1"
+    """
+    import asyncio
+
+    if not db_path.exists():
+        console.print(f"[red]Error:[/red] Database not found: {db_path}")
+        raise typer.Exit(code=1)
+
+    # Load API key from keyring
+    try:
+        import keyring
+
+        api_key = keyring.get_password("objlib-mistral", "api_key")
+        if not api_key:
+            console.print(
+                "[red]Error:[/red] Mistral API key not found in keyring.\n\n"
+                "Store your API key using:\n"
+                "[bold]keyring set objlib-mistral api_key[/bold]"
+            )
+            raise typer.Exit(code=1)
+    except Exception as e:
+        console.print(f"[red]Error:[/red] Failed to load API key: {e}")
+        raise typer.Exit(code=1)
+
+    # Initialize batch client and orchestrator
+    from objlib.extraction.batch_client import MistralBatchClient
+    from objlib.extraction.batch_orchestrator import BatchExtractionOrchestrator
+
+    console.print("[bold]Mistral Batch API Extraction[/bold]")
+    console.print(f"[dim]Database: {db_path}[/dim]")
+    console.print(f"[dim]Poll interval: {poll_interval}s[/dim]\n")
+
+    with Database(db_path) as db:
+        client = MistralBatchClient(api_key=api_key)
+        orchestrator = BatchExtractionOrchestrator(
+            db=db,
+            client=client,
+            strategy_name="minimalist",  # Use winning Wave 1 strategy
+        )
+
+        # Run batch extraction
+        console.print("[cyan]Starting batch extraction...[/cyan]")
+
+        try:
+            summary = asyncio.run(
+                orchestrator.run_batch_extraction(
+                    max_files=max_files,
+                    job_name=job_name,
+                    poll_interval=poll_interval,
+                )
+            )
+        except KeyboardInterrupt:
+            console.print("\n[yellow]Interrupted by user[/yellow]")
+            raise typer.Exit(code=130)
+        except Exception as e:
+            console.print(f"\n[red]Batch extraction failed:[/red] {e}")
+            raise typer.Exit(code=1)
+
+    # Display results
+    console.print("\n[bold green]✓ Batch Extraction Complete[/bold green]")
+
+    result_table = Table(title="Batch Summary")
+    result_table.add_column("Metric", style="bold")
+    result_table.add_column("Value", justify="right")
+
+    result_table.add_row("Batch ID", summary["batch_id"] or "N/A")
+    result_table.add_row("Total Files", str(summary["total"]))
+    result_table.add_row("Succeeded", f"[green]{summary['succeeded']}[/green]")
+    result_table.add_row("Failed", f"[red]{summary['failed']}[/red]")
+    result_table.add_row(
+        "Processing Time",
+        f"{summary['processing_time_seconds']:.1f}s ({summary['processing_time_seconds']/60:.1f}m)",
+    )
+
+    console.print(result_table)
+
+    if summary["failed_files"]:
+        console.print(f"\n[yellow]⚠ {len(summary['failed_files'])} files failed:[/yellow]")
+        for file_path in summary["failed_files"][:10]:  # Show first 10
+            console.print(f"  [dim]• {Path(file_path).name}[/dim]")
+        if len(summary["failed_files"]) > 10:
+            console.print(f"  [dim]... and {len(summary['failed_files']) - 10} more[/dim]")
+
+        console.print(
+            "\n[bold]Failed files marked in database:[/bold] "
+            "ai_metadata_status='failed_validation'\n"
+            "Review errors and retry with [cyan]objlib metadata batch-extract[/cyan]"
+        )
+    else:
+        console.print("\n[bold green]✓ All files processed successfully![/bold green]")
+
+    console.print(
+        "\n[bold]Next:[/bold] Run [cyan]objlib metadata stats[/cyan] "
+        "to see updated extraction progress"
+    )

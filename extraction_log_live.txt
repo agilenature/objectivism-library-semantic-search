@@ -1,0 +1,16 @@
+╭─────────────── 📚 Extraction Plan ────────────────╮
+│ Full Library Extraction                           │
+│                                                   │
+│ Total files to process: 1,628                     │
+│   • Files needing categories: 354                 │
+│   • Files with categories (need tiers 2-4): 1,274 │
+│                                                   │
+│ Strategy: minimalist                              │
+│ Estimated cost: $105.33                           │
+│ Estimated time: 326 minutes                       │
+╰───────────────────────────────────────────────────╯
+
+--yes flag detected, proceeding automatically
+
+Starting extraction...
+

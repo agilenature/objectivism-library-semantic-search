@@ -105,4 +105,11 @@ class MistralClient:
         parsed = parse_magistral_response(response)
         total_tokens = response.usage.total_tokens if response.usage else 0
 
+        # Defensive check: ensure parsed is a dict, not a list
+        if not isinstance(parsed, dict):
+            raise ValueError(
+                f"Parser returned {type(parsed).__name__} instead of dict. "
+                f"Raw content type: {type(response.choices[0].message.content).__name__}"
+            )
+
         return parsed, total_tokens

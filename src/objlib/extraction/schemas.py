@@ -140,7 +140,7 @@ class ExtractedMetadata(BaseModel):
     )
     semantic_description: SemanticDescription
     confidence_score: float = Field(
-        ge=0.0, le=1.0, description="Model self-assessed extraction confidence"
+        default=0.5, ge=0.0, le=1.0, description="Model self-assessed extraction confidence (calculated post-extraction)"
     )
 
     model_config = ConfigDict(extra="ignore")

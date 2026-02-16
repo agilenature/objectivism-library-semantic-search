@@ -41,6 +41,9 @@ def parse_magistral_response(response: Any) -> dict:
     """
     content = response.choices[0].message.content
 
+    import logging
+    logger = logging.getLogger(__name__)
+
     # Phase 1: List of chunk objects (magistral models)
     if isinstance(content, list):
         text_parts: list[str] = []
@@ -53,7 +56,21 @@ def parse_magistral_response(response: Any) -> dict:
         if text_parts:
             combined = "".join(text_parts)
             try:
-                return json.loads(combined)
+                parsed = json.loads(combined)
+                # BUG FIX: Handle JSON array response
+                if isinstance(parsed, list):
+                    logger.warning(
+                        "Mistral returned JSON array in chunk content. "
+                        f"Array length: {len(parsed)}"
+                    )
+                    if len(parsed) == 1 and isinstance(parsed[0], dict):
+                        logger.info("Extracting single dict from array")
+                        return parsed[0]
+                    raise ValueError(
+                        f"Mistral returned JSON array with {len(parsed)} elements "
+                        "instead of JSON object"
+                    )
+                return parsed
             except json.JSONDecodeError:
                 pass
             # Fall through to regex on combined text
@@ -64,7 +81,24 @@ def parse_magistral_response(response: Any) -> dict:
     # Phase 2: Plain string content
     if isinstance(content, str):
         try:
-            return json.loads(content)
+            parsed = json.loads(content)
+            # BUG FIX: Mistral sometimes returns JSON array instead of object
+            # despite response_format={"type": "json_object"}
+            if isinstance(parsed, list):
+                logger.warning(
+                    "Mistral returned JSON array instead of object. "
+                    f"Array length: {len(parsed)}. Content preview: {content[:200]}"
+                )
+                # If array has one element and it's a dict, use that
+                if len(parsed) == 1 and isinstance(parsed[0], dict):
+                    logger.info("Extracting single dict from array")
+                    return parsed[0]
+                # Otherwise this is a hard error
+                raise ValueError(
+                    f"Mistral returned JSON array with {len(parsed)} elements "
+                    "instead of JSON object. This violates response_format constraint."
+                )
+            return parsed
         except json.JSONDecodeError:
             pass
         # Fall through to regex

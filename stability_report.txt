@@ -1,0 +1,138 @@
+=== MINUTE 1 CHECK @ 15:36:34 ===
+Database: 167|3
+Errors: 0
+0
+Recent:
+15:34:44 - INFO - ✓ Extracted: Episode 222 [1000117389839].txt (conf: 81.0%, 13703ms)
+15:34:48 - INFO - ✓ Extracted: Episode 003 [1000386969202].txt (conf: 81.0%, 4270ms)
+15:34:59 - INFO - ✓ Extracted: Episode 190 [1000105882324].txt (conf: 81.0%, 10731ms)
+
+=== MINUTE 2 CHECK @ 15:37:34 ===
+Database: 171|3
+Errors: 0
+0
+Recent:
+15:37:08 - INFO - ✓ Extracted: Episode 152 [1000091492919].txt (conf: 81.0%, 12986ms)
+15:37:15 - INFO - ✓ Extracted: Episode 237 [1000122118792].txt (conf: 81.0%, 6061ms)
+15:37:28 - INFO - ✓ Extracted: Episode 401 [1000361701302].txt (conf: 81.0%, 13082ms)
+
+=== MINUTE 3 CHECK @ 15:38:34 ===
+Database: 178|3
+Errors: 0
+0
+Recent:
+15:38:17 - INFO - ✓ Extracted: Episode 188 [1000104270101].txt (conf: 81.0%, 10637ms)
+15:38:29 - INFO - ✓ Extracted: Episode 173 [1000095750376].txt (conf: 81.0%, 11945ms)
+15:38:34 - INFO - ✓ Extracted: Episode 259 [1000135699540].txt (conf: 81.0%, 5111ms)
+
+=== MINUTE 4 CHECK @ 15:39:34 ===
+Database: 183|4
+Errors: 0
+0
+Recent:
+15:39:07 - INFO - ✓ Extracted: Episode 243 [1000124916803].txt (conf: 81.0%, 11921ms)
+15:39:13 - INFO - ✓ Extracted: Episode 163 [1000093844912].txt (conf: 56.0%, 5380ms)
+15:39:34 - INFO - ✓ Extracted: Episode 220 [1000116711624].txt (conf: 81.0%, 21405ms)
+
+=== MINUTE 5 CHECK @ 15:40:34 ===
+Database: 187|4
+Errors: 0
+0
+Recent:
+15:40:11 - INFO - ✓ Extracted: Episode 203 [1000110492406].txt (conf: 81.0%, 11374ms)
+15:40:20 - INFO - ✓ Extracted: Episode 197 [1000109078126].txt (conf: 81.0%, 9497ms)
+15:40:29 - INFO - ✓ Extracted: Episode 320 [1000310406181].txt (conf: 81.0%, 9220ms)
+
+=== MINUTE 6 CHECK @ 15:41:35 ===
+Database: 194|4
+Errors: 0
+0
+Recent:
+15:41:03 - INFO - ✓ Extracted: Episode 396 [1000356779972].txt (conf: 81.0%, 4805ms)
+15:41:17 - INFO - ✓ Extracted: Episode 386 [1000349845491].txt (conf: 56.0%, 13186ms)
+15:41:25 - INFO - ✓ Extracted: Episode 201 [1000110048885].txt (conf: 56.0%, 8410ms)
+
+=== MINUTE 7 CHECK @ 15:42:35 ===
+Database: 200|4
+Errors: 0
+0
+Recent:
+15:41:59 - INFO - ✓ Extracted: Episode 392 [1000354083709].txt (conf: 81.0%, 4889ms)
+15:42:07 - INFO - ✓ Extracted: Episode 229 [1000119303114].txt (conf: 81.0%, 8285ms)
+15:42:24 - INFO - ✓ Extracted: Episode 064 [1000386961581].txt (conf: 81.0%, 17079ms)
+
+=== MINUTE 8 CHECK @ 15:43:35 ===
+Database: 207|4
+Errors: 0
+0
+Recent:
+15:43:11 - INFO - ✓ Extracted: Episode 110 – 5⧸3⧸2010 [1000386969167].txt (conf: 81.0%, 7643ms)
+15:43:20 - INFO - ✓ Extracted: Episode 181 [1000097186957].txt (conf: 81.0%, 9044ms)
+15:43:30 - INFO - ✓ Extracted: Episode 145 [1000090134701].txt (conf: 81.0%, 10249ms)
+
+=== MINUTE 9 CHECK @ 15:44:35 ===
+Database: 213|4
+Errors: 0
+0
+Recent:
+15:44:12 - INFO - ✓ Extracted: Episode 001 [1000386969146].txt (conf: 81.0%, 9520ms)
+15:44:20 - INFO - ✓ Extracted: Episode 397 [1000357648173].txt (conf: 81.0%, 7985ms)
+15:44:29 - INFO - ✓ Extracted: Episode 347 [1000325581320].txt (conf: 81.0%, 8275ms)
+
+=== MINUTE 10 CHECK @ 15:45:35 ===
+Database: 221|4
+Errors: 0
+0
+Recent:
+15:45:16 - INFO - ✓ Extracted: Episode 313 [1000279405816].txt (conf: 81.0%, 5019ms)
+15:45:25 - INFO - ✓ Extracted: Episode 412 [1000372714964].txt (conf: 56.0%, 9039ms)
+15:45:30 - INFO - ✓ Extracted: Episode 296 [1000184519711].txt (conf: 81.0%, 4817ms)
+
+=== MINUTE 11 CHECK @ 15:46:35 ===
+Database: 225|4
+Errors: 0
+0
+Recent:
+15:45:48 - INFO - ✓ Extracted: Episode 411 [1000371901446].txt (conf: 81.0%, 8175ms)
+15:45:53 - INFO - ✓ Extracted: Episode 394 [1000354833759].txt (conf: 81.0%, 5343ms)
+15:46:10 - INFO - ✓ Extracted: Episode 189 [1000104807427].txt (conf: 81.0%, 17012ms)
+
+=== MINUTE 12 CHECK @ 15:47:35 ===
+Database: 230|4
+Errors: 0
+0
+Recent:
+15:47:01 - INFO - ✓ Extracted: Episode 160 [1000093210862].txt (conf: 81.0%, 9944ms)
+15:47:10 - INFO - ✓ Extracted: Episode 407 [1000367889022].txt (conf: 81.0%, 9093ms)
+15:47:19 - INFO - ✓ Extracted: Episode 366 [1000338737580].txt (conf: 81.0%, 8727ms)
+
+=== MINUTE 13 CHECK @ 15:48:35 ===
+Database: 235|4
+Errors: 0
+0
+Recent:
+15:48:07 - INFO - ✓ Extracted: Episode 364 [1000337719732].txt (conf: 81.0%, 10286ms)
+15:48:18 - INFO - ✓ Extracted: Episode 250 [1000127783547].txt (conf: 56.0%, 10526ms)
+15:48:27 - INFO - ✓ Extracted: Episode 358 [1000334616117].txt (conf: 81.0%, 8990ms)
+
+=== MINUTE 14 CHECK @ 15:49:35 ===
+Database: 238|5
+Errors: 0
+0
+Recent:
+15:48:53 - INFO - ✓ Extracted: Episode 227 [1000118733296].txt (conf: 56.0%, 15552ms)
+15:49:15 - INFO - ✓ Extracted: Episode 390 [1000352773874].txt (conf: 81.0%, 22101ms)
+15:49:28 - INFO - ✓ Extracted: Episode 333 [1000317523544].txt (conf: 81.0%, 13115ms)
+
+=== MINUTE 15 CHECK @ 15:50:35 ===
+Database: 243|5
+Errors: 0
+0
+Recent:
+15:50:03 - INFO - ✓ Extracted: MOTM_2025-04-06_Full-Chat.txt (conf: 81.0%, 11312ms)
+15:50:12 - INFO - ✓ Extracted: Perception - Class 05-01 - Office Hour.txt (conf: 56.0%, 8608ms)
+15:50:34 - INFO - ✓ Extracted: Episode 398 [1000358503511].txt (conf: 81.0%, 21586ms)
+
+=== 15 MINUTE STABILITY CHECK COMPLETE ===
+Final stats:
+249|5|1494

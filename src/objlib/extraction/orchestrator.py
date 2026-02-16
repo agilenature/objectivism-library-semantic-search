@@ -432,6 +432,13 @@ class ExtractionOrchestrator:
             Summary dict: {total, extracted, needs_review, failed, partial,
             total_tokens, estimated_cost, avg_latency_ms}
         """
+        # Get temperature from Wave 1 strategy config
+        from objlib.extraction.strategies import WAVE1_STRATEGIES
+        strategy_config = WAVE1_STRATEGIES.get(strategy_name)
+        if not strategy_config:
+            raise ValueError(f"Unknown strategy: {strategy_name}")
+        temperature = strategy_config.temperature
+
         system_prompt = build_production_prompt(
             strategy_name, "production"
         )
@@ -522,7 +529,7 @@ class ExtractionOrchestrator:
                                     transcript_text=user_prompt + retry_suffix,
                                     system_prompt=system_prompt,
                                     max_tokens=8000,
-                                    temperature=1.0,  # ALWAYS 1.0 for production
+                                    temperature=temperature,  # From Wave 1 winning strategy
                                 )
                                 latency_ms = int((time.monotonic() - start_time) * 1000)
 
@@ -596,8 +603,12 @@ class ExtractionOrchestrator:
                     status_value = validation.status.value
                     if status_value == "extracted":
                         results["extracted"] += 1
+                        logger.info("✓ Extracted: %s (conf: %.1f%%, %dms)",
+                                    file_info.get("filename", file_path), confidence * 100, latency_ms)
                     elif status_value == "needs_review":
                         results["needs_review"] += 1
+                        logger.info("⚠ Needs review: %s (conf: %.1f%%, %dms)",
+                                    file_info.get("filename", file_path), confidence * 100, latency_ms)
                     elif status_value == "failed_validation":
                         results["failed"] += 1
                     else:

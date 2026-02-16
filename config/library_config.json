@@ -1,0 +1,77 @@
+{
+  "library_root": "/Volumes/U32 Shadow/Objectivism Library",
+  "excluded_patterns": [
+    ".claude",
+    ".DS_Store",
+    ".git",
+    "__pycache__",
+    ".ipynb_checkpoints"
+  ],
+  "file_extensions": [
+    ".txt"
+  ],
+  "scan_depth": 10,
+  "output_catalog": "../data/library_catalog.json",
+
+  "corpus_settings": {
+    "corpus_name": "objectivism-library-v1",
+    "display_name": "Objectivism Library - Complete Collection",
+    "description": "Comprehensive semantic search corpus for Objectivism library including courses, books, MOTM sessions, and podcasts"
+  },
+
+  "upload_settings": {
+    "batch_size": 100,
+    "retry_attempts": 3,
+    "retry_delay_seconds": 5,
+    "rate_limit_delay": 0.5,
+    "max_file_size_mb": 50
+  },
+
+  "query_settings": {
+    "default_results_limit": 10,
+    "max_results_limit": 50,
+    "default_model": "gemini-2.0-flash-exp",
+    "synthesis_model": "gemini-2.0-flash-exp"
+  },
+
+  "metadata_enrichment": {
+    "auto_infer_difficulty": true,
+    "auto_detect_prerequisites": true,
+    "auto_link_related_content": true,
+    "extract_concepts_from_titles": true,
+    "infer_philosophy_branch": true
+  },
+
+  "known_instructors": {
+    "Leonard Peikoff": ["peikoff"],
+    "Harry Binswanger": ["binswanger"],
+    "Onkar Ghate": ["ghate"],
+    "Richard Salsman": ["salsman"],
+    "Yaron Brook": ["brook"],
+    "Gregory Salmieri": ["salmieri"],
+    "Tara Smith": ["tara smith"]
+  },
+
+  "course_patterns": {
+    "year_quarter_week": "Year{N}/Q{N}/Week{N}",
+    "class_number": "Class {N}",
+    "lesson_number": "Lesson {N}",
+    "session_number": "Session {N}"
+  },
+
+  "difficulty_inference_rules": {
+    "foundations": ["foundations", "introduction", "basic", "year1"],
+    "intermediate": ["intermediate", "year2"],
+    "advanced": ["advanced", "year3", "year4", "graduate"],
+    "expert": ["expert", "doctoral", "specialized"]
+  },
+
+  "branch_keywords": {
+    "Metaphysics": ["metaphysics", "existence", "identity", "reality", "causality", "nature"],
+    "Epistemology": ["epistemology", "knowledge", "concepts", "logic", "reason", "truth", "certainty", "validation"],
+    "Ethics": ["ethics", "morality", "values", "virtues", "egoism", "happiness", "moral"],
+    "Politics": ["politics", "government", "rights", "capitalism", "freedom", "law", "liberty"],
+    "Aesthetics": ["aesthetics", "art", "literature", "beauty", "romantic", "sense of life"],
+    "History": ["history", "historical", "philosophy of history"]
+  }
+}
