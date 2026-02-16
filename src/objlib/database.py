@@ -416,6 +416,206 @@ class Database:
         row = self.conn.execute("SELECT COUNT(*) as cnt FROM files").fetchone()
         return row["cnt"]
 
+    def get_categories_with_counts(self) -> list[tuple[str, int]]:
+        """Return top-level categories with file counts.
+
+        Categories are extracted from metadata_json '$.category'.
+        NULL category values are mapped to 'uncategorized'.
+        LOCAL_DELETE records are excluded.
+
+        Returns:
+            List of (category_name, count) tuples, ordered by count descending.
+        """
+        rows = self.conn.execute(
+            """SELECT COALESCE(json_extract(metadata_json, '$.category'), 'uncategorized') as category,
+                      COUNT(*) as count
+               FROM files
+               WHERE metadata_json IS NOT NULL AND status != 'LOCAL_DELETE'
+               GROUP BY category
+               ORDER BY count DESC"""
+        ).fetchall()
+        return [(row["category"], row["count"]) for row in rows]
+
+    def get_courses_with_counts(self) -> list[tuple[str, int]]:
+        """Return all courses with file counts.
+
+        Filters to category='course' and groups by course name.
+        LOCAL_DELETE records are excluded.
+
+        Returns:
+            List of (course_name, count) tuples, ordered by course name.
+        """
+        rows = self.conn.execute(
+            """SELECT json_extract(metadata_json, '$.course') as course,
+                      COUNT(*) as count
+               FROM files
+               WHERE json_extract(metadata_json, '$.category') = 'course'
+                 AND status != 'LOCAL_DELETE'
+               GROUP BY course
+               ORDER BY course"""
+        ).fetchall()
+        return [(row["course"], row["count"]) for row in rows]
+
+    def get_files_by_course(self, course: str, year: str | None = None) -> list[dict]:
+        """Return files within a specific course, optionally filtered by year.
+
+        Results are ordered by lesson_number, year, quarter, week, then filename.
+        LOCAL_DELETE records are excluded.
+
+        Args:
+            course: Course name to filter by.
+            year: Optional year string to further filter results.
+
+        Returns:
+            List of dicts with 'filename', 'file_path', 'metadata' keys.
+        """
+        import json as json_module
+
+        params: list = [course]
+        year_clause = ""
+        if year is not None:
+            year_clause = "AND json_extract(metadata_json, '$.year') = ? "
+            try:
+                params.append(int(year))
+            except ValueError:
+                params.append(year)
+
+        sql = f"""
+            SELECT filename, file_path, metadata_json FROM files
+            WHERE json_extract(metadata_json, '$.course') = ?
+              AND status != 'LOCAL_DELETE'
+              {year_clause}
+            ORDER BY json_extract(metadata_json, '$.lesson_number'),
+                     json_extract(metadata_json, '$.year'),
+                     json_extract(metadata_json, '$.quarter'),
+                     json_extract(metadata_json, '$.week'),
+                     filename
+        """
+
+        rows = self.conn.execute(sql, params).fetchall()
+        results = []
+        for row in rows:
+            meta = json_module.loads(row["metadata_json"]) if row["metadata_json"] else {}
+            results.append({
+                "filename": row["filename"],
+                "file_path": row["file_path"],
+                "metadata": meta,
+            })
+        return results
+
+    def get_items_by_category(self, category: str) -> list[dict]:
+        """Return files within a non-course category, ordered by filename.
+
+        LOCAL_DELETE records are excluded.
+
+        Args:
+            category: Category name to filter by (e.g., 'motm', 'book').
+
+        Returns:
+            List of dicts with 'filename', 'file_path', 'metadata' keys.
+        """
+        import json as json_module
+
+        rows = self.conn.execute(
+            """SELECT filename, file_path, metadata_json FROM files
+               WHERE json_extract(metadata_json, '$.category') = ?
+                 AND status != 'LOCAL_DELETE'
+               ORDER BY filename""",
+            (category,),
+        ).fetchall()
+
+        results = []
+        for row in rows:
+            meta = json_module.loads(row["metadata_json"]) if row["metadata_json"] else {}
+            results.append({
+                "filename": row["filename"],
+                "file_path": row["file_path"],
+                "metadata": meta,
+            })
+        return results
+
+    def filter_files_by_metadata(self, filters: dict[str, str], limit: int = 50) -> list[dict]:
+        """Query files by metadata field values.
+
+        Supports the same fields as Gemini metadata_filter:
+        category, course, difficulty, quarter, date, year, week, quality_score.
+
+        Comparison operators in values: >=, <=, >, < are supported.
+
+        Args:
+            filters: Dict of {field_name: value_or_comparison}.
+            limit: Maximum results.
+
+        Returns:
+            List of dicts with 'filename', 'file_path', 'metadata' keys.
+
+        Raises:
+            ValueError: If an unknown filter field is provided.
+        """
+        import json as json_module
+
+        VALID_FIELDS = {"category", "course", "difficulty", "quarter", "date", "year", "week", "quality_score"}
+
+        where_parts: list[str] = ["status != 'LOCAL_DELETE'", "metadata_json IS NOT NULL"]
+        params: list = []
+
+        for field, value in filters.items():
+            if field not in VALID_FIELDS:
+                raise ValueError(f"Unknown filter field: {field}. Valid: {', '.join(sorted(VALID_FIELDS))}")
+
+            json_path = f"$.{field}"
+
+            def _coerce_numeric(val: str) -> int | str:
+                """Try to convert to int for proper numeric comparison in SQLite."""
+                try:
+                    return int(val)
+                except ValueError:
+                    return val
+
+            # Check for comparison operators
+            if value.startswith(">="):
+                where_parts.append("json_extract(metadata_json, ?) >= ?")
+                params.extend([json_path, _coerce_numeric(value[2:])])
+            elif value.startswith("<="):
+                where_parts.append("json_extract(metadata_json, ?) <= ?")
+                params.extend([json_path, _coerce_numeric(value[2:])])
+            elif value.startswith(">"):
+                where_parts.append("json_extract(metadata_json, ?) > ?")
+                params.extend([json_path, _coerce_numeric(value[1:])])
+            elif value.startswith("<"):
+                where_parts.append("json_extract(metadata_json, ?) < ?")
+                params.extend([json_path, _coerce_numeric(value[1:])])
+            else:
+                # Exact match (try numeric for year/week/quality_score)
+                try:
+                    numeric_val = int(value)
+                    where_parts.append("json_extract(metadata_json, ?) = ?")
+                    params.extend([json_path, numeric_val])
+                except ValueError:
+                    where_parts.append("json_extract(metadata_json, ?) = ?")
+                    params.extend([json_path, value])
+
+        where_clause = " AND ".join(where_parts)
+        sql = f"""
+            SELECT filename, file_path, metadata_json
+            FROM files
+            WHERE {where_clause}
+            ORDER BY filename
+            LIMIT ?
+        """
+        params.append(limit)
+
+        rows = self.conn.execute(sql, params).fetchall()
+        results = []
+        for row in rows:
+            meta = json_module.loads(row["metadata_json"]) if row["metadata_json"] else {}
+            results.append({
+                "filename": row["filename"],
+                "file_path": row["file_path"],
+                "metadata": meta,
+            })
+        return results
+
     def close(self) -> None:
         """Close the database connection."""
         self.conn.close()
