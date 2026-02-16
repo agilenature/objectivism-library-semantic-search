@@ -1,10 +1,11 @@
 """CLI entry point for the Objectivism Library tools.
 
-Provides five commands:
+Provides commands:
   - scan: Discover files, extract metadata, persist to SQLite
   - status: Display database statistics (counts by status and quality)
   - purge: Remove old LOCAL_DELETE records from the database
   - upload: Upload pending files to Gemini File Search store
+  - search: Semantic search across the library via Gemini File Search
   - config: Manage configuration (API keys, settings)
 """
 
@@ -12,7 +13,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 
 import keyring
 import typer
@@ -25,11 +26,80 @@ from objlib.database import Database
 from objlib.metadata import MetadataExtractor
 from objlib.scanner import FileScanner
 
+if TYPE_CHECKING:
+    from objlib.models import AppState
+
 app = typer.Typer(
-    help="Objectivism Library Scanner - Scan, track, and manage your philosophical library",
+    help="Objectivism Library - Search, browse, and explore your philosophical library",
     rich_markup_mode="rich",
 )
 console = Console()
+
+# Commands that do NOT need Gemini client initialization
+_SKIP_INIT_COMMANDS = {None, "scan", "status", "purge", "upload", "config"}
+
+
+@app.callback(invoke_without_command=True)
+def app_callback(
+    ctx: typer.Context,
+    store: Annotated[
+        str,
+        typer.Option("--store", "-s", help="Gemini File Search store display name"),
+    ] = "objectivism-library-v1",
+    db_path: Annotated[
+        Path,
+        typer.Option("--db", "-d", help="Path to SQLite database"),
+    ] = Path("data/library.db"),
+) -> None:
+    """Initialize shared state for search/browse/filter commands."""
+    if ctx.invoked_subcommand in _SKIP_INIT_COMMANDS:
+        # Skip AppState init for commands that don't need Gemini
+        return
+
+    # Skip initialization when --help is requested (Typer runs callback before subcommand)
+    if "--help" in sys.argv or "-h" in sys.argv:
+        return
+
+    import shutil
+
+    from google import genai
+
+    from objlib.config import get_api_key
+    from objlib.models import AppState as AppStateClass
+    from objlib.search.client import GeminiSearchClient
+
+    try:
+        api_key = get_api_key()
+    except RuntimeError as e:
+        console.print(f"[red]{e}[/red]")
+        raise typer.Exit(code=1)
+
+    client = genai.Client(api_key=api_key)
+
+    # Resolve store display name to resource name
+    try:
+        resource_name = GeminiSearchClient.resolve_store_name(client, store)
+    except Exception as e:
+        console.print(f"[red]Failed to resolve store '{store}':[/red] {e}")
+        raise typer.Exit(code=1)
+
+    ctx.obj = AppStateClass(
+        gemini_client=client,
+        store_resource_name=resource_name,
+        db_path=str(db_path),
+        terminal_width=shutil.get_terminal_size().columns,
+    )
+
+
+def get_state(ctx: typer.Context) -> AppState:
+    """Type-safe accessor for AppState from Typer context."""
+    if ctx.obj is None:
+        console.print(
+            "[red]Application state not initialized. "
+            "Is the Gemini API key configured?[/red]"
+        )
+        raise typer.Exit(code=1)
+    return ctx.obj
 
 # Config command group
 config_app = typer.Typer(help="Manage configuration (API keys, settings)")
@@ -477,6 +547,96 @@ def upload(
     console.print(Panel(summary_table, title="Upload Complete"))
 
 
+@app.command()
+def search(
+    ctx: typer.Context,
+    query: Annotated[str, typer.Argument(help="Semantic search query")],
+    filter: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--filter",
+            "-f",
+            help="Metadata filter (field:value). Filterable: category, course, difficulty, quarter, date, year, week, quality_score",
+        ),
+    ] = None,
+    limit: Annotated[
+        int, typer.Option("--limit", "-l", help="Max results to display")
+    ] = 10,
+    model: Annotated[
+        str, typer.Option("--model", "-m", help="Gemini model for search")
+    ] = "gemini-2.5-flash",
+) -> None:
+    """Search the library by meaning with optional metadata filters."""
+    from objlib.search.citations import (
+        build_metadata_filter,
+        enrich_citations,
+        extract_citations,
+    )
+    from objlib.search.client import GeminiSearchClient
+
+    state = get_state(ctx)
+
+    # Build AIP-160 filter
+    metadata_filter = build_metadata_filter(filter) if filter else None
+
+    search_client = GeminiSearchClient(
+        state.gemini_client, state.store_resource_name
+    )
+
+    console.print(f"[dim]Searching for:[/dim] [bold]{query}[/bold]")
+    if metadata_filter:
+        console.print(f"[dim]Filter:[/dim] {metadata_filter}")
+
+    try:
+        response = search_client.query_with_retry(
+            query, metadata_filter=metadata_filter, model=model
+        )
+    except Exception as e:
+        console.print(f"[red]Search failed after retries:[/red] {e}")
+        raise typer.Exit(code=1)
+
+    # Extract citations from grounding metadata
+    grounding = None
+    if response.candidates:
+        grounding = response.candidates[0].grounding_metadata
+
+    citations = extract_citations(grounding)
+
+    # Enrich with SQLite metadata
+    with Database(state.db_path) as db:
+        enrich_citations(citations, db)
+
+    # Basic display (Plan 02 adds rich formatting)
+    response_text = response.text or "(No response text)"
+    console.print()
+    console.print(Panel(response_text, title="Results", border_style="cyan"))
+
+    if not citations:
+        console.print("[dim]No sources cited.[/dim]")
+        return
+
+    # Basic citation list (Plan 02 replaces with three-tier display)
+    console.print()
+    for cite in citations[:limit]:
+        meta = cite.metadata or {}
+        course = meta.get("course", "")
+        year = meta.get("year", "")
+        score_pct = int(cite.confidence * 100)
+        console.print(
+            f"[yellow][{cite.index}][/yellow] [bold]{cite.title}[/bold]  "
+            f"[green]{score_pct}%[/green]"
+            + (f"  | {course}" if course else "")
+            + (f", {year}" if year else "")
+        )
+        if cite.text:
+            excerpt = (
+                cite.text[:150].rsplit(" ", 1)[0] + "..."
+                if len(cite.text) > 150
+                else cite.text
+            )
+            console.print(f"    [dim]{excerpt}[/dim]")
+
+
 @config_app.command("set-api-key")
 def set_api_key(
     key: Annotated[
@@ -502,7 +662,7 @@ def set_api_key(
 
 
 @config_app.command("get-api-key")
-def get_api_key() -> None:
+def show_api_key() -> None:
     """Retrieve and display the stored Gemini API key (masked)."""
     api_key = keyring.get_password("objlib-gemini", "api_key")
     if not api_key:
