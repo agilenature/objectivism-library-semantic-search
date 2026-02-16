@@ -110,6 +110,10 @@ def get_state(ctx: typer.Context) -> AppState:
 config_app = typer.Typer(help="Manage configuration (API keys, settings)")
 app.add_typer(config_app, name="config")
 
+# Metadata command group
+metadata_app = typer.Typer(help="Manage file metadata (categories, courses, difficulty)")
+app.add_typer(metadata_app, name="metadata")
+
 
 @app.command()
 def scan(
@@ -1066,3 +1070,247 @@ def remove_api_key() -> None:
     except Exception as e:
         console.print(f"[red]Error:[/red] Failed to remove API key: {e}")
         raise typer.Exit(code=1)
+
+
+@metadata_app.command("show")
+def metadata_show(
+    filename: Annotated[
+        str,
+        typer.Argument(help="Filename to show metadata for"),
+    ],
+    db_path: Annotated[
+        Path,
+        typer.Option("--db", "-d", help="Path to SQLite database"),
+    ] = Path("data/library.db"),
+) -> None:
+    """Show current metadata for a file."""
+    import json
+    
+    with Database(db_path) as db:
+        row = db.conn.execute(
+            "SELECT filename, metadata_json, status FROM files WHERE filename = ?",
+            [filename],
+        ).fetchone()
+        
+        if not row:
+            console.print(f"[red]Error:[/red] File not found: {filename}")
+            raise typer.Exit(code=1)
+        
+        meta = json.loads(row["metadata_json"]) if row["metadata_json"] else {}
+        
+        # Display metadata in a panel
+        lines = [f"[bold]File:[/bold] {row['filename']}", f"[bold]Status:[/bold] {row['status']}", ""]
+        
+        if meta:
+            lines.append("[bold]Metadata:[/bold]")
+            for key in sorted(meta.keys()):
+                value = meta[key]
+                if value:  # Skip empty values
+                    lines.append(f"  {key}: {value}")
+        else:
+            lines.append("[dim]No metadata available[/dim]")
+        
+        console.print(Panel("\n".join(lines), title="File Metadata", border_style="cyan"))
+
+
+@metadata_app.command("update")
+def metadata_update(
+    filename: Annotated[
+        str,
+        typer.Argument(help="Filename to update metadata for"),
+    ],
+    category: Annotated[
+        str | None,
+        typer.Option("--category", "-c", help="Update category (e.g., course, book, motm, qa_session)"),
+    ] = None,
+    course: Annotated[
+        str | None,
+        typer.Option("--course", help="Update course name"),
+    ] = None,
+    difficulty: Annotated[
+        str | None,
+        typer.Option("--difficulty", help="Update difficulty (introductory, intermediate, advanced)"),
+    ] = None,
+    topic: Annotated[
+        str | None,
+        typer.Option("--topic", help="Update topic"),
+    ] = None,
+    year: Annotated[
+        int | None,
+        typer.Option("--year", help="Update year"),
+    ] = None,
+    quarter: Annotated[
+        str | None,
+        typer.Option("--quarter", help="Update quarter"),
+    ] = None,
+    set_pending: Annotated[
+        bool,
+        typer.Option("--set-pending", help="Set status to pending for re-upload"),
+    ] = False,
+    db_path: Annotated[
+        Path,
+        typer.Option("--db", "-d", help="Path to SQLite database"),
+    ] = Path("data/library.db"),
+) -> None:
+    """Update metadata fields for a specific file.
+    
+    Examples:
+      objlib metadata update "file.txt" --category course --course OPAR
+      objlib metadata update "file.txt" --difficulty intermediate --set-pending
+    """
+    import json
+    
+    # Collect updates
+    updates = {}
+    if category is not None:
+        updates["category"] = category
+    if course is not None:
+        updates["course"] = course
+    if difficulty is not None:
+        updates["difficulty"] = difficulty
+    if topic is not None:
+        updates["topic"] = topic
+    if year is not None:
+        updates["year"] = year
+    if quarter is not None:
+        updates["quarter"] = quarter
+    
+    if not updates and not set_pending:
+        console.print("[yellow]No updates specified. Use --category, --course, etc.[/yellow]")
+        raise typer.Exit(code=1)
+    
+    with Database(db_path) as db:
+        # Get current metadata
+        row = db.conn.execute(
+            "SELECT filename, metadata_json FROM files WHERE filename = ?",
+            [filename],
+        ).fetchone()
+        
+        if not row:
+            console.print(f"[red]Error:[/red] File not found: {filename}")
+            raise typer.Exit(code=1)
+        
+        # Update metadata
+        meta = json.loads(row["metadata_json"]) if row["metadata_json"] else {}
+        meta.update(updates)
+        
+        # Save back to database
+        update_query = "UPDATE files SET metadata_json = ?"
+        params = [json.dumps(meta)]
+        
+        if set_pending:
+            update_query += ", status = ?"
+            params.append("pending")
+        
+        update_query += " WHERE filename = ?"
+        params.append(filename)
+        
+        db.conn.execute(update_query, params)
+        db.conn.commit()
+        
+        # Show what was updated
+        console.print(f"[green]✓[/green] Updated metadata for: {filename}")
+        for key, value in updates.items():
+            console.print(f"  {key}: [bold]{value}[/bold]")
+        
+        if set_pending:
+            console.print("\n[dim]Status set to 'pending' - run 'objlib upload' to sync with Gemini[/dim]")
+
+
+@metadata_app.command("batch-update")
+def metadata_batch_update(
+    pattern: Annotated[
+        str,
+        typer.Argument(help="Filename pattern to match (SQL LIKE syntax, e.g., '%Stoicism%')"),
+    ],
+    category: Annotated[
+        str | None,
+        typer.Option("--category", "-c", help="Update category for all matches"),
+    ] = None,
+    course: Annotated[
+        str | None,
+        typer.Option("--course", help="Update course for all matches"),
+    ] = None,
+    difficulty: Annotated[
+        str | None,
+        typer.Option("--difficulty", help="Update difficulty for all matches"),
+    ] = None,
+    set_pending: Annotated[
+        bool,
+        typer.Option("--set-pending", help="Set status to pending for re-upload"),
+    ] = False,
+    db_path: Annotated[
+        Path,
+        typer.Option("--db", "-d", help="Path to SQLite database"),
+    ] = Path("data/library.db"),
+) -> None:
+    """Update metadata for multiple files matching a pattern.
+    
+    Uses SQL LIKE syntax: % matches any characters, _ matches single character.
+    
+    Examples:
+      objlib metadata batch-update '%Stoicism%' --category philosophy_comparison
+      objlib metadata batch-update '%Q and A%' --category qa_session --set-pending
+      objlib metadata batch-update 'Ben Bayer%' --course ARI_Seminars
+    """
+    import json
+    
+    # Collect updates
+    updates = {}
+    if category is not None:
+        updates["category"] = category
+    if course is not None:
+        updates["course"] = course
+    if difficulty is not None:
+        updates["difficulty"] = difficulty
+    
+    if not updates and not set_pending:
+        console.print("[yellow]No updates specified. Use --category, --course, etc.[/yellow]")
+        raise typer.Exit(code=1)
+    
+    with Database(db_path) as db:
+        # Find matching files
+        rows = db.conn.execute(
+            "SELECT filename, metadata_json FROM files WHERE filename LIKE ?",
+            [pattern],
+        ).fetchall()
+        
+        if not rows:
+            console.print(f"[yellow]No files match pattern:[/yellow] {pattern}")
+            raise typer.Exit(code=0)
+        
+        console.print(f"Found {len(rows)} matching file(s):")
+        for row in rows:
+            console.print(f"  - {row['filename']}")
+        
+        # Confirm
+        if not typer.confirm("\nProceed with update?"):
+            console.print("Cancelled.")
+            raise typer.Exit(code=0)
+        
+        # Update each file
+        for row in rows:
+            meta = json.loads(row["metadata_json"]) if row["metadata_json"] else {}
+            meta.update(updates)
+            
+            update_query = "UPDATE files SET metadata_json = ?"
+            params = [json.dumps(meta)]
+            
+            if set_pending:
+                update_query += ", status = ?"
+                params.append("pending")
+            
+            update_query += " WHERE filename = ?"
+            params.append(row["filename"])
+            
+            db.conn.execute(update_query, params)
+        
+        db.conn.commit()
+        
+        # Show what was updated
+        console.print(f"\n[green]✓[/green] Updated {len(rows)} file(s)")
+        for key, value in updates.items():
+            console.print(f"  {key}: [bold]{value}[/bold]")
+        
+        if set_pending:
+            console.print("\n[dim]Status set to 'pending' - run 'objlib upload' to sync with Gemini[/dim]")
