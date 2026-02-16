@@ -321,14 +321,26 @@ Phase 3 goal achieved: User can search by meaning, filter by metadata, browse by
 
 ### ✓ Filter Command Operators - VERIFIED
 
-**Test filter command:**
+**Test filter command (basic functionality):**
 - ✓ Basic filter works: `category:course` returns 866 course files (limited to 50 display)
 - ✓ Invalid field validation: `bogus:value` shows helpful error with valid field list
 - ✓ Field whitelist enforced: category, course, date, difficulty, quality_score, quarter, week, year
 
-**Status:** Filter command functional with proper validation.
+**Test filter comparison operators (numeric fields):**
 
-Note: Comparison operators (>=, <=, >, <) are implemented in `filter_files_by_metadata()` but not tested with real numeric data (most files lack year/difficulty fields).
+Found 537 files with year metadata (2015-2026).
+
+- ✓ **year:>=2023** → Returns 50 files (limit) from 2023-2026 (139 total matching)
+- ✓ **year:<=2020** → Returns files from 2015-2020 correctly
+- ✓ **year:>2025** → Returns 2 files from 2026
+- ✓ **year:<2016** → Returns files from 2015 only
+- ✓ **year:2023** → Returns exactly 45 files from 2023
+
+**Bug found and fixed:** Initial testing revealed comparison operators failed because `json_extract()` returns strings but comparisons need integers. Fixed by adding `CAST(json_extract(metadata_json, ?) AS INTEGER)` for numeric fields (year, week, quality_score).
+
+**Commit:** `5d24a69` - fix(database): enforce type casting for numeric metadata filters
+
+**Status:** Filter command fully functional with all comparison operators (>=, <=, >, <, =) working correctly on numeric fields.
 
 ### ✓ View Command Options - VERIFIED
 
@@ -358,13 +370,18 @@ Note: Comparison operators (>=, <=, >, <) are implemented in `filter_files_by_me
 
 **All 6 Human Verification Items:**
 1. ✓ Semantic search quality
-2. ✓ Metadata filter accuracy  
+2. ✓ Metadata filter accuracy
 3. ✓ Browse navigation correctness
 4. ✓ Rich formatting display
-5. ✓ Filter command operators
+5. ✓ Filter command operators (including all comparison operators: >=, <=, >, <, =)
 6. ✓ View command options
 
 **Final Status:** PASSED - All Phase 3 goals achieved.
+
+**Verification Updates (2026-02-16):**
+- Added comprehensive testing of filter comparison operators with numeric data
+- Fixed bug preventing numeric comparisons (commit 5d24a69)
+- All comparison operators now verified working on year field (537 files tested)
 
 ---
 
