@@ -36,12 +36,12 @@ MOTM_PATTERN = re.compile(
 )
 # Peikoff Podcast patterns:
 # Pattern 1: Episode 356 [1000332668759].txt
-# Pattern 2: Episode 097 – 2/1/2010 [1000386969198].txt
+# Pattern 2: Episode 097 – 2⧸1⧸2010 [1000386969198].txt (en-dash U+2013, big solidus U+29F8)
 PODCAST_PATTERN = re.compile(
     r"^Episode (?P<episode>\d+) \[(?P<id>\d+)\]\.txt$"
 )
 PODCAST_PATTERN_WITH_DATE = re.compile(
-    r"^Episode (?P<episode>\d+) – (?P<date>[\d/]+) \[(?P<id>\d+)\]\.txt$"
+    r"^Episode (?P<episode>\d+) [\u2013-] (?P<date>[\d\u29f8/]+) \[(?P<id>\d+)\]\.txt$"
 )
 # Folder detection for complex pattern: Year{N}/Q{N}/ subfolders
 YEAR_FOLDER = re.compile(r"^Year\s*(\d+)$")
