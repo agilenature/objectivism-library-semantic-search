@@ -42,7 +42,7 @@ echo ""
 
 echo "Courses in 'course' category (first 10):"
 echo ""
-python -m objlib browse course | head -20
+python -m objlib browse --category course | head -20
 echo ""
 read -p "Press Enter to continue..."
 echo ""
