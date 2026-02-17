@@ -5,30 +5,31 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** Three equally critical pillars -- semantic search quality, metadata preservation, incremental updates
-**Current focus:** Phase 6.1: Entity Extraction & Name Normalization -- COMPLETE
+**Current focus:** Phase 6.2: Metadata-Enriched Gemini Upload -- IN PROGRESS
 **Execution strategy:** Phase 6 before full upload (1,721 files) to enrich metadata first
 
 ## Current Position
 
-Phase: 6.1 of 7+ (Entity Extraction & Name Normalization)
-Plan: 2 of 2
-Status: Phase complete
-Last activity: 2026-02-17 - Completed 06.1-02-PLAN.md (CLI integration, database persistence)
+Phase: 6.2 of 7+ (Metadata-Enriched Gemini Upload)
+Plan: 1 of 2
+Status: In progress
+Last activity: 2026-02-17 - Completed 06.2-01-PLAN.md (data transformation layer)
 
-Progress: [##############.] ~94% (17 plans of ~18 estimated total)
+Progress: [###############] ~95% (18 plans of ~19 estimated total)
 
 Phase 1 Progress: [##########] 3/3 plans -- COMPLETE
 Phase 2 Progress: [##########] 4/4 plans -- COMPLETE
 Phase 3 Progress: [##########] 3/3 plans -- COMPLETE
 Phase 6 Progress: [##########] 5/5 plans -- COMPLETE
 Phase 6.1 Progress: [##########] 2/2 plans -- COMPLETE
+Phase 6.2 Progress: [#####.....] 1/2 plans -- IN PROGRESS
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 17
-- Average duration: 4.4 min
-- Total execution time: 75 min
+- Total plans completed: 18
+- Average duration: 4.3 min
+- Total execution time: 78 min
 
 **By Phase:**
 
@@ -39,9 +40,10 @@ Phase 6.1 Progress: [##########] 2/2 plans -- COMPLETE
 | 03-search-and-cli | 3/3 | 13 min | 4.3 min |
 | 06-ai-powered-metadata | 5/5 | 24 min | 4.8 min |
 | 06.1-entity-extraction | 2/2 | 9 min | 4.5 min |
+| 06.2-metadata-enriched-upload | 1/2 | 3 min | 3.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 06-04 (6 min), 06-05 (5 min), 06.1-01 (6 min), 06.1-02 (3 min)
+- Last 5 plans: 06-05 (5 min), 06.1-01 (6 min), 06.1-02 (3 min), 06.2-01 (3 min)
 - Trend: Stable at 3-6 min per plan
 
 *Updated after each plan completion*
@@ -124,6 +126,10 @@ Recent decisions affecting current work:
 - [06.1-02]: get_person_by_name_or_alias tries exact canonical, then exact alias, then LIKE partial
 - [06.1-02]: entities extract marks missing files as status='error' and continues batch
 - [06.1-02]: Report confidence coloring: green >= 0.9, yellow >= 0.7, red < 0.7
+- [06.2-01]: Schema v5 adds only upload_attempt_count and last_upload_hash (avoids collision with existing upload columns)
+- [06.2-01]: build_enriched_metadata uses AI metadata with Phase 1 fallback for category/difficulty
+- [06.2-01]: prepare_enriched_content returns None when no Tier 4 content (skip injection, use original file)
+- [06.2-01]: get_enriched_pending_files includes needs_review files by default (configurable)
 
 ### Pending Todos
 
@@ -137,5 +143,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Phase 6.1 COMPLETE (all 2 plans). Full entity extraction pipeline ready: schema v4, PersonRegistry, EntityExtractor, database persistence, CLI commands (extract/stats/report). Next: run entity extraction on 1,748 files, then proceed to Phase 6.2 (enriched upload) or Phase 4/5.
-Resume file: N/A - Phase 6.1 complete. Begin Phase 6.2 or Phase 4/5 planning.
+Stopped at: Phase 6.2 Plan 01 COMPLETE. Data transformation layer built: schema v5 migration, enriched metadata builder (string_list_value), content preparer (Tier 4 injection), enriched pipeline query (strict entity gate). Next: execute Plan 02 (CLI integration, orchestrator wiring).
+Resume file: .planning/phases/06.2-metadata-enriched-gemini-upload/06.2-02-PLAN.md
