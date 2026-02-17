@@ -10,10 +10,12 @@ Provides commands:
   - browse: Hierarchical exploration of library structure
   - filter: Metadata-only file queries against SQLite
   - config: Manage configuration (API keys, settings)
+  - entities: Extract and manage person entity mentions in transcripts
 """
 
 from __future__ import annotations
 
+import logging
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated
@@ -31,6 +33,8 @@ from objlib.scanner import FileScanner
 
 if TYPE_CHECKING:
     from objlib.models import AppState
+
+logger = logging.getLogger(__name__)
 
 app = typer.Typer(
     help="Objectivism Library - Search, browse, and explore your philosophical library",
@@ -113,6 +117,10 @@ app.add_typer(config_app, name="config")
 # Metadata command group
 metadata_app = typer.Typer(help="Manage file metadata (categories, courses, difficulty)")
 app.add_typer(metadata_app, name="metadata")
+
+# Entity extraction command group
+entities_app = typer.Typer(help="Extract and manage person entity mentions in transcripts")
+app.add_typer(entities_app, name="entities")
 
 
 @app.command()
@@ -2088,6 +2096,7 @@ def batch_extract_metadata(
         console.print("[cyan]Starting batch extraction...[/cyan]")
 
         try:
+            print("DEBUG: About to call asyncio.run()", flush=True)
             summary = asyncio.run(
                 orchestrator.run_batch_extraction(
                     max_files=max_files,
@@ -2132,10 +2141,411 @@ def batch_extract_metadata(
             "ai_metadata_status='failed_validation'\n"
             "Review errors and retry with [cyan]objlib metadata batch-extract[/cyan]"
         )
-    else:
+
+    # Show oversized files (too large for Mistral, will use Gemini File Search only)
+    if summary.get("oversized_files"):
+        console.print(f"\n[blue]ℹ {len(summary['oversized_files'])} files too large for extraction:[/blue]")
+        for file_path in summary["oversized_files"][:10]:  # Show first 10
+            console.print(f"  [dim]• {Path(file_path).name}[/dim]")
+        if len(summary["oversized_files"]) > 10:
+            console.print(f"  [dim]... and {len(summary['oversized_files']) - 10} more[/dim]")
+
+        console.print(
+            "\n[bold]Oversized files marked as skipped:[/bold]\n"
+            "These files exceed Mistral's context window (~100K tokens).\n"
+            "They are uploaded to Gemini File Search without enriched metadata extraction.\n"
+            "Gemini File Search (2M token context) handles them natively."
+        )
+
+    if not summary["failed_files"] and not summary.get("oversized_files"):
         console.print("\n[bold green]✓ All files processed successfully![/bold green]")
 
     console.print(
         "\n[bold]Next:[/bold] Run [cyan]objlib metadata stats[/cyan] "
         "to see updated extraction progress"
     )
+
+
+# ---- Entity extraction commands (Phase 6.1) ----
+
+
+@entities_app.command("extract")
+def entities_extract(
+    mode: Annotated[
+        str,
+        typer.Option(
+            "--mode", "-m",
+            help="Extraction mode: pending (default), backfill, force, upgrade",
+        ),
+    ] = "pending",
+    limit: Annotated[
+        int,
+        typer.Option("--limit", "-l", help="Maximum files to process"),
+    ] = 500,
+    db_path: Annotated[
+        Path,
+        typer.Option("--db", "-d", help="Path to SQLite database"),
+    ] = Path("data/library.db"),
+    library_root: Annotated[
+        Path,
+        typer.Option(
+            "--library-root",
+            help="Path to library root directory",
+        ),
+    ] = Path("/Volumes/U32 Shadow/Objectivism Library"),
+    use_llm: Annotated[
+        bool,
+        typer.Option("--use-llm", help="Enable LLM fallback for 80-91 fuzzy range"),
+    ] = False,
+) -> None:
+    """Extract person entities from transcript files.
+
+    Runs deterministic-first entity extraction (exact match, alias match,
+    RapidFuzz fuzzy match) against the canonical registry of 15 Objectivist
+    philosophers and ARI instructors.
+
+    Modes:
+      pending   - Files not yet extracted (default)
+      backfill  - Already-uploaded files missing entity data
+      force     - All .txt files, re-extracting everything
+      upgrade   - Files extracted with an older version
+    """
+    # Deferred imports for fast CLI startup
+    from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
+
+    from objlib.entities.extractor import EntityExtractor
+    from objlib.entities.registry import PersonRegistry
+
+    if not db_path.exists():
+        console.print(f"[red]Error:[/red] Database not found: {db_path}")
+        raise typer.Exit(code=1)
+
+    with Database(db_path) as db:
+        # Initialize registry and extractor
+        registry = PersonRegistry(db)
+
+        mistral_client = None
+        if use_llm:
+            try:
+                api_key = keyring.get_password("objlib-mistral", "api_key")
+                if api_key:
+                    from objlib.extraction.client import MistralClient
+                    mistral_client = MistralClient(api_key=api_key)
+                    console.print("[dim]LLM fallback enabled (Mistral)[/dim]")
+                else:
+                    console.print(
+                        "[yellow]Warning:[/yellow] --use-llm requested but no Mistral API key found. "
+                        "Continuing without LLM fallback."
+                    )
+            except Exception as e:
+                console.print(f"[yellow]Warning:[/yellow] LLM init failed: {e}. Continuing without.")
+
+        extractor = EntityExtractor(registry, mistral_client=mistral_client)
+
+        # Query files to process
+        try:
+            files = db.get_files_needing_entity_extraction(mode, limit)
+        except ValueError as e:
+            console.print(f"[red]Error:[/red] {e}")
+            raise typer.Exit(code=1)
+
+        if not files:
+            console.print(f"[green]No files to process in '{mode}' mode.[/green]")
+            return
+
+        console.print(
+            Panel(
+                f"Mode: [cyan]{mode}[/cyan]\n"
+                f"Files to process: [bold]{len(files)}[/bold]\n"
+                f"Library root: {library_root}\n"
+                f"LLM fallback: {'enabled' if mistral_client else 'disabled'}",
+                title="Entity Extraction",
+                border_style="cyan",
+            )
+        )
+
+        succeeded = 0
+        failed = 0
+        skipped = 0
+        # Track person mentions across the batch for summary
+        batch_persons: dict[str, int] = {}
+
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+            TimeElapsedColumn(),
+            console=console,
+        ) as progress:
+            task = progress.add_task("Extracting entities...", total=len(files))
+
+            for file_info in files:
+                fp = file_info["file_path"]
+                fn = file_info["filename"]
+                progress.update(task, description=f"[cyan]{fn[:50]}[/cyan]")
+
+                try:
+                    # Read file content
+                    source_path = library_root / fp
+                    if not source_path.exists():
+                        logger.warning("File not found: %s", source_path)
+                        # Mark as error in database
+                        from objlib.entities.models import EntityExtractionResult
+                        error_result = EntityExtractionResult(
+                            file_path=fp,
+                            entities=[],
+                            status="error",
+                        )
+                        db.save_transcript_entities(fp, error_result)
+                        skipped += 1
+                        progress.advance(task)
+                        continue
+
+                    text = source_path.read_text(encoding="utf-8")
+
+                    # Extract entities
+                    result = extractor.extract(text, fp)
+                    db.save_transcript_entities(fp, result)
+                    succeeded += 1
+
+                    # Track persons for batch summary
+                    for entity in result.entities:
+                        batch_persons[entity.canonical_name] = (
+                            batch_persons.get(entity.canonical_name, 0) + 1
+                        )
+
+                except Exception as e:
+                    logger.error("Entity extraction failed for %s: %s", fp, e)
+                    try:
+                        from objlib.entities.models import EntityExtractionResult
+                        error_result = EntityExtractionResult(
+                            file_path=fp,
+                            entities=[],
+                            status="blocked_entity_extraction",
+                        )
+                        db.save_transcript_entities(fp, error_result)
+                    except Exception:
+                        pass
+                    failed += 1
+
+                progress.advance(task)
+
+        # Print summary
+        console.print()
+        summary_table = Table(title="Extraction Summary")
+        summary_table.add_column("Metric", style="bold")
+        summary_table.add_column("Count", justify="right")
+
+        summary_table.add_row("Processed", str(succeeded + failed + skipped))
+        summary_table.add_row("Succeeded", f"[green]{succeeded}[/green]")
+        summary_table.add_row("Failed", f"[red]{failed}[/red]")
+        summary_table.add_row("Skipped (not found)", f"[yellow]{skipped}[/yellow]")
+
+        console.print(summary_table)
+
+        # Top-5 most mentioned persons
+        if batch_persons:
+            top_persons = sorted(batch_persons.items(), key=lambda x: x[1], reverse=True)[:5]
+            console.print("\n[bold]Top mentioned persons (this batch):[/bold]")
+            for name, count in top_persons:
+                console.print(f"  {name}: {count} transcript(s)")
+
+
+@entities_app.command("stats")
+def entities_stats(
+    db_path: Annotated[
+        Path,
+        typer.Option("--db", "-d", help="Path to SQLite database"),
+    ] = Path("data/library.db"),
+) -> None:
+    """Show entity extraction coverage, person frequency, and error counts."""
+    if not db_path.exists():
+        console.print(f"[red]Error:[/red] Database not found: {db_path}")
+        raise typer.Exit(code=1)
+
+    with Database(db_path) as db:
+        stats = db.get_entity_stats()
+
+        total_txt = stats["total_txt"]
+        done = stats["entities_done"]
+        pending = stats["pending"]
+        errors = stats["errors"]
+        coverage = (done / total_txt * 100) if total_txt > 0 else 0.0
+
+        # Coverage panel
+        console.print(
+            Panel(
+                f"Total .txt files: [bold]{total_txt}[/bold]\n"
+                f"Entities extracted: [green]{done}[/green] "
+                f"([green]{coverage:.1f}%[/green] coverage)\n"
+                f"Pending: [yellow]{pending}[/yellow]\n"
+                f"Errors: [red]{errors}[/red]\n"
+                f"\n"
+                f"Total mentions: [bold]{stats['total_mentions']}[/bold]\n"
+                f"Unique persons: [bold]{stats['unique_persons']}[/bold]",
+                title="Entity Extraction Coverage",
+                border_style="cyan",
+            )
+        )
+
+        # Person frequency table
+        if stats["person_frequency"]:
+            freq_table = Table(title="Person Frequency")
+            freq_table.add_column("Person", style="bold cyan")
+            freq_table.add_column("Transcripts", justify="right", style="green")
+            freq_table.add_column("Total Mentions", justify="right")
+
+            for name, transcript_count, total_mentions in stats["person_frequency"]:
+                freq_table.add_row(name, str(transcript_count), str(total_mentions))
+
+            console.print(freq_table)
+        else:
+            console.print("[dim]No entity data yet. Run 'objlib entities extract' first.[/dim]")
+
+
+@entities_app.command("report")
+def entities_report(
+    person: Annotated[
+        str,
+        typer.Argument(help="Person name or alias to report on"),
+    ] = "",
+    low_confidence: Annotated[
+        bool,
+        typer.Option(
+            "--low-confidence",
+            help="Show entities with confidence < 0.7",
+        ),
+    ] = False,
+    limit: Annotated[
+        int,
+        typer.Option("--limit", "-l", help="Maximum results"),
+    ] = 50,
+    db_path: Annotated[
+        Path,
+        typer.Option("--db", "-d", help="Path to SQLite database"),
+    ] = Path("data/library.db"),
+) -> None:
+    """Report on entity mentions: per-person transcripts or low-confidence review.
+
+    Examples:
+      objlib entities report "Leonard Peikoff"
+      objlib entities report Peikoff
+      objlib entities report --low-confidence
+    """
+    if not db_path.exists():
+        console.print(f"[red]Error:[/red] Database not found: {db_path}")
+        raise typer.Exit(code=1)
+
+    with Database(db_path) as db:
+        if person:
+            # Resolve to person_id
+            person_id = db.get_person_by_name_or_alias(person)
+            if not person_id:
+                console.print(
+                    f"[red]Error:[/red] Person not found: [bold]{person}[/bold]\n"
+                    "Run [cyan]objlib entities stats[/cyan] to see valid person names."
+                )
+                raise typer.Exit(code=1)
+
+            # Get canonical name for display
+            row = db.conn.execute(
+                "SELECT canonical_name FROM person WHERE person_id = ?",
+                (person_id,),
+            ).fetchone()
+            canonical_name = row["canonical_name"] if row else person_id
+
+            transcripts = db.get_transcripts_by_person(person_id, limit)
+
+            if not transcripts:
+                console.print(
+                    f"[yellow]No transcripts found mentioning {canonical_name}.[/yellow]"
+                )
+                return
+
+            console.print(
+                Panel(
+                    f"[bold]{canonical_name}[/bold] -- {len(transcripts)} transcript(s)",
+                    title="Person Report",
+                    border_style="cyan",
+                )
+            )
+
+            report_table = Table(show_header=True)
+            report_table.add_column("Filename", style="cyan", max_width=50)
+            report_table.add_column("Mentions", justify="right", style="bold")
+            report_table.add_column("Confidence", justify="right")
+            report_table.add_column("Evidence", max_width=60)
+
+            for t in transcripts:
+                conf = t["max_confidence"] or 0.0
+                if conf >= 0.9:
+                    conf_style = "[green]"
+                elif conf >= 0.7:
+                    conf_style = "[yellow]"
+                else:
+                    conf_style = "[red]"
+                conf_str = f"{conf_style}{conf:.0%}[/{conf_style[1:]}"
+
+                evidence = (t["evidence_sample"] or "")[:60]
+
+                report_table.add_row(
+                    t["filename"],
+                    str(t["mention_count"]),
+                    conf_str,
+                    evidence,
+                )
+
+            console.print(report_table)
+
+        elif low_confidence:
+            # Query low-confidence entities
+            rows = db.conn.execute(
+                """SELECT f.filename, te.person_id, p.canonical_name,
+                          te.max_confidence, te.evidence_sample
+                   FROM transcript_entity te
+                   JOIN files f ON te.transcript_id = f.file_path
+                   JOIN person p ON te.person_id = p.person_id
+                   WHERE te.max_confidence < 0.7
+                   ORDER BY te.max_confidence ASC
+                   LIMIT ?""",
+                (limit,),
+            ).fetchall()
+
+            if not rows:
+                console.print("[green]No low-confidence entities found.[/green]")
+                return
+
+            console.print(
+                Panel(
+                    f"[bold]{len(rows)}[/bold] entities with confidence < 0.7",
+                    title="Low Confidence Review",
+                    border_style="yellow",
+                )
+            )
+
+            lc_table = Table(show_header=True)
+            lc_table.add_column("Filename", style="cyan", max_width=40)
+            lc_table.add_column("Person", style="bold")
+            lc_table.add_column("Confidence", justify="right", style="red")
+            lc_table.add_column("Evidence", max_width=50)
+
+            for row in rows:
+                evidence = (row["evidence_sample"] or "")[:50]
+                lc_table.add_row(
+                    row["filename"],
+                    row["canonical_name"],
+                    f"{row['max_confidence']:.0%}",
+                    evidence,
+                )
+
+            console.print(lc_table)
+
+        else:
+            console.print(
+                "[yellow]Usage:[/yellow] Provide a person name or use --low-confidence\n\n"
+                "Examples:\n"
+                "  objlib entities report \"Leonard Peikoff\"\n"
+                "  objlib entities report Peikoff\n"
+                "  objlib entities report --low-confidence"
+            )
