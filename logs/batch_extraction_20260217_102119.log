@@ -1,0 +1,1653 @@
+Mistral Batch API Extraction
+Database: data/library.db
+Poll interval: 30s
+
+Starting batch extraction...
+DEBUG: About to call asyncio.run()
+DEBUG: Loading pending files...
+DEBUG: Got 723 pending files
+DEBUG: Building batch requests...
+DEBUG: Processing file 1/723
+DEBUG: Processing file 2/723
+DEBUG: Processing file 3/723
+DEBUG: Processing file 4/723
+DEBUG: Processing file 5/723
+DEBUG: Processing file 6/723
+DEBUG: Processing file 7/723
+DEBUG: Processing file 8/723
+DEBUG: Processing file 9/723
+DEBUG: Processing file 10/723
+DEBUG: Processing file 11/723
+DEBUG: Processing file 12/723
+DEBUG: Processing file 13/723
+DEBUG: Processing file 14/723
+DEBUG: Processing file 15/723
+DEBUG: Processing file 16/723
+DEBUG: Processing file 17/723
+DEBUG: Processing file 18/723
+DEBUG: Processing file 19/723
+DEBUG: Processing file 20/723
+DEBUG: Processing file 21/723
+DEBUG: Processing file 22/723
+DEBUG: Processing file 23/723
+DEBUG: Processing file 24/723
+DEBUG: Processing file 25/723
+DEBUG: Processing file 26/723
+DEBUG: Processing file 27/723
+DEBUG: Processing file 28/723
+DEBUG: Processing file 29/723
+DEBUG: Processing file 30/723
+DEBUG: Processing file 31/723
+DEBUG: Processing file 32/723
+DEBUG: Processing file 33/723
+DEBUG: Processing file 34/723
+DEBUG: Processing file 35/723
+DEBUG: Processing file 36/723
+DEBUG: Processing file 37/723
+DEBUG: Processing file 38/723
+DEBUG: Processing file 39/723
+DEBUG: Processing file 40/723
+DEBUG: Processing file 41/723
+DEBUG: Processing file 42/723
+DEBUG: Processing file 43/723
+DEBUG: Processing file 44/723
+DEBUG: Processing file 45/723
+DEBUG: Processing file 46/723
+DEBUG: Processing file 47/723
+DEBUG: Processing file 48/723
+DEBUG: Processing file 49/723
+DEBUG: Processing file 50/723
+DEBUG: Processing file 51/723
+DEBUG: Processing file 52/723
+DEBUG: Processing file 53/723
+DEBUG: Processing file 54/723
+DEBUG: Processing file 55/723
+DEBUG: Processing file 56/723
+DEBUG: Processing file 57/723
+DEBUG: Processing file 58/723
+DEBUG: Processing file 59/723
+DEBUG: Processing file 60/723
+DEBUG: Processing file 61/723
+DEBUG: Processing file 62/723
+DEBUG: Processing file 63/723
+DEBUG: Processing file 64/723
+DEBUG: Processing file 65/723
+DEBUG: Processing file 66/723
+DEBUG: Processing file 67/723
+DEBUG: Processing file 68/723
+DEBUG: Processing file 69/723
+DEBUG: Processing file 70/723
+DEBUG: Processing file 71/723
+DEBUG: Processing file 72/723
+DEBUG: Processing file 73/723
+DEBUG: Processing file 74/723
+DEBUG: Processing file 75/723
+DEBUG: Processing file 76/723
+DEBUG: Processing file 77/723
+DEBUG: Processing file 78/723
+DEBUG: Processing file 79/723
+DEBUG: Processing file 80/723
+DEBUG: Processing file 81/723
+DEBUG: Processing file 82/723
+DEBUG: Processing file 83/723
+DEBUG: Processing file 84/723
+DEBUG: Processing file 85/723
+DEBUG: Processing file 86/723
+DEBUG: Processing file 87/723
+DEBUG: Processing file 88/723
+DEBUG: Processing file 89/723
+DEBUG: Processing file 90/723
+DEBUG: Processing file 91/723
+DEBUG: Processing file 92/723
+DEBUG: Processing file 93/723
+DEBUG: Processing file 94/723
+DEBUG: Processing file 95/723
+DEBUG: Processing file 96/723
+DEBUG: Processing file 97/723
+DEBUG: Processing file 98/723
+DEBUG: Processing file 99/723
+DEBUG: Processing file 100/723
+DEBUG: Processing file 101/723
+DEBUG: Processing file 102/723
+DEBUG: Processing file 103/723
+DEBUG: Processing file 104/723
+DEBUG: Processing file 105/723
+DEBUG: Processing file 106/723
+DEBUG: Processing file 107/723
+DEBUG: Processing file 108/723
+DEBUG: Processing file 109/723
+DEBUG: Processing file 110/723
+DEBUG: Processing file 111/723
+DEBUG: Processing file 112/723
+DEBUG: Processing file 113/723
+DEBUG: Processing file 114/723
+DEBUG: Processing file 115/723
+DEBUG: Processing file 116/723
+DEBUG: Processing file 117/723
+DEBUG: Processing file 118/723
+DEBUG: Processing file 119/723
+DEBUG: Processing file 120/723
+DEBUG: Processing file 121/723
+DEBUG: Processing file 122/723
+DEBUG: Processing file 123/723
+DEBUG: Processing file 124/723
+DEBUG: Processing file 125/723
+DEBUG: Processing file 126/723
+DEBUG: Processing file 127/723
+DEBUG: Processing file 128/723
+DEBUG: Processing file 129/723
+DEBUG: Processing file 130/723
+DEBUG: Processing file 131/723
+DEBUG: Processing file 132/723
+DEBUG: Processing file 133/723
+DEBUG: Processing file 134/723
+DEBUG: Processing file 135/723
+DEBUG: Processing file 136/723
+DEBUG: Processing file 137/723
+DEBUG: Processing file 138/723
+DEBUG: Processing file 139/723
+DEBUG: Processing file 140/723
+DEBUG: Processing file 141/723
+DEBUG: Processing file 142/723
+DEBUG: Processing file 143/723
+DEBUG: Processing file 144/723
+DEBUG: Processing file 145/723
+DEBUG: Processing file 146/723
+DEBUG: Processing file 147/723
+DEBUG: Processing file 148/723
+DEBUG: Processing file 149/723
+DEBUG: Processing file 150/723
+DEBUG: Processing file 151/723
+DEBUG: Processing file 152/723
+DEBUG: Processing file 153/723
+DEBUG: Processing file 154/723
+DEBUG: Processing file 155/723
+DEBUG: Processing file 156/723
+DEBUG: Processing file 157/723
+DEBUG: Processing file 158/723
+DEBUG: Processing file 159/723
+DEBUG: Processing file 160/723
+DEBUG: Processing file 161/723
+DEBUG: Processing file 162/723
+DEBUG: Processing file 163/723
+DEBUG: Processing file 164/723
+DEBUG: Processing file 165/723
+DEBUG: Processing file 166/723
+DEBUG: Processing file 167/723
+DEBUG: Processing file 168/723
+DEBUG: Processing file 169/723
+DEBUG: Processing file 170/723
+DEBUG: Processing file 171/723
+DEBUG: Processing file 172/723
+DEBUG: Processing file 173/723
+DEBUG: Processing file 174/723
+DEBUG: Processing file 175/723
+DEBUG: Processing file 176/723
+DEBUG: Processing file 177/723
+DEBUG: Processing file 178/723
+DEBUG: Processing file 179/723
+DEBUG: Processing file 180/723
+DEBUG: Processing file 181/723
+DEBUG: Processing file 182/723
+DEBUG: Processing file 183/723
+DEBUG: Processing file 184/723
+DEBUG: Processing file 185/723
+DEBUG: Processing file 186/723
+DEBUG: Processing file 187/723
+DEBUG: Processing file 188/723
+DEBUG: Processing file 189/723
+DEBUG: Processing file 190/723
+DEBUG: Processing file 191/723
+DEBUG: Processing file 192/723
+DEBUG: Processing file 193/723
+DEBUG: Processing file 194/723
+DEBUG: Processing file 195/723
+DEBUG: Processing file 196/723
+DEBUG: Processing file 197/723
+DEBUG: Processing file 198/723
+DEBUG: Processing file 199/723
+DEBUG: Processing file 200/723
+DEBUG: Processing file 201/723
+DEBUG: Processing file 202/723
+DEBUG: Processing file 203/723
+DEBUG: Processing file 204/723
+DEBUG: Processing file 205/723
+DEBUG: Processing file 206/723
+DEBUG: Processing file 207/723
+DEBUG: Processing file 208/723
+DEBUG: Processing file 209/723
+DEBUG: Processing file 210/723
+DEBUG: Processing file 211/723
+DEBUG: Processing file 212/723
+DEBUG: Processing file 213/723
+DEBUG: Processing file 214/723
+DEBUG: Processing file 215/723
+DEBUG: Processing file 216/723
+DEBUG: Processing file 217/723
+DEBUG: Processing file 218/723
+DEBUG: Processing file 219/723
+DEBUG: Processing file 220/723
+DEBUG: Processing file 221/723
+DEBUG: Processing file 222/723
+DEBUG: Processing file 223/723
+DEBUG: Processing file 224/723
+DEBUG: Processing file 225/723
+DEBUG: Processing file 226/723
+DEBUG: Processing file 227/723
+DEBUG: Processing file 228/723
+DEBUG: Processing file 229/723
+DEBUG: Processing file 230/723
+DEBUG: Processing file 231/723
+DEBUG: Processing file 232/723
+DEBUG: Processing file 233/723
+DEBUG: Processing file 234/723
+DEBUG: Processing file 235/723
+DEBUG: Processing file 236/723
+DEBUG: Processing file 237/723
+DEBUG: Processing file 238/723
+DEBUG: Processing file 239/723
+DEBUG: Processing file 240/723
+DEBUG: Processing file 241/723
+DEBUG: Processing file 242/723
+DEBUG: Processing file 243/723
+DEBUG: Processing file 244/723
+DEBUG: Processing file 245/723
+DEBUG: Processing file 246/723
+DEBUG: Processing file 247/723
+DEBUG: Processing file 248/723
+DEBUG: Processing file 249/723
+DEBUG: Processing file 250/723
+DEBUG: Processing file 251/723
+DEBUG: Processing file 252/723
+DEBUG: Processing file 253/723
+DEBUG: Processing file 254/723
+DEBUG: Processing file 255/723
+DEBUG: Processing file 256/723
+DEBUG: Processing file 257/723
+DEBUG: Processing file 258/723
+DEBUG: Processing file 259/723
+DEBUG: Processing file 260/723
+DEBUG: Processing file 261/723
+DEBUG: Processing file 262/723
+DEBUG: Processing file 263/723
+DEBUG: Processing file 264/723
+DEBUG: Processing file 265/723
+DEBUG: Processing file 266/723
+DEBUG: Processing file 267/723
+DEBUG: Processing file 268/723
+DEBUG: Processing file 269/723
+DEBUG: Processing file 270/723
+DEBUG: Processing file 271/723
+DEBUG: Processing file 272/723
+DEBUG: Processing file 273/723
+DEBUG: Processing file 274/723
+DEBUG: Processing file 275/723
+DEBUG: Processing file 276/723
+DEBUG: Processing file 277/723
+DEBUG: Processing file 278/723
+DEBUG: Processing file 279/723
+DEBUG: Processing file 280/723
+DEBUG: Processing file 281/723
+DEBUG: Processing file 282/723
+DEBUG: Processing file 283/723
+DEBUG: Processing file 284/723
+DEBUG: Processing file 285/723
+DEBUG: Processing file 286/723
+DEBUG: Processing file 287/723
+DEBUG: Processing file 288/723
+DEBUG: Processing file 289/723
+DEBUG: Processing file 290/723
+DEBUG: Processing file 291/723
+DEBUG: Processing file 292/723
+DEBUG: Processing file 293/723
+DEBUG: Processing file 294/723
+DEBUG: Processing file 295/723
+DEBUG: Processing file 296/723
+DEBUG: Processing file 297/723
+DEBUG: Processing file 298/723
+DEBUG: Processing file 299/723
+DEBUG: Processing file 300/723
+DEBUG: Processing file 301/723
+DEBUG: Processing file 302/723
+DEBUG: Processing file 303/723
+DEBUG: Processing file 304/723
+DEBUG: Processing file 305/723
+DEBUG: Processing file 306/723
+DEBUG: Processing file 307/723
+DEBUG: Processing file 308/723
+DEBUG: Processing file 309/723
+DEBUG: Processing file 310/723
+DEBUG: Processing file 311/723
+DEBUG: Processing file 312/723
+DEBUG: Processing file 313/723
+DEBUG: Processing file 314/723
+DEBUG: Processing file 315/723
+DEBUG: Processing file 316/723
+DEBUG: Processing file 317/723
+DEBUG: Processing file 318/723
+DEBUG: Processing file 319/723
+DEBUG: Processing file 320/723
+DEBUG: Processing file 321/723
+DEBUG: Processing file 322/723
+DEBUG: Processing file 323/723
+DEBUG: Processing file 324/723
+DEBUG: Processing file 325/723
+DEBUG: Processing file 326/723
+DEBUG: Processing file 327/723
+DEBUG: Processing file 328/723
+DEBUG: Processing file 329/723
+DEBUG: Processing file 330/723
+DEBUG: Processing file 331/723
+DEBUG: Processing file 332/723
+DEBUG: Processing file 333/723
+DEBUG: Processing file 334/723
+DEBUG: Processing file 335/723
+DEBUG: Processing file 336/723
+DEBUG: Processing file 337/723
+DEBUG: Processing file 338/723
+DEBUG: Processing file 339/723
+DEBUG: Processing file 340/723
+DEBUG: Processing file 341/723
+DEBUG: Processing file 342/723
+DEBUG: Processing file 343/723
+DEBUG: Processing file 344/723
+DEBUG: Processing file 345/723
+DEBUG: Processing file 346/723
+DEBUG: Processing file 347/723
+DEBUG: Processing file 348/723
+DEBUG: Processing file 349/723
+DEBUG: Processing file 350/723
+DEBUG: Processing file 351/723
+DEBUG: Processing file 352/723
+DEBUG: Processing file 353/723
+DEBUG: Processing file 354/723
+DEBUG: Processing file 355/723
+DEBUG: Processing file 356/723
+DEBUG: Processing file 357/723
+DEBUG: Processing file 358/723
+DEBUG: Processing file 359/723
+DEBUG: Processing file 360/723
+DEBUG: Processing file 361/723
+DEBUG: Processing file 362/723
+DEBUG: Processing file 363/723
+DEBUG: Processing file 364/723
+DEBUG: Processing file 365/723
+DEBUG: Processing file 366/723
+DEBUG: Processing file 367/723
+DEBUG: Processing file 368/723
+DEBUG: Processing file 369/723
+DEBUG: Processing file 370/723
+DEBUG: Processing file 371/723
+DEBUG: Processing file 372/723
+DEBUG: Processing file 373/723
+DEBUG: Processing file 374/723
+DEBUG: Processing file 375/723
+DEBUG: Processing file 376/723
+DEBUG: Processing file 377/723
+DEBUG: Processing file 378/723
+DEBUG: Processing file 379/723
+DEBUG: Processing file 380/723
+DEBUG: Processing file 381/723
+DEBUG: Processing file 382/723
+DEBUG: Processing file 383/723
+DEBUG: Processing file 384/723
+DEBUG: Processing file 385/723
+DEBUG: Processing file 386/723
+DEBUG: Processing file 387/723
+DEBUG: Processing file 388/723
+DEBUG: Processing file 389/723
+DEBUG: Processing file 390/723
+DEBUG: Processing file 391/723
+DEBUG: Processing file 392/723
+DEBUG: Processing file 393/723
+DEBUG: Processing file 394/723
+DEBUG: Processing file 395/723
+DEBUG: Processing file 396/723
+DEBUG: Processing file 397/723
+DEBUG: Processing file 398/723
+DEBUG: Processing file 399/723
+DEBUG: Processing file 400/723
+DEBUG: Processing file 401/723
+DEBUG: Processing file 402/723
+DEBUG: Processing file 403/723
+DEBUG: Processing file 404/723
+DEBUG: Processing file 405/723
+DEBUG: Processing file 406/723
+DEBUG: Processing file 407/723
+DEBUG: Processing file 408/723
+DEBUG: Processing file 409/723
+DEBUG: Processing file 410/723
+DEBUG: Processing file 411/723
+DEBUG: Processing file 412/723
+DEBUG: Processing file 413/723
+DEBUG: Processing file 414/723
+DEBUG: Processing file 415/723
+DEBUG: Processing file 416/723
+DEBUG: Processing file 417/723
+DEBUG: Processing file 418/723
+DEBUG: Processing file 419/723
+DEBUG: Processing file 420/723
+DEBUG: Processing file 421/723
+DEBUG: Processing file 422/723
+DEBUG: Processing file 423/723
+DEBUG: Processing file 424/723
+DEBUG: Processing file 425/723
+DEBUG: Processing file 426/723
+DEBUG: Processing file 427/723
+DEBUG: Processing file 428/723
+DEBUG: Processing file 429/723
+DEBUG: Processing file 430/723
+DEBUG: Processing file 431/723
+DEBUG: Processing file 432/723
+DEBUG: Processing file 433/723
+DEBUG: Processing file 434/723
+DEBUG: Processing file 435/723
+DEBUG: Processing file 436/723
+DEBUG: Processing file 437/723
+DEBUG: Processing file 438/723
+DEBUG: Processing file 439/723
+DEBUG: Processing file 440/723
+DEBUG: Processing file 441/723
+DEBUG: Processing file 442/723
+DEBUG: Processing file 443/723
+DEBUG: Processing file 444/723
+DEBUG: Processing file 445/723
+DEBUG: Processing file 446/723
+DEBUG: Processing file 447/723
+DEBUG: Processing file 448/723
+DEBUG: Processing file 449/723
+DEBUG: Processing file 450/723
+DEBUG: Processing file 451/723
+DEBUG: Processing file 452/723
+DEBUG: Processing file 453/723
+DEBUG: Processing file 454/723
+DEBUG: Processing file 455/723
+DEBUG: Processing file 456/723
+DEBUG: Processing file 457/723
+DEBUG: Processing file 458/723
+DEBUG: Processing file 459/723
+DEBUG: Processing file 460/723
+DEBUG: Processing file 461/723
+DEBUG: Processing file 462/723
+DEBUG: Processing file 463/723
+DEBUG: Processing file 464/723
+DEBUG: Processing file 465/723
+DEBUG: Processing file 466/723
+DEBUG: Processing file 467/723
+DEBUG: Processing file 468/723
+DEBUG: Processing file 469/723
+DEBUG: Processing file 470/723
+DEBUG: Processing file 471/723
+DEBUG: Processing file 472/723
+DEBUG: Processing file 473/723
+DEBUG: Processing file 474/723
+DEBUG: Processing file 475/723
+DEBUG: Processing file 476/723
+DEBUG: Processing file 477/723
+DEBUG: Processing file 478/723
+DEBUG: Processing file 479/723
+DEBUG: Processing file 480/723
+DEBUG: Processing file 481/723
+DEBUG: Processing file 482/723
+DEBUG: Processing file 483/723
+DEBUG: Processing file 484/723
+DEBUG: Processing file 485/723
+DEBUG: Processing file 486/723
+DEBUG: Processing file 487/723
+DEBUG: Processing file 488/723
+DEBUG: Processing file 489/723
+DEBUG: Processing file 490/723
+DEBUG: Processing file 491/723
+DEBUG: Processing file 492/723
+DEBUG: Processing file 493/723
+DEBUG: Processing file 494/723
+DEBUG: Processing file 495/723
+DEBUG: Processing file 496/723
+DEBUG: Processing file 497/723
+DEBUG: Processing file 498/723
+DEBUG: Processing file 499/723
+DEBUG: Processing file 500/723
+DEBUG: Processing file 501/723
+DEBUG: Processing file 502/723
+DEBUG: Processing file 503/723
+DEBUG: Processing file 504/723
+DEBUG: Processing file 505/723
+DEBUG: Processing file 506/723
+DEBUG: Processing file 507/723
+DEBUG: Processing file 508/723
+DEBUG: Processing file 509/723
+DEBUG: Processing file 510/723
+DEBUG: Processing file 511/723
+DEBUG: Processing file 512/723
+DEBUG: Processing file 513/723
+DEBUG: Processing file 514/723
+DEBUG: Processing file 515/723
+DEBUG: Processing file 516/723
+DEBUG: Processing file 517/723
+DEBUG: Processing file 518/723
+DEBUG: Processing file 519/723
+DEBUG: Processing file 520/723
+DEBUG: Processing file 521/723
+DEBUG: Processing file 522/723
+DEBUG: Processing file 523/723
+DEBUG: Processing file 524/723
+DEBUG: Processing file 525/723
+DEBUG: Processing file 526/723
+DEBUG: Processing file 527/723
+DEBUG: Processing file 528/723
+DEBUG: Processing file 529/723
+DEBUG: Processing file 530/723
+DEBUG: Processing file 531/723
+DEBUG: Processing file 532/723
+DEBUG: Processing file 533/723
+DEBUG: Processing file 534/723
+DEBUG: Processing file 535/723
+DEBUG: Processing file 536/723
+DEBUG: Processing file 537/723
+DEBUG: Processing file 538/723
+DEBUG: Processing file 539/723
+DEBUG: Processing file 540/723
+DEBUG: Processing file 541/723
+DEBUG: Processing file 542/723
+DEBUG: Processing file 543/723
+DEBUG: Processing file 544/723
+DEBUG: Processing file 545/723
+DEBUG: Processing file 546/723
+DEBUG: Processing file 547/723
+DEBUG: Processing file 548/723
+DEBUG: Processing file 549/723
+DEBUG: Processing file 550/723
+DEBUG: Processing file 551/723
+DEBUG: Processing file 552/723
+DEBUG: Processing file 553/723
+DEBUG: Processing file 554/723
+DEBUG: Processing file 555/723
+DEBUG: Processing file 556/723
+DEBUG: Processing file 557/723
+DEBUG: Processing file 558/723
+DEBUG: Processing file 559/723
+DEBUG: Processing file 560/723
+DEBUG: Processing file 561/723
+DEBUG: Processing file 562/723
+DEBUG: Processing file 563/723
+DEBUG: Processing file 564/723
+DEBUG: Processing file 565/723
+DEBUG: Processing file 566/723
+DEBUG: Processing file 567/723
+DEBUG: Processing file 568/723
+DEBUG: Processing file 569/723
+DEBUG: Processing file 570/723
+DEBUG: Processing file 571/723
+DEBUG: Processing file 572/723
+DEBUG: Processing file 573/723
+DEBUG: Processing file 574/723
+DEBUG: Processing file 575/723
+DEBUG: Processing file 576/723
+DEBUG: Processing file 577/723
+DEBUG: Processing file 578/723
+DEBUG: Processing file 579/723
+DEBUG: Processing file 580/723
+DEBUG: Processing file 581/723
+DEBUG: Processing file 582/723
+DEBUG: Processing file 583/723
+DEBUG: Processing file 584/723
+DEBUG: Processing file 585/723
+DEBUG: Processing file 586/723
+DEBUG: Processing file 587/723
+DEBUG: Processing file 588/723
+DEBUG: Processing file 589/723
+DEBUG: Processing file 590/723
+DEBUG: Processing file 591/723
+DEBUG: Processing file 592/723
+DEBUG: Processing file 593/723
+DEBUG: Processing file 594/723
+DEBUG: Processing file 595/723
+DEBUG: Processing file 596/723
+DEBUG: Processing file 597/723
+DEBUG: Processing file 598/723
+DEBUG: Processing file 599/723
+DEBUG: Processing file 600/723
+DEBUG: Processing file 601/723
+DEBUG: Processing file 602/723
+DEBUG: Processing file 603/723
+DEBUG: Processing file 604/723
+DEBUG: Processing file 605/723
+DEBUG: Processing file 606/723
+DEBUG: Processing file 607/723
+DEBUG: Processing file 608/723
+DEBUG: Processing file 609/723
+DEBUG: Processing file 610/723
+DEBUG: Processing file 611/723
+DEBUG: Processing file 612/723
+DEBUG: Processing file 613/723
+DEBUG: Processing file 614/723
+DEBUG: Processing file 615/723
+DEBUG: Processing file 616/723
+DEBUG: Processing file 617/723
+DEBUG: Processing file 618/723
+DEBUG: Processing file 619/723
+DEBUG: Processing file 620/723
+DEBUG: Processing file 621/723
+DEBUG: Processing file 622/723
+DEBUG: Processing file 623/723
+DEBUG: Processing file 624/723
+DEBUG: Processing file 625/723
+DEBUG: Processing file 626/723
+DEBUG: Processing file 627/723
+DEBUG: Processing file 628/723
+DEBUG: Processing file 629/723
+DEBUG: Processing file 630/723
+DEBUG: Processing file 631/723
+DEBUG: Processing file 632/723
+DEBUG: Processing file 633/723
+DEBUG: Processing file 634/723
+DEBUG: Processing file 635/723
+DEBUG: Processing file 636/723
+DEBUG: Processing file 637/723
+DEBUG: Processing file 638/723
+DEBUG: Processing file 639/723
+DEBUG: Processing file 640/723
+DEBUG: Processing file 641/723
+DEBUG: Processing file 642/723
+DEBUG: Processing file 643/723
+DEBUG: Processing file 644/723
+DEBUG: Processing file 645/723
+DEBUG: Processing file 646/723
+DEBUG: Processing file 647/723
+DEBUG: Processing file 648/723
+DEBUG: Processing file 649/723
+DEBUG: Processing file 650/723
+DEBUG: Processing file 651/723
+DEBUG: Processing file 652/723
+DEBUG: Processing file 653/723
+DEBUG: Processing file 654/723
+DEBUG: Processing file 655/723
+DEBUG: Processing file 656/723
+DEBUG: Processing file 657/723
+DEBUG: Processing file 658/723
+DEBUG: Processing file 659/723
+DEBUG: Processing file 660/723
+DEBUG: Processing file 661/723
+DEBUG: Processing file 662/723
+DEBUG: Processing file 663/723
+DEBUG: Processing file 664/723
+DEBUG: Processing file 665/723
+DEBUG: Processing file 666/723
+DEBUG: Processing file 667/723
+DEBUG: Processing file 668/723
+DEBUG: Processing file 669/723
+DEBUG: Processing file 670/723
+DEBUG: Processing file 671/723
+DEBUG: Processing file 672/723
+DEBUG: Processing file 673/723
+DEBUG: Processing file 674/723
+DEBUG: Processing file 675/723
+DEBUG: Processing file 676/723
+DEBUG: Processing file 677/723
+DEBUG: Processing file 678/723
+DEBUG: Processing file 679/723
+DEBUG: Processing file 680/723
+DEBUG: Processing file 681/723
+DEBUG: Processing file 682/723
+DEBUG: Processing file 683/723
+DEBUG: Processing file 684/723
+DEBUG: Processing file 685/723
+DEBUG: Processing file 686/723
+DEBUG: Processing file 687/723
+DEBUG: Processing file 688/723
+DEBUG: Processing file 689/723
+DEBUG: Processing file 690/723
+DEBUG: Processing file 691/723
+DEBUG: Processing file 692/723
+DEBUG: Processing file 693/723
+DEBUG: Processing file 694/723
+DEBUG: Processing file 695/723
+DEBUG: Processing file 696/723
+DEBUG: Processing file 697/723
+DEBUG: Processing file 698/723
+DEBUG: Processing file 699/723
+DEBUG: Processing file 700/723
+DEBUG: Processing file 701/723
+DEBUG: Processing file 702/723
+DEBUG: Processing file 703/723
+DEBUG: Processing file 704/723
+DEBUG: Processing file 705/723
+DEBUG: Processing file 706/723
+DEBUG: Processing file 707/723
+DEBUG: Processing file 708/723
+DEBUG: Processing file 709/723
+DEBUG: Processing file 710/723
+DEBUG: Processing file 711/723
+DEBUG: Processing file 712/723
+DEBUG: Processing file 713/723
+DEBUG: Processing file 714/723
+DEBUG: Processing file 715/723
+DEBUG: Processing file 716/723
+DEBUG: Processing file 717/723
+DEBUG: Processing file 718/723
+DEBUG: Processing file 719/723
+DEBUG: Processing file 720/723
+DEBUG: Processing file 721/723
+DEBUG: Processing file 722/723
+DEBUG: Processing file 723/723
+DEBUG: About to submit 723 requests...
+DEBUG: Batch submitted, ID: 9dec4b1c-bf96-428b-bdee-59d96f5e4545
+DEBUG: Starting to poll (interval=30s)...
+DEBUG: Checking status (elapsed=0s, interval=30s)...
+DEBUG: Got status: QUEUED
+DEBUG: Checking status (elapsed=30s, interval=45s)...
+DEBUG: Got status: RUNNING
+DEBUG: Checking status (elapsed=75s, interval=67s)...
+DEBUG: Got status: RUNNING
+DEBUG: Checking status (elapsed=142s, interval=100s)...
+DEBUG: Got status: RUNNING
+DEBUG: Checking status (elapsed=242s, interval=120s)...
+DEBUG: Got status: RUNNING
+DEBUG: Checking status (elapsed=362s, interval=120s)...
+DEBUG: Got status: RUNNING
+DEBUG: Checking status (elapsed=482s, interval=120s)...
+DEBUG: Got status: RUNNING
+DEBUG: Checking status (elapsed=602s, interval=120s)...
+DEBUG: Got status: RUNNING
+DEBUG: Checking status (elapsed=722s, interval=120s)...
+DEBUG: Got status: RUNNING
+DEBUG: Checking status (elapsed=842s, interval=120s)...
+DEBUG: Got status: RUNNING
+DEBUG: Checking status (elapsed=962s, interval=120s)...
+DEBUG: Got status: RUNNING
+DEBUG: Checking status (elapsed=1082s, interval=120s)...
+DEBUG: Got status: RUNNING
+DEBUG: Checking status (elapsed=1202s, interval=120s)...
+DEBUG: Got status: RUNNING
+DEBUG: Checking status (elapsed=1322s, interval=120s)...
+DEBUG: Got status: RUNNING
+DEBUG: Checking status (elapsed=1442s, interval=120s)...
+DEBUG: Got status: RUNNING
+DEBUG: Checking status (elapsed=1562s, interval=120s)...
+DEBUG: Got status: RUNNING
+DEBUG: Checking status (elapsed=1682s, interval=120s)...
+DEBUG: Got status: RUNNING
+DEBUG: Checking status (elapsed=1802s, interval=120s)...
+DEBUG: Got status: RUNNING
+DEBUG: Checking status (elapsed=1922s, interval=120s)...
+DEBUG: Got status: RUNNING
+DEBUG: Checking status (elapsed=2042s, interval=120s)...
+DEBUG: Got status: RUNNING
+DEBUG: Checking status (elapsed=2162s, interval=120s)...
+DEBUG: Got status: RUNNING
+DEBUG: Checking status (elapsed=2282s, interval=120s)...
+DEBUG: Got status: RUNNING
+DEBUG: Checking status (elapsed=2402s, interval=120s)...
+DEBUG: Got status: RUNNING
+DEBUG: Checking status (elapsed=2522s, interval=120s)...
+DEBUG: Got status: RUNNING
+DEBUG: Checking status (elapsed=2642s, interval=120s)...
+DEBUG: Got status: RUNNING
+DEBUG: Checking status (elapsed=2762s, interval=120s)...
+DEBUG: Got status: RUNNING
+DEBUG: Checking status (elapsed=2882s, interval=120s)...
+DEBUG: Got status: RUNNING
+DEBUG: Checking status (elapsed=3002s, interval=120s)...
+DEBUG: Got status: RUNNING
+DEBUG: Checking status (elapsed=3122s, interval=120s)...
+DEBUG: Got status: RUNNING
+DEBUG: Checking status (elapsed=3242s, interval=120s)...
+DEBUG: Got status: RUNNING
+DEBUG: Checking status (elapsed=3362s, interval=120s)...
+DEBUG: Got status: SUCCESS
+DEBUG: Polling completed, status: {'id': '9dec4b1c-bf96-428b-bdee-59d96f5e4545', 'status': 'SUCCESS', 'model': 'magistral-medium-latest', 'created_at': 1771345286, 'started_at': 1771345288, 'completed_at': 1771348634, 'total_requests': 723, 'succeeded_requests': 723, 'failed_requests': 0, 'metadata': {'strategy': 'minimalist'}}
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights:   1%|          | 1/103 [00:00<00:00, 4405.78it/s, Materializing param=embeddings.LayerNorm.bias]Loading weights:   1%|          | 1/103 [00:00<00:00, 3521.67it/s, Materializing param=embeddings.LayerNorm.bias]Loading weights:   2%|▏         | 2/103 [00:00<00:00, 2299.51it/s, Materializing param=embeddings.LayerNorm.weight]Loading weights:   2%|▏         | 2/103 [00:00<00:00, 1574.73it/s, Materializing param=embeddings.LayerNorm.weight]Loading weights:   3%|▎         | 3/103 [00:00<00:00, 2243.74it/s, Materializing param=embeddings.position_embeddings.weight]Loading weights:   3%|▎         | 3/103 [00:00<00:00, 2192.91it/s, Materializing param=embeddings.position_embeddings.weight]Loading weights:   4%|▍         | 4/103 [00:00<00:00, 2259.86it/s, Materializing param=embeddings.token_type_embeddings.weight]Loading weights:   4%|▍         | 4/103 [00:00<00:00, 2193.10it/s, Materializing param=embeddings.token_type_embeddings.weight]Loading weights:   5%|▍         | 5/103 [00:00<00:00, 2627.68it/s, Materializing param=embeddings.word_embeddings.weight]      Loading weights:   5%|▍         | 5/103 [00:00<00:00, 2589.40it/s, Materializing param=embeddings.word_embeddings.weight]Loading weights:   6%|▌         | 6/103 [00:00<00:00, 2246.55it/s, Materializing param=encoder.layer.0.attention.output.LayerNorm.bias]Loading weights:   6%|▌         | 6/103 [00:00<00:00, 2224.70it/s, Materializing param=encoder.layer.0.attention.output.LayerNorm.bias]Loading weights:   7%|▋         | 7/103 [00:00<00:00, 2286.79it/s, Materializing param=encoder.layer.0.attention.output.LayerNorm.weight]Loading weights:   7%|▋         | 7/103 [00:00<00:00, 2253.62it/s, Materializing param=encoder.layer.0.attention.output.LayerNorm.weight]Loading weights:   8%|▊         | 8/103 [00:00<00:00, 2475.25it/s, Materializing param=encoder.layer.0.attention.output.dense.bias]      Loading weights:   8%|▊         | 8/103 [00:00<00:00, 2454.07it/s, Materializing param=encoder.layer.0.attention.output.dense.bias]Loading weights:   9%|▊         | 9/103 [00:00<00:00, 2701.94it/s, Materializing param=encoder.layer.0.attention.output.dense.weight]Loading weights:   9%|▊         | 9/103 [00:00<00:00, 2682.73it/s, Materializing param=encoder.layer.0.attention.output.dense.weight]Loading weights:  10%|▉         | 10/103 [00:00<00:00, 2941.31it/s, Materializing param=encoder.layer.0.attention.self.key.bias]     Loading weights:  10%|▉         | 10/103 [00:00<00:00, 2923.27it/s, Materializing param=encoder.layer.0.attention.self.key.bias]Loading weights:  11%|█         | 11/103 [00:00<00:00, 3173.79it/s, Materializing param=encoder.layer.0.attention.self.key.weight]Loading weights:  11%|█         | 11/103 [00:00<00:00, 3154.69it/s, Materializing param=encoder.layer.0.attention.self.key.weight]Loading weights:  12%|█▏        | 12/103 [00:00<00:00, 3401.48it/s, Materializing param=encoder.layer.0.attention.self.query.bias]Loading weights:  12%|█▏        | 12/103 [00:00<00:00, 3381.37it/s, Materializing param=encoder.layer.0.attention.self.query.bias]Loading weights:  13%|█▎        | 13/103 [00:00<00:00, 3620.34it/s, Materializing param=encoder.layer.0.attention.self.query.weight]Loading weights:  13%|█▎        | 13/103 [00:00<00:00, 3599.31it/s, Materializing param=encoder.layer.0.attention.self.query.weight]Loading weights:  14%|█▎        | 14/103 [00:00<00:00, 3827.17it/s, Materializing param=encoder.layer.0.attention.self.value.bias]  Loading weights:  14%|█▎        | 14/103 [00:00<00:00, 3805.34it/s, Materializing param=encoder.layer.0.attention.self.value.bias]Loading weights:  15%|█▍        | 15/103 [00:00<00:00, 3437.20it/s, Materializing param=encoder.layer.0.attention.self.value.weight]Loading weights:  15%|█▍        | 15/103 [00:00<00:00, 3417.04it/s, Materializing param=encoder.layer.0.attention.self.value.weight]Loading weights:  16%|█▌        | 16/103 [00:00<00:00, 3606.84it/s, Materializing param=encoder.layer.0.intermediate.dense.bias]    Loading weights:  16%|█▌        | 16/103 [00:00<00:00, 3589.86it/s, Materializing param=encoder.layer.0.intermediate.dense.bias]Loading weights:  17%|█▋        | 17/103 [00:00<00:00, 3777.85it/s, Materializing param=encoder.layer.0.intermediate.dense.weight]Loading weights:  17%|█▋        | 17/103 [00:00<00:00, 3760.32it/s, Materializing param=encoder.layer.0.intermediate.dense.weight]Loading weights:  17%|█▋        | 18/103 [00:00<00:00, 3946.55it/s, Materializing param=encoder.layer.0.output.LayerNorm.bias]    Loading weights:  17%|█▋        | 18/103 [00:00<00:00, 3929.50it/s, Materializing param=encoder.layer.0.output.LayerNorm.bias]Loading weights:  18%|█▊        | 19/103 [00:00<00:00, 4090.53it/s, Materializing param=encoder.layer.0.output.LayerNorm.weight]Loading weights:  18%|█▊        | 19/103 [00:00<00:00, 4067.77it/s, Materializing param=encoder.layer.0.output.LayerNorm.weight]Loading weights:  19%|█▉        | 20/103 [00:00<00:00, 4187.60it/s, Materializing param=encoder.layer.0.output.dense.bias]      Loading weights:  19%|█▉        | 20/103 [00:00<00:00, 4151.13it/s, Materializing param=encoder.layer.0.output.dense.bias]Loading weights:  20%|██        | 21/103 [00:00<00:00, 4108.80it/s, Materializing param=encoder.layer.0.output.dense.weight]Loading weights:  20%|██        | 21/103 [00:00<00:00, 4091.24it/s, Materializing param=encoder.layer.0.output.dense.weight]Loading weights:  21%|██▏       | 22/103 [00:00<00:00, 4251.11it/s, Materializing param=encoder.layer.1.attention.output.LayerNorm.bias]Loading weights:  21%|██▏       | 22/103 [00:00<00:00, 4233.95it/s, Materializing param=encoder.layer.1.attention.output.LayerNorm.bias]Loading weights:  22%|██▏       | 23/103 [00:00<00:00, 4386.95it/s, Materializing param=encoder.layer.1.attention.output.LayerNorm.weight]Loading weights:  22%|██▏       | 23/103 [00:00<00:00, 4368.67it/s, Materializing param=encoder.layer.1.attention.output.LayerNorm.weight]Loading weights:  23%|██▎       | 24/103 [00:00<00:00, 4232.22it/s, Materializing param=encoder.layer.1.attention.output.dense.bias]      Loading weights:  23%|██▎       | 24/103 [00:00<00:00, 4214.32it/s, Materializing param=encoder.layer.1.attention.output.dense.bias]Loading weights:  24%|██▍       | 25/103 [00:00<00:00, 4357.81it/s, Materializing param=encoder.layer.1.attention.output.dense.weight]Loading weights:  24%|██▍       | 25/103 [00:00<00:00, 4341.93it/s, Materializing param=encoder.layer.1.attention.output.dense.weight]Loading weights:  25%|██▌       | 26/103 [00:00<00:00, 4484.41it/s, Materializing param=encoder.layer.1.attention.self.key.bias]      Loading weights:  25%|██▌       | 26/103 [00:00<00:00, 4467.51it/s, Materializing param=encoder.layer.1.attention.self.key.bias]Loading weights:  26%|██▌       | 27/103 [00:00<00:00, 3996.41it/s, Materializing param=encoder.layer.1.attention.self.key.weight]Loading weights:  26%|██▌       | 27/103 [00:00<00:00, 3979.42it/s, Materializing param=encoder.layer.1.attention.self.key.weight]Loading weights:  27%|██▋       | 28/103 [00:00<00:00, 3980.76it/s, Materializing param=encoder.layer.1.attention.self.query.bias]Loading weights:  27%|██▋       | 28/103 [00:00<00:00, 3967.72it/s, Materializing param=encoder.layer.1.attention.self.query.bias]Loading weights:  28%|██▊       | 29/103 [00:00<00:00, 4081.71it/s, Materializing param=encoder.layer.1.attention.self.query.weight]Loading weights:  28%|██▊       | 29/103 [00:00<00:00, 4068.46it/s, Materializing param=encoder.layer.1.attention.self.query.weight]Loading weights:  29%|██▉       | 30/103 [00:00<00:00, 4183.01it/s, Materializing param=encoder.layer.1.attention.self.value.bias]  Loading weights:  29%|██▉       | 30/103 [00:00<00:00, 4170.67it/s, Materializing param=encoder.layer.1.attention.self.value.bias]Loading weights:  30%|███       | 31/103 [00:00<00:00, 4285.26it/s, Materializing param=encoder.layer.1.attention.self.value.weight]Loading weights:  30%|███       | 31/103 [00:00<00:00, 4272.87it/s, Materializing param=encoder.layer.1.attention.self.value.weight]Loading weights:  31%|███       | 32/103 [00:00<00:00, 4385.34it/s, Materializing param=encoder.layer.1.intermediate.dense.bias]    Loading weights:  31%|███       | 32/103 [00:00<00:00, 4372.77it/s, Materializing param=encoder.layer.1.intermediate.dense.bias]Loading weights:  32%|███▏      | 33/103 [00:00<00:00, 4463.03it/s, Materializing param=encoder.layer.1.intermediate.dense.weight]Loading weights:  32%|███▏      | 33/103 [00:00<00:00, 4445.69it/s, Materializing param=encoder.layer.1.intermediate.dense.weight]Loading weights:  33%|███▎      | 34/103 [00:00<00:00, 4550.44it/s, Materializing param=encoder.layer.1.output.LayerNorm.bias]    Loading weights:  33%|███▎      | 34/103 [00:00<00:00, 4536.40it/s, Materializing param=encoder.layer.1.output.LayerNorm.bias]Loading weights:  34%|███▍      | 35/103 [00:00<00:00, 4640.01it/s, Materializing param=encoder.layer.1.output.LayerNorm.weight]Loading weights:  34%|███▍      | 35/103 [00:00<00:00, 4625.97it/s, Materializing param=encoder.layer.1.output.LayerNorm.weight]Loading weights:  35%|███▍      | 36/103 [00:00<00:00, 4731.90it/s, Materializing param=encoder.layer.1.output.dense.bias]      Loading weights:  35%|███▍      | 36/103 [00:00<00:00, 4718.89it/s, Materializing param=encoder.layer.1.output.dense.bias]Loading weights:  36%|███▌      | 37/103 [00:00<00:00, 4824.64it/s, Materializing param=encoder.layer.1.output.dense.weight]Loading weights:  36%|███▌      | 37/103 [00:00<00:00, 4800.31it/s, Materializing param=encoder.layer.1.output.dense.weight]Loading weights:  37%|███▋      | 38/103 [00:00<00:00, 4905.17it/s, Materializing param=encoder.layer.2.attention.output.LayerNorm.bias]Loading weights:  37%|███▋      | 38/103 [00:00<00:00, 4891.17it/s, Materializing param=encoder.layer.2.attention.output.LayerNorm.bias]Loading weights:  38%|███▊      | 39/103 [00:00<00:00, 4962.47it/s, Materializing param=encoder.layer.2.attention.output.LayerNorm.weight]Loading weights:  38%|███▊      | 39/103 [00:00<00:00, 4948.66it/s, Materializing param=encoder.layer.2.attention.output.LayerNorm.weight]Loading weights:  39%|███▉      | 40/103 [00:00<00:00, 5050.03it/s, Materializing param=encoder.layer.2.attention.output.dense.bias]      Loading weights:  39%|███▉      | 40/103 [00:00<00:00, 5037.30it/s, Materializing param=encoder.layer.2.attention.output.dense.bias]Loading weights:  40%|███▉      | 41/103 [00:00<00:00, 4790.42it/s, Materializing param=encoder.layer.2.attention.output.dense.weight]Loading weights:  40%|███▉      | 41/103 [00:00<00:00, 4778.04it/s, Materializing param=encoder.layer.2.attention.output.dense.weight]Loading weights:  41%|████      | 42/103 [00:00<00:00, 4846.11it/s, Materializing param=encoder.layer.2.attention.self.key.bias]      Loading weights:  41%|████      | 42/103 [00:00<00:00, 4834.40it/s, Materializing param=encoder.layer.2.attention.self.key.bias]Loading weights:  42%|████▏     | 43/103 [00:00<00:00, 4926.66it/s, Materializing param=encoder.layer.2.attention.self.key.weight]Loading weights:  42%|████▏     | 43/103 [00:00<00:00, 4914.31it/s, Materializing param=encoder.layer.2.attention.self.key.weight]Loading weights:  43%|████▎     | 44/103 [00:00<00:00, 4502.63it/s, Materializing param=encoder.layer.2.attention.self.query.bias]Loading weights:  43%|████▎     | 44/103 [00:00<00:00, 4491.24it/s, Materializing param=encoder.layer.2.attention.self.query.bias]Loading weights:  44%|████▎     | 45/103 [00:00<00:00, 4571.84it/s, Materializing param=encoder.layer.2.attention.self.query.weight]Loading weights:  44%|████▎     | 45/103 [00:00<00:00, 4562.11it/s, Materializing param=encoder.layer.2.attention.self.query.weight]Loading weights:  45%|████▍     | 46/103 [00:00<00:00, 4644.63it/s, Materializing param=encoder.layer.2.attention.self.value.bias]  Loading weights:  45%|████▍     | 46/103 [00:00<00:00, 4634.37it/s, Materializing param=encoder.layer.2.attention.self.value.bias]Loading weights:  46%|████▌     | 47/103 [00:00<00:00, 4715.63it/s, Materializing param=encoder.layer.2.attention.self.value.weight]Loading weights:  46%|████▌     | 47/103 [00:00<00:00, 4706.06it/s, Materializing param=encoder.layer.2.attention.self.value.weight]Loading weights:  47%|████▋     | 48/103 [00:00<00:00, 4787.56it/s, Materializing param=encoder.layer.2.intermediate.dense.bias]    Loading weights:  47%|████▋     | 48/103 [00:00<00:00, 4777.57it/s, Materializing param=encoder.layer.2.intermediate.dense.bias]Loading weights:  48%|████▊     | 49/103 [00:00<00:00, 4856.81it/s, Materializing param=encoder.layer.2.intermediate.dense.weight]Loading weights:  48%|████▊     | 49/103 [00:00<00:00, 4847.19it/s, Materializing param=encoder.layer.2.intermediate.dense.weight]Loading weights:  49%|████▊     | 50/103 [00:00<00:00, 4926.13it/s, Materializing param=encoder.layer.2.output.LayerNorm.bias]    Loading weights:  49%|████▊     | 50/103 [00:00<00:00, 4915.97it/s, Materializing param=encoder.layer.2.output.LayerNorm.bias]Loading weights:  50%|████▉     | 51/103 [00:00<00:00, 4976.14it/s, Materializing param=encoder.layer.2.output.LayerNorm.weight]Loading weights:  50%|████▉     | 51/103 [00:00<00:00, 4910.46it/s, Materializing param=encoder.layer.2.output.LayerNorm.weight]Loading weights:  50%|█████     | 52/103 [00:00<00:00, 4875.79it/s, Materializing param=encoder.layer.2.output.dense.bias]      Loading weights:  50%|█████     | 52/103 [00:00<00:00, 4866.22it/s, Materializing param=encoder.layer.2.output.dense.bias]Loading weights:  51%|█████▏    | 53/103 [00:00<00:00, 4923.87it/s, Materializing param=encoder.layer.2.output.dense.weight]Loading weights:  51%|█████▏    | 53/103 [00:00<00:00, 4911.58it/s, Materializing param=encoder.layer.2.output.dense.weight]Loading weights:  52%|█████▏    | 54/103 [00:00<00:00, 4983.00it/s, Materializing param=encoder.layer.3.attention.output.LayerNorm.bias]Loading weights:  52%|█████▏    | 54/103 [00:00<00:00, 4972.39it/s, Materializing param=encoder.layer.3.attention.output.LayerNorm.bias]Loading weights:  53%|█████▎    | 55/103 [00:00<00:00, 4767.34it/s, Materializing param=encoder.layer.3.attention.output.LayerNorm.weight]Loading weights:  53%|█████▎    | 55/103 [00:00<00:00, 4758.29it/s, Materializing param=encoder.layer.3.attention.output.LayerNorm.weight]Loading weights:  54%|█████▍    | 56/103 [00:00<00:00, 4827.18it/s, Materializing param=encoder.layer.3.attention.output.dense.bias]      Loading weights:  54%|█████▍    | 56/103 [00:00<00:00, 4818.07it/s, Materializing param=encoder.layer.3.attention.output.dense.bias]Loading weights:  55%|█████▌    | 57/103 [00:00<00:00, 4886.87it/s, Materializing param=encoder.layer.3.attention.output.dense.weight]Loading weights:  55%|█████▌    | 57/103 [00:00<00:00, 4878.09it/s, Materializing param=encoder.layer.3.attention.output.dense.weight]Loading weights:  56%|█████▋    | 58/103 [00:00<00:00, 4945.51it/s, Materializing param=encoder.layer.3.attention.self.key.bias]      Loading weights:  56%|█████▋    | 58/103 [00:00<00:00, 4935.78it/s, Materializing param=encoder.layer.3.attention.self.key.bias]Loading weights:  57%|█████▋    | 59/103 [00:00<00:00, 4983.57it/s, Materializing param=encoder.layer.3.attention.self.key.weight]Loading weights:  57%|█████▋    | 59/103 [00:00<00:00, 4973.45it/s, Materializing param=encoder.layer.3.attention.self.key.weight]Loading weights:  58%|█████▊    | 60/103 [00:00<00:00, 5040.32it/s, Materializing param=encoder.layer.3.attention.self.query.bias]Loading weights:  58%|█████▊    | 60/103 [00:00<00:00, 5031.86it/s, Materializing param=encoder.layer.3.attention.self.query.bias]Loading weights:  59%|█████▉    | 61/103 [00:00<00:00, 4694.80it/s, Materializing param=encoder.layer.3.attention.self.query.weight]Loading weights:  59%|█████▉    | 61/103 [00:00<00:00, 4686.89it/s, Materializing param=encoder.layer.3.attention.self.query.weight]Loading weights:  60%|██████    | 62/103 [00:00<00:00, 4748.41it/s, Materializing param=encoder.layer.3.attention.self.value.bias]  Loading weights:  60%|██████    | 62/103 [00:00<00:00, 4740.45it/s, Materializing param=encoder.layer.3.attention.self.value.bias]Loading weights:  61%|██████    | 63/103 [00:00<00:00, 4802.20it/s, Materializing param=encoder.layer.3.attention.self.value.weight]Loading weights:  61%|██████    | 63/103 [00:00<00:00, 4794.53it/s, Materializing param=encoder.layer.3.attention.self.value.weight]Loading weights:  62%|██████▏   | 64/103 [00:00<00:00, 4855.92it/s, Materializing param=encoder.layer.3.intermediate.dense.bias]    Loading weights:  62%|██████▏   | 64/103 [00:00<00:00, 4848.21it/s, Materializing param=encoder.layer.3.intermediate.dense.bias]Loading weights:  63%|██████▎   | 65/103 [00:00<00:00, 4904.65it/s, Materializing param=encoder.layer.3.intermediate.dense.weight]Loading weights:  63%|██████▎   | 65/103 [00:00<00:00, 4897.16it/s, Materializing param=encoder.layer.3.intermediate.dense.weight]Loading weights:  64%|██████▍   | 66/103 [00:00<00:00, 4958.69it/s, Materializing param=encoder.layer.3.output.LayerNorm.bias]    Loading weights:  64%|██████▍   | 66/103 [00:00<00:00, 4950.89it/s, Materializing param=encoder.layer.3.output.LayerNorm.bias]Loading weights:  65%|██████▌   | 67/103 [00:00<00:00, 5004.87it/s, Materializing param=encoder.layer.3.output.LayerNorm.weight]Loading weights:  65%|██████▌   | 67/103 [00:00<00:00, 4997.39it/s, Materializing param=encoder.layer.3.output.LayerNorm.weight]Loading weights:  66%|██████▌   | 68/103 [00:00<00:00, 4907.31it/s, Materializing param=encoder.layer.3.output.dense.bias]      Loading weights:  66%|██████▌   | 68/103 [00:00<00:00, 4898.79it/s, Materializing param=encoder.layer.3.output.dense.bias]Loading weights:  67%|██████▋   | 69/103 [00:00<00:00, 4854.03it/s, Materializing param=encoder.layer.3.output.dense.weight]Loading weights:  67%|██████▋   | 69/103 [00:00<00:00, 4844.12it/s, Materializing param=encoder.layer.3.output.dense.weight]Loading weights:  68%|██████▊   | 70/103 [00:00<00:00, 4895.15it/s, Materializing param=encoder.layer.4.attention.output.LayerNorm.bias]Loading weights:  68%|██████▊   | 70/103 [00:00<00:00, 4887.25it/s, Materializing param=encoder.layer.4.attention.output.LayerNorm.bias]Loading weights:  69%|██████▉   | 71/103 [00:00<00:00, 4925.74it/s, Materializing param=encoder.layer.4.attention.output.LayerNorm.weight]Loading weights:  69%|██████▉   | 71/103 [00:00<00:00, 4916.96it/s, Materializing param=encoder.layer.4.attention.output.LayerNorm.weight]Loading weights:  70%|██████▉   | 72/103 [00:00<00:00, 4971.03it/s, Materializing param=encoder.layer.4.attention.output.dense.bias]      Loading weights:  70%|██████▉   | 72/103 [00:00<00:00, 4963.10it/s, Materializing param=encoder.layer.4.attention.output.dense.bias]Loading weights:  71%|███████   | 73/103 [00:00<00:00, 5017.52it/s, Materializing param=encoder.layer.4.attention.output.dense.weight]Loading weights:  71%|███████   | 73/103 [00:00<00:00, 5010.30it/s, Materializing param=encoder.layer.4.attention.output.dense.weight]Loading weights:  72%|███████▏  | 74/103 [00:00<00:00, 4998.69it/s, Materializing param=encoder.layer.4.attention.self.key.bias]      Loading weights:  72%|███████▏  | 74/103 [00:00<00:00, 4990.89it/s, Materializing param=encoder.layer.4.attention.self.key.bias]Loading weights:  73%|███████▎  | 75/103 [00:00<00:00, 4893.64it/s, Materializing param=encoder.layer.4.attention.self.key.weight]Loading weights:  73%|███████▎  | 75/103 [00:00<00:00, 4886.95it/s, Materializing param=encoder.layer.4.attention.self.key.weight]Loading weights:  74%|███████▍  | 76/103 [00:00<00:00, 4939.29it/s, Materializing param=encoder.layer.4.attention.self.query.bias]Loading weights:  74%|███████▍  | 76/103 [00:00<00:00, 4932.87it/s, Materializing param=encoder.layer.4.attention.self.query.bias]Loading weights:  75%|███████▍  | 77/103 [00:00<00:00, 4984.43it/s, Materializing param=encoder.layer.4.attention.self.query.weight]Loading weights:  75%|███████▍  | 77/103 [00:00<00:00, 4977.67it/s, Materializing param=encoder.layer.4.attention.self.query.weight]Loading weights:  76%|███████▌  | 78/103 [00:00<00:00, 5029.68it/s, Materializing param=encoder.layer.4.attention.self.value.bias]  Loading weights:  76%|███████▌  | 78/103 [00:00<00:00, 5023.58it/s, Materializing param=encoder.layer.4.attention.self.value.bias]Loading weights:  77%|███████▋  | 79/103 [00:00<00:00, 5074.89it/s, Materializing param=encoder.layer.4.attention.self.value.weight]Loading weights:  77%|███████▋  | 79/103 [00:00<00:00, 5067.99it/s, Materializing param=encoder.layer.4.attention.self.value.weight]Loading weights:  78%|███████▊  | 80/103 [00:00<00:00, 5043.20it/s, Materializing param=encoder.layer.4.intermediate.dense.bias]    Loading weights:  78%|███████▊  | 80/103 [00:00<00:00, 5034.95it/s, Materializing param=encoder.layer.4.intermediate.dense.bias]Loading weights:  79%|███████▊  | 81/103 [00:00<00:00, 5019.26it/s, Materializing param=encoder.layer.4.intermediate.dense.weight]Loading weights:  79%|███████▊  | 81/103 [00:00<00:00, 5012.08it/s, Materializing param=encoder.layer.4.intermediate.dense.weight]Loading weights:  80%|███████▉  | 82/103 [00:00<00:00, 5060.52it/s, Materializing param=encoder.layer.4.output.LayerNorm.bias]    Loading weights:  80%|███████▉  | 82/103 [00:00<00:00, 5053.90it/s, Materializing param=encoder.layer.4.output.LayerNorm.bias]Loading weights:  81%|████████  | 83/103 [00:00<00:00, 5101.74it/s, Materializing param=encoder.layer.4.output.LayerNorm.weight]Loading weights:  81%|████████  | 83/103 [00:00<00:00, 5095.46it/s, Materializing param=encoder.layer.4.output.LayerNorm.weight]Loading weights:  82%|████████▏ | 84/103 [00:00<00:00, 5142.63it/s, Materializing param=encoder.layer.4.output.dense.bias]      Loading weights:  82%|████████▏ | 84/103 [00:00<00:00, 5136.03it/s, Materializing param=encoder.layer.4.output.dense.bias]Loading weights:  83%|████████▎ | 85/103 [00:00<00:00, 5068.90it/s, Materializing param=encoder.layer.4.output.dense.weight]Loading weights:  83%|████████▎ | 85/103 [00:00<00:00, 5055.60it/s, Materializing param=encoder.layer.4.output.dense.weight]Loading weights:  83%|████████▎ | 86/103 [00:00<00:00, 5045.18it/s, Materializing param=encoder.layer.5.attention.output.LayerNorm.bias]Loading weights:  83%|████████▎ | 86/103 [00:00<00:00, 5036.94it/s, Materializing param=encoder.layer.5.attention.output.LayerNorm.bias]Loading weights:  84%|████████▍ | 87/103 [00:00<00:00, 4945.44it/s, Materializing param=encoder.layer.5.attention.output.LayerNorm.weight]Loading weights:  84%|████████▍ | 87/103 [00:00<00:00, 4938.75it/s, Materializing param=encoder.layer.5.attention.output.LayerNorm.weight]Loading weights:  85%|████████▌ | 88/103 [00:00<00:00, 4983.31it/s, Materializing param=encoder.layer.5.attention.output.dense.bias]      Loading weights:  85%|████████▌ | 88/103 [00:00<00:00, 4977.13it/s, Materializing param=encoder.layer.5.attention.output.dense.bias]Loading weights:  86%|████████▋ | 89/103 [00:00<00:00, 5022.04it/s, Materializing param=encoder.layer.5.attention.output.dense.weight]Loading weights:  86%|████████▋ | 89/103 [00:00<00:00, 5016.10it/s, Materializing param=encoder.layer.5.attention.output.dense.weight]Loading weights:  87%|████████▋ | 90/103 [00:00<00:00, 5061.31it/s, Materializing param=encoder.layer.5.attention.self.key.bias]      Loading weights:  87%|████████▋ | 90/103 [00:00<00:00, 5055.34it/s, Materializing param=encoder.layer.5.attention.self.key.bias]Loading weights:  88%|████████▊ | 91/103 [00:00<00:00, 5100.38it/s, Materializing param=encoder.layer.5.attention.self.key.weight]Loading weights:  88%|████████▊ | 91/103 [00:00<00:00, 5094.66it/s, Materializing param=encoder.layer.5.attention.self.key.weight]Loading weights:  89%|████████▉ | 92/103 [00:00<00:00, 5139.67it/s, Materializing param=encoder.layer.5.attention.self.query.bias]Loading weights:  89%|████████▉ | 92/103 [00:00<00:00, 5134.27it/s, Materializing param=encoder.layer.5.attention.self.query.bias]Loading weights:  90%|█████████ | 93/103 [00:00<00:00, 5179.32it/s, Materializing param=encoder.layer.5.attention.self.query.weight]Loading weights:  90%|█████████ | 93/103 [00:00<00:00, 5173.83it/s, Materializing param=encoder.layer.5.attention.self.query.weight]Loading weights:  91%|█████████▏| 94/103 [00:00<00:00, 5218.45it/s, Materializing param=encoder.layer.5.attention.self.value.bias]  Loading weights:  91%|█████████▏| 94/103 [00:00<00:00, 5212.73it/s, Materializing param=encoder.layer.5.attention.self.value.bias]Loading weights:  92%|█████████▏| 95/103 [00:00<00:00, 5103.41it/s, Materializing param=encoder.layer.5.attention.self.value.weight]Loading weights:  92%|█████████▏| 95/103 [00:00<00:00, 5096.62it/s, Materializing param=encoder.layer.5.attention.self.value.weight]Loading weights:  93%|█████████▎| 96/103 [00:00<00:00, 5138.70it/s, Materializing param=encoder.layer.5.intermediate.dense.bias]    Loading weights:  93%|█████████▎| 96/103 [00:00<00:00, 5133.13it/s, Materializing param=encoder.layer.5.intermediate.dense.bias]Loading weights:  94%|█████████▍| 97/103 [00:00<00:00, 5175.85it/s, Materializing param=encoder.layer.5.intermediate.dense.weight]Loading weights:  94%|█████████▍| 97/103 [00:00<00:00, 5170.06it/s, Materializing param=encoder.layer.5.intermediate.dense.weight]Loading weights:  95%|█████████▌| 98/103 [00:00<00:00, 5212.83it/s, Materializing param=encoder.layer.5.output.LayerNorm.bias]    Loading weights:  95%|█████████▌| 98/103 [00:00<00:00, 5207.28it/s, Materializing param=encoder.layer.5.output.LayerNorm.bias]Loading weights:  96%|█████████▌| 99/103 [00:00<00:00, 5250.04it/s, Materializing param=encoder.layer.5.output.LayerNorm.weight]Loading weights:  96%|█████████▌| 99/103 [00:00<00:00, 5244.54it/s, Materializing param=encoder.layer.5.output.LayerNorm.weight]Loading weights:  97%|█████████▋| 100/103 [00:00<00:00, 5284.30it/s, Materializing param=encoder.layer.5.output.dense.bias]     Loading weights:  97%|█████████▋| 100/103 [00:00<00:00, 5279.04it/s, Materializing param=encoder.layer.5.output.dense.bias]Loading weights:  98%|█████████▊| 101/103 [00:00<00:00, 5322.52it/s, Materializing param=encoder.layer.5.output.dense.weight]Loading weights:  98%|█████████▊| 101/103 [00:00<00:00, 5317.51it/s, Materializing param=encoder.layer.5.output.dense.weight]Loading weights:  99%|█████████▉| 102/103 [00:00<00:00, 5360.80it/s, Materializing param=pooler.dense.bias]                  Loading weights:  99%|█████████▉| 102/103 [00:00<00:00, 5355.77it/s, Materializing param=pooler.dense.bias]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 5398.95it/s, Materializing param=pooler.dense.weight]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 5393.76it/s, Materializing param=pooler.dense.weight]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 5372.70it/s, Materializing param=pooler.dense.weight]
+[1mBertModel LOAD REPORT[0m from: sentence-transformers/all-MiniLM-L6-v2
+Key                     | Status     |  | 
+------------------------+------------+--+-
+embeddings.position_ids | UNEXPECTED |  | 
+
+[3mNotes:
+- UNEXPECTED[3m	:can be ignored when loading from different task/architecture; not ok if you expect identical arch.[0m
+Mistral returned JSON array instead of object. Array length: 1. Content preview: 
+[[[  {    "category": "course_transcript",    "difficulty": "intermediate",    "primary_topics": [      "metaphysics",      "identity",      "epistemology",      "existence",      "consciouness"    ]
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/Courses/ITOE Advanced Topics/ITOE Advanced Topics - Class 15-01.txt: Mistral returned JSON array with 1 elements instead of JSON object. This violates response_format constraint.
+Mistral returned JSON array instead of object. Array length: 1. Content preview: [2023.0830]
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/Courses/ITOE/ITOE - Class 17-01.txt: Mistral returned JSON array with 1 elements instead of JSON object. This violates response_format constraint.
+Mistral returned JSON array instead of object. Array length: 12. Content preview: [21002, 21013, 21014, 21015, 21016, 21018, 21022, 21023, 21029, 21030, 21031, 21033]
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/Courses/Introduction to the Objectivist Ethics /Introduction to the Objectivist Ethics - 03.txt: Mistral returned JSON array with 12 elements instead of JSON object. This violates response_format constraint.
+Mistral returned JSON array instead of object. Array length: 1. Content preview: ["course_transcript"]
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/Courses/Logic_ The Cashing-In/Logic_ The Cashing-In - Lesson 05 - Wrap-up and Course Q&A.txt: Mistral returned JSON array with 1 elements instead of JSON object. This violates response_format constraint.
+Mistral returned JSON array instead of object. Array length: 1. Content preview: [11]
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/Courses/Moral Virtue/Moral Virtue - Lesson 03 - The Virtue of Independence.txt: Mistral returned JSON array with 1 elements instead of JSON object. This violates response_format constraint.
+Mistral returned JSON array instead of object. Array length: 1. Content preview: [[  ]]
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/Courses/Moral Virtue/Moral Virtue - Lesson 04 - Question Period, Moral Virtue.txt: Mistral returned JSON array with 1 elements instead of JSON object. This violates response_format constraint.
+Mistral returned JSON array instead of object. Array length: 3. Content preview: [23419, 28621, 33823]
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/Courses/Objective Communication/Objective Communication - Lesson 03 - Writing_ Analyses of _The Wreckage of the Consensus_ and a Sample Essay.txt: Mistral returned JSON array with 3 elements instead of JSON object. This violates response_format constraint.
+Mistral returned JSON array instead of object. Array length: 3. Content preview:  [3, 4, 5]
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/Courses/Objective Communication/Objective Communication - Lesson 07 - Arguing_ Principles and Methods of Informal Debate.txt: Mistral returned JSON array with 3 elements instead of JSON object. This violates response_format constraint.
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/Courses/Objective Communication/Objective Communication - Lesson 08 - Arguing_ Analyses of Student Mock Arguments on God and on Knowledge.txt: ['confidence_score is missing or not a number']
+Mistral returned JSON array instead of object. Array length: 3. Content preview: [[0,1,0], [0,0,1], [0,0,0]]
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/Courses/Objective Communication/Objective Communication - Lesson 09 - Writing_ Analyses of Student Papers on the Primacy of Consciousness and on Man_s Rights.txt: Mistral returned JSON array with 3 elements instead of JSON object. This violates response_format constraint.
+Mistral returned JSON array instead of object. Array length: 1. Content preview: [20230603152306]
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/Courses/Objective Thinking/Objective Thinking - Lesson 01 - Thinking Objectively.txt: Mistral returned JSON array with 1 elements instead of JSON object. This violates response_format constraint.
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/Courses/Objective Thinking/Objective Thinking - Lesson 02 - Discussion of Objective Thinking.txt: No valid JSON found in response
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/Courses/Objective Thinking/Objective Thinking - Lesson 04 - Discussion of Objectivity in Science.txt: UNIQUE constraint failed: file_primary_topics.file_path, file_primary_topics.topic_tag
+Mistral returned JSON array instead of object. Array length: 1. Content preview: 
+[20240630162219]
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/Courses/Objective Thinking/Objective Thinking - Lesson 06 - Being Objective About Objectivism.txt: Mistral returned JSON array with 1 elements instead of JSON object. This violates response_format constraint.
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/Courses/Objectivism Seminar - Foundations/Year1/Q2/Objectivism Seminar - Foundations - Year 1 - Q2 - Week 2 - Descartes Meditations on First Philosophy.txt: ['confidence_score is missing or not a number']
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/Courses/Objectivism Seminar - Foundations/Year1/Q2/Objectivism Seminar - Foundations - Year 1 - Q2 - Week 7 - Idealism and Arguments for the Existence of God Discussion – Group B.txt: ['confidence_score is missing or not a number']
+Mistral returned JSON array instead of object. Array length: 1. Content preview: [{"category":"cultural_commentary","difficulty":"advanced","primary_topics":["epistemology","consciousness","metaphysics"],"topic_aspects":["integration in philosophy","perception vs. perception theor
+Mistral returned JSON array instead of object. Array length: 1. Content preview: [[[1]]]
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/Courses/Objectivism Seminar - Foundations/Year1/Q3/Objectivism Seminar - Foundations - Year 1 - Q3 - Week 3 - Perceptual Awareness Form and Object.txt: Mistral returned JSON array with 1 elements instead of JSON object. This violates response_format constraint.
+Mistral returned JSON array instead of object. Array length: 1. Content preview: [{ "category": "course_transcript", "difficulty": "intermediate", "primary_topics": ["metaphysics", "epistemology", "existence", "consciousness", "concept_formation", "universals"], "topic_aspects": [
+Mistral returned JSON array instead of object. Array length: 1. Content preview: [{"category":"course_transcript","difficulty":"intermediate","primary_topics":["epistemology","metaphysics","concept_formation"],"topic_aspects":["problem of universals","Platonic realism","Aristoteli
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/Courses/Objectivism Seminar - Foundations/Year1/Q4/Objectivism Seminar - Foundations - Year 1 - Q4 - Week 4 - The Objectivist Theory of Concepts Measurement, Isolation and Abstraction.txt: ['confidence_score is missing or not a number']
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/Courses/Objectivism Seminar - Foundations/Year1/Q4/Objectivism Seminar - Foundations - Year 1 - Q4 - Week 6 - The Objectivist Theory of Concepts Definitions.txt: ["Invalid difficulty: ''. Must be one of: ['advanced', 'intermediate', 'intro']", 'primary_topics: must be exactly 8 topics (found 0). Semantic normalization should have corrected this. Valid: []', 'confidence_score is missing or not a number']
+Mistral returned JSON array instead of object. Array length: 1. Content preview: [5.0]
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/Courses/Objectivism Seminar - Foundations/Year2/Q2/Objectivism Seminar - Foundations - Year 2 - Q2 - Week 6 - The virtue of justice.txt: Mistral returned JSON array with 1 elements instead of JSON object. This violates response_format constraint.
+Mistral returned JSON array instead of object. Array length: 26. Content preview: [12421, 12823, 13225, 13627, 14029, 14431, 14833, 5000, 5402, 5804, 6206, 6608, 7010, 7412, 7814, 8216, 8618, 9020, 9422, 9824, 10226, 10628, 11030, 11432, 11834, 12236]
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/Courses/Objectivism Seminar - Foundations/Year2/Q3/Objectivism Seminar - Foundations - Year 2 - Q3 - Week 1 - Hobbes on the philosophic foundations of government - Part 1.txt: Mistral returned JSON array with 26 elements instead of JSON object. This violates response_format constraint.
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/Courses/Objectivism Seminar - Foundations/Year2/Q3/Objectivism Seminar - Foundations - Year 2 - Q3 - Week 6 - Government.txt: ['confidence_score is missing or not a number']
+Mistral returned JSON array instead of object. Array length: 7. Content preview: [1, 2, 3, 4, 5, 6, 7]
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/Courses/Objectivism Seminar - Foundations/Year2/Q3/Objectivism Seminar - Foundations - Year 2 - Q3 - Week 8 - Wrap up topics physical force and the good; property rights, including intellectual property and Locke on property.txt: Mistral returned JSON array with 7 elements instead of JSON object. This violates response_format constraint.
+Mistral returned JSON array instead of object. Array length: 1. Content preview:  [{
+  "description": "Complete 4-tier hybrid metadata for a single file.\n\nValidates controlled vocabulary for Tiers 1-2, accepts freeform\nfor Tiers 3-4. Invalid primary_topics are silently filtered
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/Courses/Objectivism Seminar - Foundations/Year2/Q4/Objectivism Seminar - Foundations - Year 2 - Q4 - Week 2 - Capitalism [cont’d]; War and foreign policy capitalism and a mixed economy.txt: ["Invalid difficulty: ''. Must be one of: ['advanced', 'intermediate', 'intro']", 'primary_topics: must be exactly 8 topics (found 0). Semantic normalization should have corrected this. Valid: []', 'confidence_score is missing or not a number']
+✓ Saved: How to think about current events - Week 2.txt (conf: 56.0%, status=needs_review)
+✓ Saved: How to think about current events - Week 3.txt (conf: 56.0%, status=needs_review)
+✓ Saved: How to think about current events - Week 9.txt (conf: 56.0%, status=needs_review)
+✓ Saved: ITOE Advanced Topics - Class 16-02.txt (conf: 56.0%, status=needs_review)
+✓ Saved: ITOE - Class 01-01.txt (conf: 56.0%, status=needs_review)
+✓ Saved: ITOE - Class 02-01.txt (conf: 56.0%, status=needs_review)
+✓ Saved: ITOE - Class 07-01.txt (conf: 56.0%, status=needs_review)
+✓ Saved: ITOE - Class 09-01.txt (conf: 56.0%, status=needs_review)
+✓ Saved: ITOE - Class 13-01.txt (conf: 56.0%, status=needs_review)
+✓ Saved: ITOE - Class 17-02.txt (conf: 56.0%, status=needs_review)
+✓ Saved: In Defense of Financial Markets - Lesson 01 - Introduction_ The Attack on Financial Markets.txt (conf: 56.0%, status=needs_review)
+✓ Saved: In Defense of Financial Markets - Lesson 02 - The Importance of Financial Markets.txt (conf: 56.0%, status=needs_review)
+✓ Saved: In Defense of Financial Markets - Lesson 03 - The Ideas Behind the Attacks Against Financiers.txt (conf: 56.0%, status=needs_review)
+✓ Saved: In Defense of Financial Markets - Lesson 04 - The Role of the Stock Market.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Individualism in an Age of Tribalism - Lesson 04 - Tribalism and Family Relationships.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Induction in Physics and Philosophy - Lesson 01 - The Axioms of Induction, Part 1.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Induction in Physics and Philosophy - Lesson 02 - The Axioms of Induction, Part 2.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Induction in Physics and Philosophy - Lesson 03 - Generalizations in Physics, Part 1.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Introduction to Finance 01.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Introduction to Finance 04.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Introduction to Finance 05.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Introduction to Finance 08.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Introduction to Writing - Lesson 07 - Q1 Week 2 – 2.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Introduction to Writing - Lesson 08 - Q1 Week 3 – 1.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Introduction to Writing - Lesson 15 - Q1 Week 6 – 1.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Introduction to Writing - Lesson 16 - Q1 Week 6 – 2.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Introduction to Writing - Lesson 22 - Q1 Week 9 – 2.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Introduction to the Objectivist Ethics - 01.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Introduction to the Objectivist Ethics - 02.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Introduction to the Objectivist Ethics - 05.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Introduction to the Objectivist Ethics - 06.txt (conf: 81.0%, status=needs_review)
+✓ Saved: Introduction to the Objectivist Ethics - 07.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Introduction to the Objectivist Ethics - 08.txt (conf: 56.0%, status=needs_review)
+✓ Saved: John Locke_s Political Philosophy - Lesson 01 - Locke_s Basic Philosophy.txt (conf: 56.0%, status=needs_review)
+✓ Saved: John Locke_s Political Philosophy - Lesson 02 - Rights and Government.txt (conf: 56.0%, status=needs_review)
+✓ Saved: John Locke_s Political Philosophy - Lesson 03 - Delegation of Rights, Consent, and Property Rights.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Judging, Feeling and Not Being Moralistic - Lesson 01 - What Judgment Requires.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Judging, Feeling and Not Being Moralistic - Lesson 02 - The Proper Role of Emotions.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Kant_s Philosophy (Part 1)_ Theoretical Philosophy - Lesson 01 - Historical and Conceptual Framework.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Kant_s Philosophy (Part 1)_ Theoretical Philosophy - Lesson 02 - Concepts and Method in Transcendental Idealism.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Kant_s Philosophy (Part 1)_ Theoretical Philosophy - Lesson 03 - Reason, Idealism, Kantianism and Objectivism.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Kant_s Philosophy (Part 2)_ Moral Philosophy - Lesson 03 - Formulations of the Categorical Imperative and Duties.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Lectures on Culture and Politics - Lesson 01 - The Philosophic Basis of Capitalism.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Lectures on Culture and Politics - Lesson 02 - The Role of Philosophy and Psychology in History.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Lectures on Culture and Politics - Lesson 03 - Objectivism_ A Question and Answer Session.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Lectures on Culture and Politics - Lesson 04 - A Rational Curriculum.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Lectures on Culture and Politics - Lesson 05 - Can Capitalism Survive_.txt (conf: 81.0%, status=needs_review)
+✓ Saved: Leonard Peikoff at the Ford Hall Forum - Lesson 01 - The Sanction of the Victims.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Leonard Peikoff at the Ford Hall Forum - Lesson 02 - Assault from the Ivory Tower_ The Professors_ War on America.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Leonard Peikoff at the Ford Hall Forum - Lesson 03 - The American School_ Why Johnny Can_t Think.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Leonard Peikoff at the Ford Hall Forum - Lesson 04 - Medicine_ The Death of a Profession.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Leonard Peikoff at the Ford Hall Forum - Lesson 05 - Religion vs. America.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Leonard Peikoff at the Ford Hall Forum - Lesson 06 - My Thirty Years with Ayn Rand_ An Intellectual Memoir.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Leonard Peikoff at the Ford Hall Forum - Lesson 07 - Why Should One Act on Principle_.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Leonard Peikoff at the Ford Hall Forum - Lesson 08 - Philosophy and the Real World Out There.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Leonard Peikoff at the Ford Hall Forum - Lesson 09 - Some Notes About Tomorrow.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Leonard Peikoff at the Ford Hall Forum - Lesson 10 - Modernism and Madness.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Leonard Peikoff at the Ford Hall Forum - Lesson 11 - What to Do About Crime.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Leonard Peikoff at the Ford Hall Forum - Lesson 12 - A Philosopher Looks at the O. J. Verdict.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Leonard Peikoff at the Ford Hall Forum - Lesson 13 - A Picture Is Not an Argument.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Leonard Peikoff at the Ford Hall Forum - Lesson 14 - America vs. Americans.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Love and Philosophy - Lesson 01.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Moral Virtue - Lesson 01 - The Virtue of Justice.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Moral Virtue - Lesson 02 - The Evil of the Initiation of Force.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objective Communication - Lesson 01 - Basic Principles and Methods of Communicating Ideas.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objective Communication - Lesson 02 - Writing_ Analyses of _Philosophy_ Who Needs It_ and a Sample Essay.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objective Communication - Lesson 04 - Speaking_ Principles and Methods of Oral Communication.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objective Communication - Lesson 05 - Speaking_ Analyses of Student Talks on Parenting and on Objectivist Ethics.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objective Communication - Lesson 06 - Speaking_ Analyses of Student Talks on Art and on Moral Sanction.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objective Communication - Lesson 10 - Writing_ Analyses of Student Papers on the Moral and the Practical and on Racism.txt (conf: 56.0%, status=needs_review)Mistral returned JSON array instead of object. Array length: 249. Content preview: [47800, 50500, 55900, 57700, 60600, 70000, 73300, 73900, 74400, 75700, 92800, 93100, 93900, 96400, 98700, 99000, 99600, 100000, 100700, 101000, 101700, 101900, 103000, 103500, 104000, 105200, 106700, 
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/Courses/Objectivism Through Induction/Objectivism Through Induction - Lesson 01 - An Inductive Approach to Philosophy.txt: Mistral returned JSON array with 249 elements instead of JSON object. This violates response_format constraint.
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/Courses/Objectivism Through Induction/Objectivism Through Induction - Lesson 08 - The Evil of Initiating Physical Force.txt: ['confidence_score is missing or not a number']
+Mistral returned JSON array instead of object. Array length: 1. Content preview: [{}]
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/Courses/Objectivism Through Induction/Objectivism Through Induction - Lesson 10 - Values as Objective.txt: ["Invalid difficulty: ''. Must be one of: ['advanced', 'intermediate', 'intro']", 'primary_topics: must be exactly 8 topics (found 0). Semantic normalization should have corrected this. Valid: []', 'confidence_score is missing or not a number']
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/Courses/Objectivism_ The State of the Art/Objectivism_ The State of the Art - Lesson 03 - Rand_s Distinctive Conception of Objectivity.txt: ['confidence_score is missing or not a number']
+Mistral returned JSON array instead of object. Array length: 6. Content preview: ["category","difficulty","primary_topics","topic_aspects","semantic_description","confidence_score"]
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/Courses/Objectivism_ The State of the Art/Objectivism_ The State of the Art - Lesson 06 - Moral Principles_ Integrity and Honesty.txt: Mistral returned JSON array with 6 elements instead of JSON object. This violates response_format constraint.
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/Courses/Objectivism_ The State of the Art/Objectivism_ The State of the Art - Lesson 08 - Question Period 2_ Objectivism_ The State of the Art.txt: ['confidence_score is missing or not a number']
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/Courses/Objectivist Logic/Objectivist Logic - Class 05-02.txt: ['confidence_score is missing or not a number']
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/Courses/Objectivist Logic/Objectivist Logic - Class 08-01.txt: No valid JSON found in response
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/Courses/Objectivist Logic/Objectivist Logic - Class 08-02.txt: No valid JSON found in response
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/Courses/Objectivist Logic/Objectivist Logic - Class 11-02.txt: ['confidence_score is missing or not a number']
+Mistral returned JSON array instead of object. Array length: 1. Content preview: [20230720113049796.13351851466403]
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/Courses/Persuasion Mastery/Persuasion Mastery - Week 3.txt: Mistral returned JSON array with 1 elements instead of JSON object. This violates response_format constraint.
+Mistral returned JSON array instead of object. Array length: 0. Content preview: 
+
+[]
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/Courses/Persuasion Mastery/Persuasion Mastery - Week 5.txt: Mistral returned JSON array with 0 elements instead of JSON object. This violates response_format constraint.
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/Courses/Philosophy of Education/Philosophy of Education - Lesson 02 - How to Teach Proper Thinking Methods.txt: No valid JSON found in response
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/Courses/Philosophy of Education/Philosophy of Education - Lesson 04 - Teaching Techniques, Teacher Training and the Politics of Education.txt: ["Invalid difficulty: ''. Must be one of: ['advanced', 'intermediate', 'intro']", 'primary_topics: must be exactly 8 topics (found 0). Semantic normalization should have corrected this. Valid: []', 'confidence_score is missing or not a number']
+
+✓ Saved: Objective Thinking - Lesson 03 - How to Be an Objective Consumer of Science.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objective Thinking - Lesson 05 - Being Objective About the News.txt (conf: 81.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 1 - Q1 - Week 1 - Objectivism and Its View of Philosophy.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 1 - Q1 - Week 2 - Philosophy and the False Methods of Rationalism and Empiricism.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 1 - Q1 - Week 3 - The Subject of Morality.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 1 - Q1 - Week 4 - The Foundations of the Objectivist Ethics – Life as the Standard of Value.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 1 - Q1 - Week 5 - The Foundations of the Objectivist Ethics – Man’s Life as the Standard of Moral Value.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 1 - Q1 - Week 6 - The Cardinal Values Reason.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 1 - Q1 - Week 7 - The Cardinal Values Purpose (and Egoism).txt (conf: 81.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 1 - Q1 - Week 8 - The Cardinal Values Self-Esteem.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 1 - Q2 - Week 1 - Descartes Meditations on First Philosophy.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 1 - Q2 - Week 3 - The Subject of Metaphysics and Beginning at the Beginning.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 1 - Q2 - Week 4 - The Axioms and Causality.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 1 - Q2 - Week 5 - Causality; The Primacy of Existence vs. the Primacy of Consciousness.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 1 - Q2 - Week 6 - The Metaphysically Given and the Man-Made.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 1 - Q2 - Week 7 - Idealism and Arguments for the Existence of God Discussion – Group A.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 1 - Q2 - Week 7 - Idealism and Arguments for the Existence of God.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 1 - Q2 - Week 8 - Materialism.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 1 - Q3 - Week 1 - Perception — Some Philosophical Questions About It.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 1 - Q3 - Week 2 - The Validity of the Senses and Some of the Arguments That Seek to Challenge Their Validity.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 1 - Q3 - Week 3 - Perceptual Awareness Form and Object Discussion — Group A.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 1 - Q3 - Week 3 - Perceptual Awareness Form and Object Discussion — Group B.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 1 - Q3 - Week 4 - Free will and Determinism – The Philosophical Debate.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 1 - Q3 - Week 5 - Free Will and Determinism.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 1 - Q3 - Week 6 - Free Will — The Primary Choice.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 1 - Q3 - Week 7 - Primary and Secondary Choices.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 1 - Q3 - Week 8 - Choice, Causality and Volition as an Axiom.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 1 - Q4 - Week 1 - Concepts; Plato's Approach to Concepts.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 1 - Q4 - Week 2 - The Problem of Universals – Aristotle vs Plato.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 1 - Q4 - Week 3 - The Problem of Universals Abelard, Locke, Berkeley and Hume.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 1 - Q4 - Week 5 - The Objectivist Theory of Concepts Abstractions, Abstraction from Abstractions, and the Cognitive Role of Concepts.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 1 - Q4 - Week 7 - The Objectivist Theory of Concepts and the Analytic-Synthetic Dichotomy.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 1 - Q4 - Week 8 - Conceptualization Essentials, Package-Deals, and Anti-Concepts.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 2 - Q1 - Week 1 - Objectivism and objectivity.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 2 - Q1 - Week 2 - Objectivity [continued].txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 2 - Q1 - Week 3 - Logic context and hierarchy.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 2 - Q1 - Week 4 - Plato and Hume on reason and emotion.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 2 - Q1 - Week 5 - Objectivism Reason and emotion.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 2 - Q1 - Week 6 - Reason, faith and the arbitrary.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 2 - Q1 - Week 7 - Certainty, mysticism, and skepticism.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 2 - Q1 - Week 8 - Certainty, mysticism, and skepticism [continued].txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 2 - Q2 - Week 1 - Pleasure and the foundations of ethics.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 2 - Q2 - Week 2 - Happiness.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 2 - Q2 - Week 3 - Independence.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 2 - Q2 - Week 4 - Productiveness.txt (conf: 81.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 2 - Q2 - Week 5 - The virtue of honesty.txt (conf: 81.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 2 - Q2 - Week 7 - The virtue of integrity.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 2 - Q2 - Week 8 - The virtue of pride.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 2 - Q3 - Week 2 - Locke on the philosophic foundations of government.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 2 - Q3 - Week 3 - The evil of the initiation of physical force.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 2 - Q3 - Week 4 - J.S. Mill and Ayn Rand Morality, rights, freedom, and force.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 2 - Q3 - Week 5 - Individual rights.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 2 - Q3 - Week 7 - ASSIGNMENTS.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 2 - Q4 - Week 1 - Capitalism.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 2 - Q4 - Week 3 - Marxian exploitation vs. a proper understanding of capitalism.txt (conf: 81.0%, status=needs_review)Mistral returned JSON array instead of object. Array length: 1. Content preview: [1.0]
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/Courses/Principles of Grammar/Principles of Grammar - Lesson 02 - Subordination and Coordination Part 1.txt: Mistral returned JSON array with 1 elements instead of JSON object. This violates response_format constraint.
+Mistral returned JSON array instead of object. Array length: 1. Content preview: [20240620184016]
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/Courses/Principles of Grammar/Principles of Grammar - Lesson 03 - Subordination and Coordination Part 2.txt: Mistral returned JSON array with 1 elements instead of JSON object. This violates response_format constraint.
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/Courses/Psycho-Epistemology/Psycho-Epistemology II - Lesson 02 - Psycho-Epistemology II, Part 2.txt: ['confidence_score is missing or not a number']
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/Courses/Rationality and Objectivity/Rationality and Objectivity - Lesson 01 - Introduction to Rationality and Objectivity.txt: No valid JSON found in response
+Mistral returned JSON array instead of object. Array length: 3. Content preview: 			 
+[ 20231030, 0.92,	{
+  "category": "course_transcript",
+  "difficulty": "advanced",
+  "primary_topics": [
+    "psychology_of_rationality",
+    "rationality",
+    "objectivity",
+    "epistemology",
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/Courses/Rationality and Objectivity/Rationality and Objectivity - Lesson 04 - Objectivity_ Theory.txt: Mistral returned JSON array with 3 elements instead of JSON object. This violates response_format constraint.
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/Courses/Self-Interest/Self-Interest - Lesson 04 - Altruism, Principles and the Ill-gotten.txt: ['confidence_score is missing or not a number']
+Mistral returned JSON array instead of object. Array length: 1. Content preview: [20240626032523]
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/Courses/The Art of Thinking/The Art of Thinking - Lesson 02 - Hierarchy.txt: Mistral returned JSON array with 1 elements instead of JSON object. This violates response_format constraint.
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/Courses/The Atlas Project/The Atlas Project - Lesson 09 - Part I Chapter 9 - The Sacred and the Profane.txt: No valid JSON found in response
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/Courses/The Atlas Project/The Atlas Project - Lesson 11 - Part II Chapter 1 - The Man Who Belonged on Earth.txt: ['confidence_score is missing or not a number']
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/Courses/The Atlas Project/The Atlas Project - Lesson 21 - Part III Chapter 1 - Atlantis.txt: ['confidence_score is missing or not a number']
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/Courses/The Atlas Project/The Atlas Project - Lesson 29 - Part III Chapter 8 - The Egoist.txt: ['confidence_score is missing or not a number']
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/Courses/The Atlas Project/The Atlas Project - Lesson 31 - Part III Chapter 10 - In the Name of the Best Within Us.txt: ["Invalid category: 'collectivism'. Must be one of: ['article', 'book_excerpt', 'concept_exploration', 'course_transcript', 'cultural_commentary', 'philosophy_comparison', 'qa_session']"]
+
+✓ Saved: Objectivism Seminar - Foundations - Year 2 - Q4 - Week 4 - ASSIGNMENTS.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 2 - Q4 - Week 5 - Esthetics.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 2 - Q4 - Week 6 - The Objectivist Esthetics.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 2 - Q4 - Week 7 - Alternative definitions of “art.”.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Seminar - Foundations - Year 2 - Q4 - Week 8 - Literary Romanticism.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Through Induction - Lesson 02 - Reason as Man_s Basic Means of Survival.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Through Induction - Lesson 03 - Validating Egoism Inductively.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Through Induction - Lesson 04 - Egoism and Justice.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Through Induction - Lesson 05 - Justice and Objectivity.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Through Induction - Lesson 06 - Aristotle_s Induction of Objectivity.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Through Induction - Lesson 07 - Objectivity_ From Aristotle to Ayn Rand.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Through Induction - Lesson 09 - Sex as Metaphysical.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Through Induction - Lesson 11 - The Arbitrary as Neither True Nor False.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism Through Induction - Lesson 12 - Final Exam_ Leonard Peikoff_s Answers.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism_ The State of the Art - Lesson 01 - The Logical Structure of Objectivism.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism_ The State of the Art - Lesson 02 - The Logical Structure of the Objectivist Metaphysics.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism_ The State of the Art - Lesson 04 - Rand_s Distinctive Conception of Logic.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism_ The State of the Art - Lesson 05 - Moral Principles_ What Is a Principle_.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism_ The State of the Art - Lesson 07 - Question Period 1_ Objectivism_ The State of the Art.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism_s Approach to the Virtues - Lesson 01 - Unborrowed Vision_ The Virtue of Independence.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism_s Approach to the Virtues - Lesson 02 - Moral Ambition_ Perfection and Pride, Part 1.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism_s Approach to the Virtues - Lesson 03 - Moral Ambition_ Perfection and Pride, Part 2.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism_s Approach to the Virtues - Lesson 04 - Productive Achievement_ Man_s _Noblest Activity_.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivism_s Approach to the Virtues - Lesson 05 - Virtues or Vices__ Kindness, Generosity, Charity.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivist Epistemology in Outline - Lesson 01 - Preliminaries.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivist Epistemology in Outline - Lesson 02 - Concepts.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivist Epistemology in Outline - Lesson 03 - Conceptualization.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivist Epistemology in Outline - Lesson 04 - Objectivity.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivist Logic - Class 01-01.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivist Logic - Class 01-02.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivist Logic - Class 02-01.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivist Logic - Class 02-02.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivist Logic - Class 03-01.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivist Logic - Class 03-02.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivist Logic - Class 04-01.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivist Logic - Class 07-01.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivist Logic - Class 09-01.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivist Logic - Class 09-02.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivist Logic - Class 10-01.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivist Logic - Class 10-02.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivist Logic - Class 11-02 - Open Office Hour.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivist Logic - Class 13-02.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivist Logic - Class 14-02.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivist Logic - Class 16-02.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivist Logic - Class 17-01.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Objectivist Logic - Class 17-02.txt (conf: 81.0%, status=needs_review)
+✓ Saved: Oral Communication - Basics | 2024 - Lesson 01 - Week 1.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Oral Communication - Basics | 2024 - Lesson 02 - Week 2.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Oral Communication - Basics | 2024 - Lesson 03 - Week 2 – Class 2.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Oral Communication - Basics | 2024 - Lesson 04 - Week 3.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Oral Communication - Basics | 2024 - Lesson 05 - Week 3 – Class 2.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Oral Communication - Basics | 2024 - Lesson 06 - Week 4.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Oral Communication - Basics | 2024 - Lesson 07 - Week 5 – Class 1.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Oral Communication - Basics | 2024 - Lesson 08 - Week 6 – Class 1.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Oral Communication - Basics | 2024 - Lesson 09 - Week 7.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Oral Communication - Basics | 2024 - Lesson 10 - Week 8.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Perception - Class 02-02.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Perception - Class 04-01.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Perception - Class 05-02.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Perception - Class 06-01.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Persuasion Mastery - Week 1.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Persuasion Mastery - Week 2.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Persuasion Mastery - Week 4.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Persuasion Mastery - Week 6.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Persuasion Mastery - Week 7.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Persuasion Mastery - Week 8.txt (conf: 81.0%, status=needs_review)
+✓ Saved: Philosophic Issues in Economics - Lesson 01.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Philosophic Issues in Economics - Lesson 02.txt (conf: 81.0%, status=needs_review)
+✓ Saved: Philosophic Issues in Economics - Lesson 03.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Philosophic Issues in Economics - Lesson 04 - Questions and Answers - Panel on Objectivism and Economics.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Philosophy of Education - Lesson 01 - The Purpose of Education.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Philosophy of Education - Lesson 03 - A Proper Curriculum for Primary and Secondary Education.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Philosophy, Work and Business - Week 1.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Philosophy, Work and Business - Week 2.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Philosophy, Work and Business - Week 3.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Philosophy, Work and Business - Week 4.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Philosophy, Work and Business - Week 5.txt (conf: 56.0%, status=needs_review)Mistral returned JSON array instead of object. Array length: 4. Content preview: [5, 6, 7, 8]
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/Courses/The DIM Hypothesis I/The DIM Hypothesis I - Lesson 01 - Integration.txt: Mistral returned JSON array with 4 elements instead of JSON object. This violates response_format constraint.
+Mistral returned JSON array instead of object. Array length: 2. Content preview: ["category", "article"]
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/Courses/The DIM Hypothesis I/The DIM Hypothesis I - Lesson 05 - DIM in Education.txt: Mistral returned JSON array with 2 elements instead of JSON object. This violates response_format constraint.
+Mistral returned JSON array instead of object. Array length: 1. Content preview: [20240102073124]
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/Courses/The Fountainhead - Reading Group/The Fountainhead — Reading Group — Session 07 — (Chapters 2-10|2-11|2-12).txt: Mistral returned JSON array with 1 elements instead of JSON object. This violates response_format constraint.
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/Courses/The Fountainhead - Reading Group/The Fountainhead — Reading Group — Session 11 — (Chapters 4-2|4-3|4-4|4-5).txt: ["Invalid difficulty: ''. Must be one of: ['advanced', 'intermediate', 'intro']", 'primary_topics: must be exactly 8 topics (found 0). Semantic normalization should have corrected this. Valid: []', 'confidence_score is missing or not a number']
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/Courses/Unity in Epistemology and Ethics/Unity in Epistemology and Ethics - Lesson 02 - How to Unite History and Philosophy.txt: No valid JSON found in response
+Mistral returned JSON array instead of object. Array length: 1. Content preview: [[
+{
+  "category": "course_transcript",
+  "difficulty": "intermediate",
+  "primary_topics": [
+    "epistemology",
+    "values",
+    "rational_egoism",
+    "communication",
+    "writing",
+    "educatio
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/Courses/Writing_ A Mini-Course/Writing_ A Mini-Course - Lesson 01 - Writing, Part 1.txt: Mistral returned JSON array with 1 elements instead of JSON object. This violates response_format constraint.
+Mistral returned JSON array instead of object. Array length: 2. Content preview: [23.0, 25.0]
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2016-06-26_Alex-Epstein-on-Fossil-Fuels-and-Industrial-Progress.txt: Mistral returned JSON array with 2 elements instead of JSON object. This violates response_format constraint.
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2016-07-31_Sunday-Brunch-Prox-Principle-and-Objectivism-as-Elitist-Philosophy.txt: ['confidence_score is missing or not a number']
+Mistral returned JSON array instead of object. Array length: 2. Content preview: [6043, 2848]
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2016-10-23_Ellen-Kenner-10.txt: Mistral returned JSON array with 2 elements instead of JSON object. This violates response_format constraint.
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2016-12-04_Sunday-Brunch-Subconscious-Causality-and-Textbook-of-Americanism.txt: ['confidence_score is missing or not a number']
+
+✓ Saved: Philosophy, Work and Business - Week 6.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Philosophy, Work and Business - Week 7.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Philosophy, Work and Business - Week 8.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Principles of Grammar - Lesson 01 - Basic Grammatical Concepts.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Principles of Grammar - Lesson 04 - Verbs and Pronouns Part 1.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Principles of Grammar - Lesson 05 - Verbs and Pronouns Part 2.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Principles of Grammar - Lesson 06 - Punctuation.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Principles of Grammar - Lesson 07 - Choosing the Right Word Part 1.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Principles of Grammar - Lesson 08 - Choosing the Right Word Part 2.txt (conf: 81.0%, status=needs_review)
+✓ Saved: Psycho-Epistemology I - Lesson 01 - Psycho-Epistemology I, Part 1.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Psycho-Epistemology I - Lesson 02 - Psycho-Epistemology I, Part 2.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Psycho-Epistemology II - Lesson 01 - Psycho-Epistemology II, Part 1.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Rationality and Objectivity - Lesson 02 - Rationality_ Theory.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Rationality and Objectivity - Lesson 03 - Rationality_ Practice.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Rationality and Objectivity - Lesson 05 - Objectivity_ Practice.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Reflections on Life and Personal Values - Lesson 02 - Triumphs and Tribulations of a Talk-Show Host.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Reflections on Life and Personal Values - Lesson 03 - Love, Sex and Romance.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Reflections on Life and Personal Values - Lesson 04 - Centenary Reminiscences of Ayn Rand.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Reflections on Life and Personal Values - Lesson 05 - Cultural Commentary Q&A.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Seize the Reins of Your Mind - Lesson 01 - Seize the Reins of Your Mind.txt (conf: 81.0%, status=needs_review)
+✓ Saved: Self-Interest - Lesson 01 - What Self-Interest Is.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Self-Interest - Lesson 02 - What Egoism Is Not.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Self-Interest - Lesson 03 - Why Egoism Is the Proper Policy to Adopt.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Self-Interest - Lesson 05 - How to Be Self-Interested, Part 1.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Self-Interest - Lesson 06 - How to Be Self-Interested, Part 2.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Seminar on Ayn Rand_s Political Philosophy - Lesson 01 - The Basic Principle of Political Philosophy_ Individual Rights.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Seminar on Ayn Rand_s Political Philosophy - Lesson 02 - Government as the Means of Securing Individual Rights.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Seminar on Ayn Rand_s Political Philosophy - Lesson 03 - The Moral Foundations of Capitalism.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Seminar on Ayn Rand_s Political Philosophy - Lesson 04 - The Objectivity of the Free Market.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Seminar on Ayn Rand_s Political Philosophy - Lesson 05 - A Deeper Look at Property Rights.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Seminar on Ayn Rand_s Political Philosophy - Lesson 06 - Intellectual Freedom and the Right to Disagree.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Anti-Industrial Revolution - Lesson 01 - The Anti-Industrial Revolution.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Art of Thinking - Lesson 01 - Volition as a Means to Clarity.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Art of Thinking - Lesson 03 - Thinking in Essentials.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Art of Thinking - Lesson 04 - Question & Answer Session 1.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Art of Thinking - Lesson 05 - Thinking In Principles.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Art of Thinking - Lesson 06 - Certainty.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Art of Thinking - Lesson 07 - Thinking versus Writing.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Art of Thinking - Lesson 08 - Question & Answer Session 2.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Atlas Project - Lesson 01 - Part I Chapter 1 - The Theme.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Atlas Project - Lesson 02 - Part I Chapter 2 - The Chain.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Atlas Project - Lesson 03 - Part I Chapter 3 - The Top and the Bottom.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Atlas Project - Lesson 04 - Part I Chapter 4 - The Immovable Movers.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Atlas Project - Lesson 05 - Part I Chapter 5 - The Climax of the dAnconias.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Atlas Project - Lesson 06 - Part I Chapter 6 - The Non-Commercial.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Atlas Project - Lesson 07 - Part I Chapter 7 - The Exploiters and the Exploited.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Atlas Project - Lesson 08 - Part I Chapter 8 - The John Galt Line.txt (conf: 81.0%, status=needs_review)
+✓ Saved: The Atlas Project - Lesson 10 - Part I Chapter 10 - Wyatts Torch.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Atlas Project - Lesson 12 - Part II Chapter 2 - The Aristocracy of Pull.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Atlas Project - Lesson 13 - Part II Chapter 3 - White Blackmail.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Atlas Project - Lesson 14 - Part II Chapter 4 - The Sanction of the Victim.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Atlas Project - Lesson 15 - Part II Chapter 5 - Account Overdrawn.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Atlas Project - Lesson 16 - Part II Chapter 6 - Miracle Metal.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Atlas Project - Lesson 17 - Part II Chapter 7 - The Moratorium on Brains.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Atlas Project - Lesson 18 - Part II Chapter 8 - By Our Love.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Atlas Project - Lesson 19 - Part II Chapter 9 - The Face Without Pain or Fear or Guilt.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Atlas Project - Lesson 20 - Part II Chapter 10 - The Sign of the Dollar.txt (conf: 81.0%, status=needs_review)
+✓ Saved: The Atlas Project - Lesson 22 - Part III Chapter 2 - The Utopia of Greed.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Atlas Project - Lesson 23 - Part III Chapter 3 - Anti-Greed.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Atlas Project - Lesson 24 - Part III Chapter 4 - Anti-Life.txt (conf: 81.0%, status=needs_review)
+✓ Saved: The Atlas Project - Lesson 25 - Part III Chapter 5 - Their Brothers Keepers.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Atlas Project - Lesson 26 - Part III Chapter 6 - The Concerto of Deliverance.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Atlas Project - Lesson 27 - Part III Chapter 7 - This Is John Galt Speaking - part 1 of 2.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Atlas Project - Lesson 28 - Part III Chapter 7 - This Is John Galt Speaking - part 2 of 2.txt (conf: 81.0%, status=needs_review)
+✓ Saved: The Atlas Project - Lesson 30 - Part III Chapter 9 - The Generator.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Atlas Project - Lesson 32 - Atlas Shrugged as Literature and Philosophy.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Atlas Project - Lesson 33 - Social and Political Themes in Atlas Shrugged.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Atlas Project - Lesson 34 - John Galts Moral Philosophy.txt (conf: 56.0%, status=needs_review)Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2017-03-26_Sunday-Brunch-at-HBL-Ryan-Care.txt: ["Invalid category: 'q_a_session'. Must be one of: ['article', 'book_excerpt', 'concept_exploration', 'course_transcript', 'cultural_commentary', 'philosophy_comparison', 'qa_session']"]
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2017-04-02_Sunday-Brunch-at-HBL-Political-Reactions-Labels-and-Moral-Certainty-Dealing-with-the-altruist.txt: ['confidence_score is missing or not a number']
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2017-07-09_Sunday-Brunch-The-inspiration-for-Song-of-Broken-Glass-Preventive-Law-Researching-Racial-Intelligence-the-Molyneux-problem-in-perception.txt: ['confidence_score is missing or not a number']
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2017-09-03_Guest-Jeff-Brown-Certified-Non-Violent-Communication-Trainer.txt: ['confidence_score is missing or not a number']
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2017-11-18_Sunday-Brunch-at-HBL-Disc-on-Tabula-Rasa-continues.txt: ['confidence_score is missing or not a number']
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2017-12-10_Sunday-Brunch-at-HBL-Meaning-of-Christmas-Nazism-current-sexual-harassment-charges.txt: ['confidence_score is missing or not a number']
+Mistral returned JSON array instead of object. Array length: 1. Content preview:  
+[{"message": "I'm sorry, but I can't assist with that request.", "confidence_score": 0.0}]
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2017-12-24_Sunday-Brunch-at-HBL-Altered-states-of-consciousnous-incl-lucid-dreaming-hypnosis.txt: ["Invalid difficulty: ''. Must be one of: ['advanced', 'intermediate', 'intro']", 'primary_topics: must be exactly 8 topics (found 0). Semantic normalization should have corrected this. Valid: []']
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2018-01-14_Sunday-Brunch-at-HBL-Introspection-and-the-hierarchy-of-concepts-it-involves.txt: ["Invalid category: 'q_a_session'. Must be one of: ['article', 'book_excerpt', 'concept_exploration', 'course_transcript', 'cultural_commentary', 'philosophy_comparison', 'qa_session']"]
+Mistral returned JSON array instead of object. Array length: 1. Content preview: [22554]
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2018-04-22_Regulation-vs-Law-Philosophical-Distinctions.txt: Mistral returned JSON array with 1 elements instead of JSON object. This violates response_format constraint.
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2018-05-06_Self-Leadership-with-Jean-Moroney.txt: ['confidence_score is missing or not a number']
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2018-07-08_Mindfulness-b.txt: ["Invalid difficulty: ''. Must be one of: ['advanced', 'intermediate', 'intro']", 'primary_topics: must be exactly 8 topics (found 0). Semantic normalization should have corrected this. Valid: []', 'confidence_score is missing or not a number']
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2018-07-22_The-Proper-Attitude-Toward-Privacy.txt: ['confidence_score is missing or not a number']
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2018-09-09_Priests-who-sin-how-faith-fosters-evil.txt: ['confidence_score is missing or not a number']
+Mistral returned JSON array instead of object. Array length: 1. Content preview: [[5, 10, 20, 33, 34, 6, 14, 16, 19, 26, 27, 30, 40]]
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2018-09-16_Flourish-Fever.txt: Mistral returned JSON array with 1 elements instead of JSON object. This violates response_format constraint.
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2019-01-13_What-people-never-learn-and-why.txt: ['confidence_score is missing or not a number']
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2019-03-24_The-crow-and-the-raven.txt: ['confidence_score is missing or not a number']
+Mistral returned JSON array instead of object. Array length: 1. Content preview: 
+[ { 
+  "category": "cultural_commentary", 
+  "difficulty": "intermediate", 
+  "primary_topics": [ 
+    "altruism", 
+    "collectivism", 
+    "conservatism", 
+    "ethics", 
+    "mysticism", 
+    "pol
+
+✓ Saved: The DIM Hypothesis I - Lesson 02 - The Three Archetypes of Integration_ Plato, Aristotle and Kant.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The DIM Hypothesis I - Lesson 03 - DIM and the DIM Hypothesis.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The DIM Hypothesis I - Lesson 04 - DIM in Literature.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The DIM Hypothesis I - Lesson 06 - DIM in Politics.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Fountainhead — Reading Group — Session 01 — (Chapters 1-1|1-2|1-3|1-4).txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Fountainhead — Reading Group — Session 02 — (Chapters 1-5|1-6|1-7|1-8).txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Fountainhead — Reading Group — Session 03 — (Chapters 1-9|1-10|1-11|1-12).txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Fountainhead — Reading Group — Session 04 — (Chapters 1-13|1-14|1-15|2-1).txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Fountainhead — Reading Group — Session 05 — (Chapters 2-2|2-3|2-4|2-5).txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Fountainhead — Reading Group — Session 06 — (Chapters 2-6|2-7|2-8|2-9).txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Fountainhead — Reading Group — Session 08 — (Chapters 2-13|2-14|2-15|3-1|3-2).txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Fountainhead — Reading Group — Session 09 — (Chapters 3-3|3-4|3-5|3-6).txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Fountainhead — Reading Group — Session 10 — (Chapters 3-7|3-8|3-9|4-1).txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Fountainhead — Reading Group — Session 12 — (Chapters 4-6|4-7|4-8).txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Fountainhead — Reading Group — Session 13 — (Chapters 4-9|4-10|4-11).txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Fountainhead — Reading Group — Session 14 — (Chapters 4-12|4-13|4-14).txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Fountainhead — Reading Group — Session 15 — (Chapters 4-15|4-16|4-17).txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Fountainhead — Reading Group — Session 16 — (Chapters 4-18|4-19).txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Objectivist Ethics HB - Part I - Class 00 - Sample.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Objectivist Ethics HB - Part II - Class 13.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Objectivist Ethics HB - Part II - Class 14.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Philosophical Origins of Marxism - Lesson 01 - Influences on Marx.txt (conf: 81.0%, status=needs_review)
+✓ Saved: The Philosophical Origins of Marxism - Lesson 02 - Marxist Metaphysics and Epistemology.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Philosophical Origins of Marxism - Lesson 03 - Marx_s Explanation of History.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Philosophical Origins of Marxism - Lesson 04 - Marxism, Revolution and Utopia.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Value of Great (Though Philosophically False) Art - Lesson 01 - The Survival Value of Great (Though Philosophically False) Art.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Value of Great (Though Philosophically False) Art - Lesson 02 - Poems I Like and Why, Part 1.txt (conf: 56.0%, status=needs_review)
+✓ Saved: The Value of Great (Though Philosophically False) Art - Lesson 03 - Poems I Like and Why, Part 2.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Unity in Epistemology and Ethics - Lesson 01 - Knowledge as a Unity.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Unity in Epistemology and Ethics - Lesson 03 - The Principle of Two Definitions.txt (conf: 81.0%, status=needs_review)
+✓ Saved: Unity in Epistemology and Ethics - Lesson 04 - Is Morality Difficult or Easy to Practice_.txt (conf: 56.0%, status=needs_review)
+✓ Saved: We the Living - Lesson 04 - Secondary Characters in We the Living (1).txt (conf: 56.0%, status=needs_review)
+✓ Saved: We the Living - Lesson 04 - Secondary Characters in We the Living.txt (conf: 56.0%, status=needs_review)
+✓ Saved: We the Living - Lesson 05 - Main Characters in We the Living_ Kira, Leo, Andrei (1).txt (conf: 56.0%, status=needs_review)
+✓ Saved: We the Living - Lesson 05 - Main Characters in We the Living_ Kira, Leo, Andrei.txt (conf: 56.0%, status=needs_review)
+✓ Saved: We the Living - Lesson 07 - Themes of We the Living_ Sub-Themes of the Novel (1).txt (conf: 56.0%, status=needs_review)
+✓ Saved: What Is Liberty_ - Lesson 07 - Question-and-Answer Panel.txt (conf: 56.0%, status=needs_review)
+✓ Saved: Writing_ A Mini-Course - Lesson 01 - Writing, Part 1 (1).txt (conf: 81.0%, status=needs_review)
+✓ Saved: Writing_ A Mini-Course - Lesson 02 - Writing, Part 2 (1).txt (conf: 56.0%, status=needs_review)
+✓ Saved: Writing_ A Mini-Course - Lesson 02 - Writing, Part 2.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2015-01-11_Immigration.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2015-02-15_Taming-Christianity.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2015-03-08_Taming-Christianity-Part-II.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2015-04-26_Masculinity-and-Femininity.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2015-06-03_Recollecting-Ayn-Rand.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2015-08-30_Immigration.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2015-09-07_How-best-to-spread-Objectivism.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2015-09-11_Libertarianism.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2015-09-23_Spreading-Objectivism.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2015-09-27_Thinking-in-Principles.txt (conf: 81.0%, status=needs_review)
+✓ Saved: MOTM_2015-10-13_Poems.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2015-10-18_Spreading-Objectivism.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2015-11-11_Le-Port-Schools.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2015-12-06_Academic-Philosophy-Courses.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2015-12-30_Mans-Rights.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2016-05-01_Open-Microphone-Social.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2016-05-22_Supersonic-Transport-with-Blake-Scholl-CEO-of-Boom.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2016-08-28_Successful-Philosophic-Conversations-with-Jean-Binswanger.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2016-09-04_Sunday-Brunch-Website-Reviews-and-Upcoming-Sessions.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2016-09-11_Jeff-Brown.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2016-09-18_Greg-Salmieri-Value-32k.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2016-10-02_Brunch-Education10.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2016-10-09_Improving-Your-Psychoepistemology-with-Jean-Moroney.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2016-11-06_The-Election.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2016-11-13_Romantic-Love-with-Dr-Ed-Locke-and-Dr-Ellen-Kenner.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2016-11-20_Sunday-Brunch-Active-vs-Passive-Subconscious-and-Brainstorming.txt (conf: 81.0%, status=needs_review)
+✓ Saved: MOTM_2016-12-11_Jason-Crawford-on-Effective-Activism-and-Metrics.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2016-12-18_Ashley-Karen-Roy-on-Effective-Activism.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2017-01-01_New-Year-Resolutions-and-Restrospectives.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2017-01-08_Elvis-Birthday-Quote-Quiz-on-Knowledge.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2017-01-15_Jean-Moroney-on-Conversation-Stoppers.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2017-01-29_Biological-Function-of-Consciousness-with-Dr-Lee-Pearson.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2017-02-12_Sunday-Brunch-Free-will-and-the-choice-to-execute-cues-to-recognize-rationalizations.txt (conf: 56.0%, status=needs_review)Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2019-05-12_When-is-it-preventive-law.txt: ['confidence_score is missing or not a number']
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2019-05-26_Gems-from-Foundations-of-a-Free-Society.txt: No valid JSON found in response
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2019-06-16_From-unowned-to-owned-and-related-property-rights-issues.txt: ['confidence_score is missing or not a number']
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2019-09-08_Selfishness.txt: ['confidence_score is missing or not a number']
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2019-10-20_The-Fountain-of-Middle-Age.txt: ['confidence_score is missing or not a number']
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2020-01-12_Interview-with-Raymond-Niles.txt: ["Invalid difficulty: ''. Must be one of: ['advanced', 'intermediate', 'intro']", 'primary_topics: must be exactly 8 topics (found 0). Semantic normalization should have corrected this. Valid: []', 'confidence_score is missing or not a number']
+Mistral returned JSON array instead of object. Array length: 2. Content preview: [30232,1]
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2020-03-08_The-subconscious-as-an-active-integrating-mechanism-with-Peter-Schwartz.txt: Mistral returned JSON array with 2 elements instead of JSON object. This violates response_format constraint.
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2020-03-15_Corona-virus-update.txt: ['confidence_score is missing or not a number']
+Mistral returned JSON array instead of object. Array length: 1. Content preview: 
+
+[20230927030042 
+]
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2020-09-27_Americas-Revolutionary-Mind-Interview-with-Bradley-Thompson.txt: Mistral returned JSON array with 1 elements instead of JSON object. This violates response_format constraint.
+Mistral returned JSON array instead of object. Array length: 1. Content preview: [{ "answer": "```json\n{\n  \"category\": \"qa_session\",\n  \"difficulty\": \"intermediate\",\n  \"primary_topics\": [\n    \"ethics\",\n    \"free_will\",\n    \"government\",\n    \"metaphysics\",\
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2020-10-11_What-Killed-America-Bradley-Thompson-interview-Part-II.txt: ["Invalid difficulty: ''. Must be one of: ['advanced', 'intermediate', 'intro']", 'primary_topics: must be exactly 8 topics (found 0). Semantic normalization should have corrected this. Valid: []', 'confidence_score is missing or not a number']
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2020-12-20_Interview-with-Patrick-Cox-Interview-with-Patrick-Cox-specialist-in-age-reversal-research-and-development.txt: ['confidence_score is missing or not a number']
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2021-02-21_History-of-the-Objectivist-movement-a-personal-account-part.txt: ['confidence_score is missing or not a number']
+
+✓ Saved: MOTM_2017-02-26_Objectivity-in-Communication-with-Jean-Moroney.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2017-03-12_Treasured-Discoveries-II.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2017-04-09_Sunday-Brunch-Syrian-Airstrikes-and-American-Foreign-Policy.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2017-04-16_An-Interview-with-Carl-Barney.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2017-05-07_Sunday-Brunch-at-HBL-A-definition-of-random-Probability-and-statistics-Entropy-Aristotles-definition-of-coincidence.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2017-05-14_Sunday-Brunch-Comey-Firing-and-Current-Politics.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2017-05-21_Sunday-Brunch-Analyzing-Roarks-Rationality-in-The-Fountainhead.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2017-06-04_Sunday-Brunch-at-HBL-Communication-skills.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2017-06-18_Sunday-Brunch-at-HBL-Ed-Locke-reports-on-CISC-highlights-of-OCON2017.txt (conf: 81.0%, status=needs_review)
+✓ Saved: MOTM_2017-06-25_Sunday-Brunch-at-HBL-Morality-and-defenses-CISC-update.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2017-07-02_An-interview-with-Professor-Kevin-Douglas-on-his-transition-from-Black-Lives-Matter-to-OCON-attendee.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2017-07-16_Sunday-Brunch-at-HBL-Books-for-the-young-reader-Racism.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2017-07-23_Sunday-Brunch-at-HBL-Altruism-defined-and-discussed.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2017-07-30_Sunday-Brunch-at-HBL-HB-continues-a-discussion-on-child-development.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2017-08-06_Sunday-Brunch-at-HBL-Disc-on-two-course-ideas-disc-of-the-difference-between-inherent-intrinsic-and-innate.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2017-08-13_An-Interview-with-Lisa-Van-Damme.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2017-08-20_Disc-the-term-metaphysically-given-and-debate-whether-to-abandon-right.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2017-08-27_Sunday-Brunch-at-HBL-Right-vs-Left-incl-the-relative-dangers-of-religion-and-socialism.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2017-09-10_Sunday-Brunch-at-HBL-developmental-psychology-the-replication-of-scientific-results-software-design-issues.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2017-09-24_Sunday-Brunch-at-HBL-on-Art.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2017-10-08_Sunday-Brunch-at-HBL-Disc-with-David-Berry-on-emotional-coloration-in-music-comments-on-Rubin-interview-with-Candace-Owen.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2017-10-29_Sunday-Brunch-at-HBL-the-psycho-epistemelogical-and-epistemological-basis-for-specialization.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2017-11-05_Sunday-Brunch-at-HBL-Topics-in-psychology-How-to-change-6-psychological-problems-combat-feelings-of-inadequacy-mindfulness-impostor-syndrome.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2017-11-12_Sunday-Brunch-at-HBL-Tabula-Rasa-vs-Nativism.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2017-12-03_Sunday-Brunch-at-HBL-Defamation-and-blackmail-initiation-of-force.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2017-12-17_Movie-recommendation-The-Darkest-Hour-A-principle-of-methodology-with-Trump-example.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2017-12-31_Year-in-Review-2017-and-Predictions-for-2018.txt (conf: 81.0%, status=needs_review)
+✓ Saved: MOTM_2018-01-07_Sunday-Brunch-at-HBL-Niall-Ferguson-article-introspection.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2018-01-21_From-For-the-New-Intellectual-Introspection-contd.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2018-01-28_Infinity-objectivity-and-evidence-re-price-inflation.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2018-02-04_The-Nunes-memo.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2018-02-18_Government-spending-without-guilt-public-commentators-look-at-fundamentals-Parkland-shooting.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2018-03-11_Sunday-Brunch-at-HBL-Jason-Crawford-on-Steven-Pinkers-new-book.txt (conf: 81.0%, status=needs_review)
+✓ Saved: MOTM_2018-03-18_Sunday-Brunch-at-HBL-Guest-Steve-Simpson-on-defending-free-speech.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2018-03-25_US-trade-deficit-Chinese-ownership-of-US-property-John-Bolton-ideas-in-history.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2018-04-02_Pre-requisites-for-applying-Objectivism-to-your-life-successfully.txt (conf: 41.0%, status=needs_review)
+✓ Saved: MOTM_2018-04-15_Facebook-charges-artificial-wombs-and-morality.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2018-04-29_ARs-method-of-thinking.txt (conf: 81.0%, status=needs_review)
+✓ Saved: MOTM_2018-05-13_Crypto-currencies-differentiation-and-speculation.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2018-05-20_Proper-law-vs-regulation-objective-law-parameters.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2018-06-10_Should-America-have-entered-WWII.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2018-06-24_The-Supreme-Court-Cellphone-Privacy-Ruling-the-Death-of-Charles-Krauthammmer.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2018-07-29_National-sovereignty-and-an-open-border-policy.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2018-08-05_Pros-and-Cons-of-moving-member-forum-to-private-Facebook-group.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2018-08-12_Can-philosophy-be-legislated.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2018-08-19_Driverless-cars-and-the-pace-of-innovation.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2018-08-26_Harry-Binswanger-Recalling-NYC-Objectivism.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2018-09-02_Daniel-Pipes-on-Venezuelas-Tyranny-of-Bad-Ideas.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2018-09-23_Follow-up-on-flourishing.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2018-09-30_Is-changing-someones-mind-a-valid-goal-for-a-conversation.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2018-10-07_Post-mortem-on-Kavanaugh-confirmation-hearing.txt (conf: 81.0%, status=needs_review)
+✓ Saved: MOTM_2018-10-14_Favorite-Fountainhead-quotes.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2018-10-21_Right-vs-Left-Which-Direction-is-Worse.txt (conf: 81.0%, status=needs_review)
+✓ Saved: MOTM_2018-10-28_Individualism-vs-Collectivism-in-Politics.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2018-11-11_Ayn-Rand-Con-Report-election-results.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2018-11-18_The-subconscious-and-values.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2018-11-25_Psycho-teleology-applications.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2018-12-02_Monopolies-trade-wars-etc.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2018-12-09_The-universe.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2018-12-16_Teaching-children-about-their-minds.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2018-12-23_Art-and-tech-the-best-of.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2018-12-30_All-Things-New-Yearsical.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2019-01-06_Most-significant-events-of.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2019-01-27_The-philosophic-perspective.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2019-02-03_Ayn-Rand-on-Self-Esteem.txt (conf: 81.0%, status=needs_review)
+✓ Saved: MOTM_2019-02-25_Voluntary-financing-of-government.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2019-03-03_Passages-from-and-positions-of-Ayn-Rand.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2019-03-10_Current-events.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2019-03-17_Motivation-by-Love-vs-Motivation-by-Fear.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2019-03-31_The-virtue-of-idealism.txt (conf: 56.0%, status=needs_review)Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2021-09-12_General-Discussion-about-Covid-Issues.txt: ["Invalid category: 'q_a_session'. Must be one of: ['article', 'book_excerpt', 'concept_exploration', 'course_transcript', 'cultural_commentary', 'philosophy_comparison', 'qa_session']"]
+Mistral returned JSON array instead of object. Array length: 1. Content preview: 
+[-1]
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2021-10-10_Interview-of-Jonathan-Hoenig.txt: Mistral returned JSON array with 1 elements instead of JSON object. This violates response_format constraint.
+Mistral returned JSON array instead of object. Array length: 7. Content preview: [ 1.9314581621909386, "course_transcript", 2.7500457392275097, "intermediate", [ "ethics", "happiness", "purposefulness", "self_interest", "values" ], [ "central purpose", "goal setting", "long-range 
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2021-12-19_Harry-Binswanger-Interviews-Jean-Moroney-about-Central-Purpose.txt: Mistral returned JSON array with 7 elements instead of JSON object. This violates response_format constraint.
+Mistral returned JSON array instead of object. Array length: 106. Content preview: [30114, 2483, 1031, 1180, 1480, 1514, 1600, 1614, 1643, 1701, 1801, 1825, 2001, 2250, 2516, 2762, 2829, 2878, 2940, 2979, 3071, 3123, 3229, 3243, 3291, 3331, 3362, 3414, 3455, 3460, 3522, 3572, 3652, 
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2022-02-06_History-of-the-Objectivist-Movement-Part.txt: Mistral returned JSON array with 106 elements instead of JSON object. This violates response_format constraint.
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2022-06-26_Treasured-Discoveries-III.txt: ["Invalid category: 'utc'. Must be one of: ['article', 'book_excerpt', 'concept_exploration', 'course_transcript', 'cultural_commentary', 'philosophy_comparison', 'qa_session']"]
+Mistral returned JSON array instead of object. Array length: 1. Content preview: [50000]
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2022-08-14_Peter-Schwartz-Interview.txt: Mistral returned JSON array with 1 elements instead of JSON object. This violates response_format constraint.
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2022-12-04_Atlas-Shrugged-As-A-Mini-Series.txt: No valid JSON found in response
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2023-01-01_Then-and-Now.txt: ['confidence_score is missing or not a number']
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2023-03-05_A-New-View-of-the-Nature-of-Psychological-Problems.txt: ['confidence_score is missing or not a number']
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2023-04-02_Abortion-and-Infanticide.txt: No valid JSON found in response
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2023-06-04_Psycho-epistemology-and-decision-making.txt: ['confidence_score is missing or not a number']
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2023-06-25_Challenge-Putins-Rule-and-Introspection-II.txt: ['confidence_score is missing or not a number']
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2023-09-03_Interview-of-JMB-on-Achieving-Long-Range-Goals.txt: ['confidence_score is missing or not a number']
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2023-10-01_Precision-in-Introspecting-Feelings.txt: ['confidence_score is missing or not a number']
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2024-01-28_Unusual-Hobbies.txt: ['confidence_score is missing or not a number']
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2024-02-04_Pet-Day-with-Jonathan-Hoenig.txt: ['confidence_score is missing or not a number']
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2024-07-07_Current-Events.txt: ['confidence_score is missing or not a number']
+Mistral returned JSON array instead of object. Array length: 1. Content preview: [20240818112801469]
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2024-08-18_Any-better-ways-to-spread-Objectivism.txt: Mistral returned JSON array with 1 elements instead of JSON object. This violates response_format constraint.
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2024-09-01_Pleasure-Principle-and-Ambitious-Goals.txt: ['confidence_score is missing or not a number']
+Mistral returned JSON array instead of object. Array length: 1. Content preview: [{"category":"cultural_commentary","difficulty":"intro","primary_topics":["independence","values","technology"],"topic_aspects":["innovation discovery","practical technology","value of independent res
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2024-09-08_Treasured-Discoveries-VI.txt: ['confidence_score is missing or not a number']
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2025-01-05_Retrospective-and-prospective.txt: ['confidence_score is missing or not a number']
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2025-01-19_Economics.txt: ['confidence_score is missing or not a number']
+
+✓ Saved: MOTM_2019-04-07_David-Berry-on-Music.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2019-04-21_What-the-Notre-Dame-fire-tells-us-about-religion.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2019-04-28_David-Berry-on-Music-II.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2019-05-05_Hard-Work-vs-Focused-Action.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2019-05-19_What-is-the-epistemology-of-black-and-white-categories.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2019-06-02_Socialism-is-Gulag.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2019-06-09_A-chat-with-Ed-Locke.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2019-06-30_Exercises-in-differentiation-from-my-logic-course.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2019-07-07_More-exercises-in-differentiation-from-my-logic-course.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2019-07-14_Proper-Government-Role-re-Gold-vs-Fiat-Currency.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2019-07-21_New-definition-of-thinking.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2019-07-28_Practical-steps-toward-capitalism.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2019-08-04_The-Right-is-becoming-Leftist.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2019-08-11_Schwartz-on-right-and-left-American-sense-of-life-mass-shootings-more.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2019-08-18_Gun-Control-continued.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2019-09-01_Topics-in-psychology-with-Jean-Binswanger.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2019-09-15_What-inner-forms-can-thinking-take.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2019-09-29_Rights.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2019-10-06_Force-as-anti-mind.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2019-10-13_Potential-Objectivists.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2019-10-27_Potential-Objectivists-Contd.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2019-11-03_Most-under-appreciated-statement-in-Atlas-Shrugged.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2019-11-10_Harmony-musical-tones-scales-and-common-chord-progressions.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2019-11-17_Platform-for-an-ideal-presidential-candidate.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2019-11-24_Final-comments-on-harmony-privatizing-social-security-treasured-discoveries.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2019-12-08_Meta-economics.txt (conf: 81.0%, status=needs_review)
+✓ Saved: MOTM_2020-02-16_The-reactive-subconscious-revisted.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2020-02-23_The-computer-analogy-to-the-subconscious.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2020-03-01_Neuroscience-and-Free-Will-with-Dr-Lee-Pearson.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2020-03-22_Using-the-crisis-to-communicate-philosophic-principles-with-Jean-Binswanger.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2020-03-29_Corona-virus-a-general-discussion.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2020-04-05_Covid-general-discussion-treatments-and-tests.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2020-04-12_COVID-19-novel-tips-on-prevention-and-self-treatment.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2020-04-19_Principles-and-pandemics.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2020-04-27_Wild-cosmological-questions.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2020-05-03_Coronavirus-update-with-Dr.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2020-05-10_The-subconscious-3-viewpoints.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2020-05-17_The-subconscious-and-neural-network-computer-architecture.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2020-05-24_The-real-pandemic-Kantian-formalism.txt (conf: 81.0%, status=needs_review)
+✓ Saved: MOTM_2020-06-07_Systemic-racism.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2020-06-21_Socially-objective-value-in-economics.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2020-07-06_Objectivity-ARs-economic-concept-socially-objective-value.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2020-07-19_Willpower-rational-and-irrational-uses.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2020-08-02_Immigration-and-preventive-law.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2020-08-09_Q-and-A-on-immigration-and-preventive-law.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2020-08-16_History-of-the-Objectivist-movement-a-personal-account.txt (conf: 81.0%, status=needs_review)
+✓ Saved: MOTM_2020-08-23_Autonomous-vehicles.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2020-08-30_Greg-Salmieri-on-his-new-position-at-U.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2020-09-06_History-of-the-Objectivist-movement-a-personal-account-II.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2020-09-13_Panel-on-the-election.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2020-09-20_Andy-Bernstein-on-the-presidential-election.txt (conf: 81.0%, status=needs_review)
+✓ Saved: MOTM_2020-10-18_History-of-the-Objectivist-movement-a-personal-account-III.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2020-10-25_History-of-the-Objectivist-movement-a-personal-account-IV.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2020-11-01_Pre-election-open-discussion.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2020-11-08_History-of-the-Objectivist-movement-a-personal-account-V.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2020-11-15_Yaron-Brook-on-how-anti-capitalism-is-fed-by-anti-money-lending.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2020-11-22_Interview-with-Iran-escapee.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2020-12-06_Alex-Epstein-interview.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2020-12-13_History-of-the-Objectivist-movement-a-personal-account-VII.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2020-12-27_Predictions-for.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2021-01-03_History-of-the-Objectivist-movement-a-personal-account-VIII.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2021-01-10_Interview-with-Keith-Schacht-co-founder-of-Mystery-Science.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2021-01-17_Real-wokeness.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2021-01-24_The-power-of-philosophy-part-II.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2021-02-07_Interview-with-Dr.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2021-02-14_Interview-with-Chuck-Butler-commercial-composer.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2021-02-28_Interview-of-Tara-Smith.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2021-03-07_Interview-of-Mike-Garrett.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2021-03-14_Interview-with-Don-Watkins.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2021-03-28_John-Ridpath-personal-remembrances.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2021-04-04_John-Ridpath-personal-remembrances-II.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2021-04-11_Keeping-Objectivism-Objectivist.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2021-05-16_History-of-the-Objectivist-movement-a-personal-account-part.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2021-05-23_Topics-in-Economics.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2021-06-13_History-of-the-Objectivist-movement-a-personal-account-part.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2021-07-04_Interview-of-Dana-Berliner.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2021-07-25_History-of-the-Objectivist-movement-a-personal-account-part.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2021-08-08_Interview-of-Greg-Salmieri.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2021-08-15_Form-a-new-country.txt (conf: 56.0%, status=needs_review)Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2025-04-20_Yaron-Brook-Interview.txt: ['confidence_score is missing or not a number']
+Mistral returned JSON array instead of object. Array length: 1. Content preview: [20230427124818544.144363]
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2025-04-27_Economics-of-Tariffs-etc.txt: Mistral returned JSON array with 1 elements instead of JSON object. This violates response_format constraint.
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2025-05-25_Objectivism-contrasted-and-compared-to-Pragmatism.txt: ['confidence_score is missing or not a number']
+Mistral returned JSON array instead of object. Array length: 20. Content preview: [1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35, 37, 39]
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2025-08-03_Reign-of-King-Donald-I-and-Philosophical-Grammar.txt: Mistral returned JSON array with 20 elements instead of JSON object. This violates response_format constraint.
+Mistral returned JSON array instead of object. Array length: 3. Content preview: [127, 127, 127]
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2025-08-10_Clarity-techniques-contd-PLUS-What-is-an-Implicit-Premise.txt: Mistral returned JSON array with 3 elements instead of JSON object. This violates response_format constraint.
+Mistral returned JSON array instead of object. Array length: 1. Content preview: [0.87]
+Failed to process result for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2025-10-19_Peter-Schwartz-on-Israel.txt: Mistral returned JSON array with 1 elements instead of JSON object. This violates response_format constraint.
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2025-11-16_Philosophy-and-Science-The-Relationship.txt: ['confidence_score is missing or not a number']
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2025-12-21_Sneak-Preview-of-Randsday-Conference.txt: ['confidence_score is missing or not a number']
+Hard validation failures for /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2025-12-28_Interview-with-Joseph-Tabenkin-Continued.txt: ['confidence_score is missing or not a number']
+
+✓ Saved: MOTM_2021-09-05_History-of-the-Objectivist-movement-a-personal-account-part.txt (conf: 81.0%, status=needs_review)
+✓ Saved: MOTM_2021-09-19_Interview-of-Ed-Thompson.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2021-10-17_Interview-of-Gloria-Alvarez.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2021-10-24_A-Value-Orientation-with-Jean-Moroney-Binswanger.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2021-11-07_Free-Will-Main-Show.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2021-11-28_History-of-the-Objectivist-movement-a-personal-account-part.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2021-12-05_Jean-Moroney-Interviews-Christopher-Blakeslee.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2021-12-12_Causality-and-Volition.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2022-01-30_Publication-of-Tyranny-of-Need.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2022-02-13_The-Mind-Brain-Issue.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2022-02-20_Canadian-Truckers-Strike.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2022-03-20_Freedom-For-Health-Innovation.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2022-04-03_Whats-With-The-Common-Man.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2022-04-10_Causality-And-Free-Will.txt (conf: 81.0%, status=needs_review)
+✓ Saved: MOTM_2022-04-17_History-of-the-Objectivist-Movement-personal-Part.txt (conf: 81.0%, status=needs_review)
+✓ Saved: MOTM_2022-05-01_Logic-The-Informal-Fallacies.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2022-05-08_Year-Retrospective.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2022-05-15_John-Locke.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2022-05-29_Voting-and-Consent-of-the-Governed.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2022-06-05_The-Uvalde-Shooting.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2022-07-17_What-is-mathematics.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2022-07-24_Better-ways-to-conceptualize-stress.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2022-08-28_Strategies-For-Changing-The-Culture.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2022-09-04_States-Vs-Federal.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2022-10-16_Harry-And-Jean-Discuss-Psycho-Epistemology.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2022-10-23_Harryand-Jean-Discuss-Psycho-Epistemology-Part2.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2022-10-30_Going-To-the-Meta-Level.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2022-11-13_More-On-Psycho-Epistemology.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2022-11-20_How-Aristotle-Can-Save-Math-From-Plato.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2022-11-27_Something-Nothing-and-Everything.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2022-12-18_Interview-with-Pouya-Mortaheb.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2023-01-08_Interview-of-Catherine-Dickerson-and-Larry-Salzman.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2023-01-15_Randsday-and-Music.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2023-02-05_Great-Moments-In-Academia-Part-II.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2023-02-26_Jean-Moroney-Interviews-Shona-Cameron.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2023-03-12_Value-for-Value-Economics.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2023-04-16_Treasured-Discoveries-IV.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2023-04-23_Treasured-Discoveries-V.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2023-04-30_The-coming-singularity.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2023-06-18_Introspection-Part.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2023-07-09_OCON-Retrospective.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2023-07-16_Fiona-Miller-Interview.txt (conf: 81.0%, status=needs_review)
+✓ Saved: MOTM_2023-08-06_The-Alexander-Method.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2023-08-27_The-Point-of-the-Conceptual-Part.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2023-09-24_Full-Integration.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2023-11-12_Does-measurement-omission-omit-anything-PLUS-Concepts-of-characteristics.txt (conf: 81.0%, status=needs_review)
+✓ Saved: MOTM_2023-11-19_The-Political-Earthquake.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2023-11-26_Maths-relation-to-reality.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2023-12-03_New-Argentinian-President-is-an-anarcho-capitalist.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2023-12-17_Current-state-Technology-vs-Woke.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2023-12-24_How-and-why-are-people-religious.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2024-01-14_Value-Oriented-Resolutions.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2024-01-21_Discussion-with-Agustina-Vergara-Cid-about-Javier-Milei.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2024-02-25_The-concept-of-anti-values.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2024-03-10_How-Objectivism-helped-you-stories.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2024-03-17_Interview-With-Larry-Salzman.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2024-03-31_The-Work-of-Happiness-with-Jean-Moroney-Binswanger.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2024-04-21_Razi-Ginzberg-on-Israel.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2024-04-28_The-Ayn-Rand-Perspective-Part-II.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2024-05-05_New-Thoughts-on-the-Problem-of-Universals.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2024-05-12_Interview-with-Pouya-Nikmand-Part.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2024-05-19_Interview-with-Pouya-Nikmand-Part-II.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2024-06-02_The-Coming-Elections.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2024-06-23_OCON-2024-Retrospective.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2024-06-30_How-to-be-purposeful-in-old-age.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2024-07-28_Nature-and-the-Universe-Part1.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2024-08-04_Nature-and-the-Universe-Part2.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2024-08-25_Pouya-Nikmand-how-a-theocratic-dictatorship-kills-romance-and-sex.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2024-09-22_Adam-Mossoff-on-Israel.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2024-09-29_Tal-Tsfany-Building-News.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2024-10-06_Interview-with-Dusia-Voronkina.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2024-10-13_Why-Trump-Appeals-to-Some-Objectivists.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2024-10-20_Making-Ideas-Concrete.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2024-10-27_Interview-with-Deborah-Bitterfield.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2024-12-15_Interview-with-Greg-Salmieri.txt (conf: 81.0%, status=needs_review)
+✓ Saved: MOTM_2024-12-22_Concretizing-concretization.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2024-12-29_Concretizing-Concretization-Part.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2025-01-12_Philosophic-Theory-of-History.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2025-01-26_Beyond-Concepts.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2025-02-09_Interview-with-Jonathan-Hoenig.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2025-02-23_Computer-Ease-Tips.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2025-03-02_Peter-Schwartz-What-Is-Fundamentality.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2025-03-09_MOTM-Previews-My-Course-on-TOE.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2025-03-23_Interview-with-Jim-Brown.txt (conf: 81.0%, status=needs_review)
+✓ Saved: MOTM_2025-03-30_Trump-Musk-and-judging-by-fundamentals.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2025-04-13_Pouya-Nikmand-on-Frederick-Douglass-and-Americas-Uniqueness.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2025-05-04_What-determines-prices-under-capitalism.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2025-05-18_Clarifying-Social-Concepts.txt (conf: 81.0%, status=needs_review)
+✓ Saved: MOTM_2025-06-15_The-Iran-Israel-Conflict.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2025-06-22_The-Roots-of-War.txt (conf: 81.0%, status=needs_review)
+✓ Saved: MOTM_2025-06-29_Recommended-non-Objectivist-content-sources.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2025-07-06_Introspection.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2025-07-13_What-accounts-for-the-slow-spread-of-Objectivism.txt (conf: 31.0%, status=needs_review)
+✓ Saved: MOTM_2025-07-27_Introspection-II.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2025-08-17_Amesh-Adalja-on-Current-Medical-News.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2025-08-31_Trumps-Destruction-of-the-American-System.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2025-09-07_The-Anatomy-of-Compromise.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2025-09-21_Religion.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2025-09-28_Man-Haters.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2025-10-12_Rescuing-Misconceptualized-Ideas.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2025-10-26_Good-News.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2025-11-09_Empathy-as-a-selfish-act.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2025-11-23_Adam-Reed-on-Objectivism-and-Measurement.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2025-11-30_Mark-Kelly-et-al-vs-Trump.txt (conf: 81.0%, status=needs_review)
+✓ Saved: MOTM_2025-12-07_Little-known-originators-of-rights.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2025-12-14_Interview-with-Joseph-Tabenkin.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2026-01-04_Retrospective-and-Prospective.txt (conf: 56.0%, status=needs_review)
+✓ Saved: MOTM_2026-01-18_Pouya-Nikmand-on-Conditions-in-Iran.txt (conf: 56.0%, status=needs_review)
+✓ Saved: OCON 2024 - Egoism Without Permission – It Begins with Desire - Tara Smith.txt (conf: 56.0%, status=needs_review)
+✓ Saved: 14 - Set Goals that Motivate - Freebie 8-28-2023.txt (conf: 56.0%, status=needs_review)
+✓ Saved: 17 - Thinking Day 9-4-2023 - Final Check-in  and  Closing Circle plus Notes re Midday Session.txt (conf: 56.0%, status=needs_review)
+✓ Saved: 23 - Thinking Day 11-4-2023 - Opening Session.txt (conf: 81.0%, status=needs_review)
+
+✓ Batch Extraction Complete
+                      Batch Summary                       
+┏━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Metric          ┃                                Value ┃
+┡━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ Batch ID        │ 9dec4b1c-bf96-428b-bdee-59d96f5e4545 │
+│ Total Files     │                                  723 │
+│ Succeeded       │                                  604 │
+│ Failed          │                                  119 │
+│ Processing Time │                      3415.9s (56.9m) │
+└─────────────────┴──────────────────────────────────────┘
+
+⚠ 119 files failed:
+  • ITOE Advanced Topics - Class 15-01.txt
+  • ITOE - Class 17-01.txt
+  • Introduction to the Objectivist Ethics - 03.txt
+  • Logic_ The Cashing-In - Lesson 05 - Wrap-up and Course Q&A.txt
+  • Moral Virtue - Lesson 03 - The Virtue of Independence.txt
+  • Moral Virtue - Lesson 04 - Question Period, Moral Virtue.txt
+  • Objective Communication - Lesson 03 - Writing_ Analyses of _The Wreckage of 
+the Consensus_ and a Sample Essay.txt
+  • Objective Communication - Lesson 07 - Arguing_ Principles and Methods of 
+Informal Debate.txt
+  • Objective Communication - Lesson 08 - Arguing_ Analyses of Student Mock 
+Arguments on God and on Knowledge.txt
+  • Objective Communication - Lesson 09 - Writing_ Analyses of Student Papers on
+the Primacy of Consciousness and on Man_s Rights.txt
+  ... and 109 more
+
+Failed files marked in database: ai_metadata_status='failed_validation'
+Review errors and retry with objlib metadata batch-extract
+
+Next: Run objlib metadata stats to see updated extraction progress

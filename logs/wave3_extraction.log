@@ -1,0 +1,49 @@
+╭──────────────────────── Wave 2 Production Extraction ────────────────────────╮
+│ Processing 33 files with strategy 'minimalist'                               │
+│ Prompt version: 1.0.0                                                        │
+╰──────────────────────────────────────────────────────────────────────────────╯
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/OCON/2024/OCON 2024 - Socratic Wisdom - Jason Rheins.txt, backing off 1.5s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/OCON/2024/OCON 2024 - Socratic Wisdom - Jason Rheins.txt, backing off 2.2s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/OCON/OCON 2023 - Greg Salmieri - Moral Cognition - Telling Right from Wrong- Livestream.txt, backing off 1.3s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/OCON/OCON 2023 - Greg Salmieri - Moral Cognition - Telling Right from Wrong- Livestream.txt, backing off 2.8s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/OCON/OCON 2023 - Robert Mayhew - The Ontological Argument for the Existence of God.txt, backing off 1.3s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/OCON/OCON 2023 - Robert Mayhew - The Ontological Argument for the Existence of God.txt, backing off 2.1s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/OCON/OCON 2023 - Tara Smith - Living Objectively – Integrating Objectivity Into Your Every Day.txt, backing off 2.0s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/OCON/OCON 2023 - Tara Smith - Living Objectively – Integrating Objectivity Into Your Every Day.txt, backing off 2.1s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Peikoff Podcast/Episode 365 [1000338227220].txt, backing off 1.5s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Peikoff Podcast/Episode 365 [1000338227220].txt, backing off 2.9s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/00 - __1 - Role of Emotions.txt, backing off 2.0s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/00 - __1 - Role of Emotions.txt, backing off 3.0s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/02 - Thinking Day 6-17-2023 - Mid-Day Check-in Session 3.txt, backing off 1.2s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/02 - Thinking Day 6-17-2023 - Mid-Day Check-in Session 3.txt, backing off 2.4s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/04 - __2 - Basics of Introspection 6-27-2023.txt, backing off 1.4s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/06 - What Makes a Positive Attitude Rational - Freebie 7-10-2023.txt, backing off 1.7s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/06 - What Makes a Positive Attitude Rational - Freebie 7-10-2023.txt, backing off 2.5s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/21 - Open Q and A 10-17-2023.txt, backing off 1.3s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/21 - Open Q and A 10-17-2023.txt, backing off 2.7s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/29 - __13 - Emotions as Alerts to Values at Stake - 12-5-2023.txt, backing off 1.7s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/29 - __13 - Emotions as Alerts to Values at Stake - 12-5-2023.txt, backing off 2.4s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/32 - The concept of anti-values - MOTM 2-25-2024.txt, backing off 1.7s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/Developing a Central Purpose/01 - Developing a Central Purpose - Part 1.txt, backing off 1.8s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/Developing a Central Purpose/01 - Developing a Central Purpose - Part 1.txt, backing off 2.0s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/Just-in-Time Planning/TL - JIT - Thinking Day 20240101 - 1 - Opening Session.txt, backing off 1.4s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/Just-in-Time Planning/TL - JIT - Thinking Day 20240101 - 1 - Opening Session.txt, backing off 2.1s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/Just-in-Time Planning/TL - JIT - Unit 01 - Workshop Vetting Your Project .txt, backing off 2.0s (attempt 1)
+      Extraction Summary      
+┏━━━━━━━━━━━━━━━━┳━━━━━━━━━━━┓
+┃ Metric         ┃     Value ┃
+┡━━━━━━━━━━━━━━━━╇━━━━━━━━━━━┩
+│ Extracted      │        20 │
+│ Needs Review   │         0 │
+│ Failed         │        13 │
+│ Total Tokens   │   349,353 │
+│ Estimated Cost │     $0.42 │
+│ Avg Latency    │ 20,671 ms │
+│ Time Elapsed   │    497.0s │
+└────────────────┴───────────┘
+
+Set 755 file(s) to pending for re-upload.
+
+Next steps:
+  Run objlib metadata review to check results
+  Run objlib metadata approve --min-confidence 0.85 to auto-approve

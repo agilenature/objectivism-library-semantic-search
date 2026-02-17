@@ -1,0 +1,22 @@
+╭──────────────────────── Wave 2 Production Extraction ────────────────────────╮
+│ Processing 4 files with strategy 'minimalist'                                │
+│ Prompt version: 1.0.0                                                        │
+╰──────────────────────────────────────────────────────────────────────────────╯
+      Extraction Summary      
+┏━━━━━━━━━━━━━━━━┳━━━━━━━━━━━┓
+┃ Metric         ┃     Value ┃
+┡━━━━━━━━━━━━━━━━╇━━━━━━━━━━━┩
+│ Extracted      │         4 │
+│ Needs Review   │         0 │
+│ Failed         │         0 │
+│ Total Tokens   │    66,689 │
+│ Estimated Cost │     $0.08 │
+│ Avg Latency    │ 13,948 ms │
+│ Time Elapsed   │     55.9s │
+└────────────────┴───────────┘
+
+Set 767 file(s) to pending for re-upload.
+
+Next steps:
+  Run objlib metadata review to check results
+  Run objlib metadata approve --min-confidence 0.85 to auto-approve

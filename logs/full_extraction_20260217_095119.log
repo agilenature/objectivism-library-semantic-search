@@ -1,0 +1,61 @@
+╭──────────────────────── Wave 2 Production Extraction ────────────────────────╮
+│ Processing 814 files with strategy 'minimalist'                              │
+│ Prompt version: 1.0.0                                                        │
+╰──────────────────────────────────────────────────────────────────────────────╯
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/How to think about current events/How to think about current events - Week 2.txt, backing off 1.8s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/How to think about current events/How to think about current events - Week 2.txt, backing off 3.0s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/How to think about current events/How to think about current events - Week 3.txt, backing off 1.0s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/How to think about current events/How to think about current events - Week 3.txt, backing off 2.2s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/How to think about current events/How to think about current events - Week 9.txt, backing off 1.8s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/How to think about current events/How to think about current events - Week 9.txt, backing off 2.7s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/ITOE Advanced Topics/ITOE Advanced Topics - Class 15-01.txt, backing off 1.3s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/ITOE Advanced Topics/ITOE Advanced Topics - Class 15-01.txt, backing off 2.9s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/ITOE Advanced Topics/ITOE Advanced Topics - Class 16-02.txt, backing off 1.2s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/ITOE Advanced Topics/ITOE Advanced Topics - Class 16-02.txt, backing off 2.9s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/ITOE/ITOE - Class 01-01.txt, backing off 1.9s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/ITOE/ITOE - Class 01-01.txt, backing off 2.5s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/ITOE/ITOE - Class 01-02.txt, backing off 1.6s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/ITOE/ITOE - Class 02-01.txt, backing off 1.4s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/ITOE/ITOE - Class 02-01.txt, backing off 2.6s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/ITOE/ITOE - Class 07-01.txt, backing off 1.3s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/ITOE/ITOE - Class 07-01.txt, backing off 2.3s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/ITOE/ITOE - Class 07-02.txt, backing off 1.9s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/ITOE/ITOE - Class 09-01.txt, backing off 1.8s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/ITOE/ITOE - Class 09-01.txt, backing off 3.0s (attempt 2)
+Unexpected error for /Volumes/U32 Shadow/Objectivism Library/Courses/ITOE/ITOE - Class 13-01.txt: API error occurred: Status 503. Body: {"object":"error","message":"Service unavailable.","type":"internal_server_error","param":null,"code":"3800"}
+Unexpected error for /Volumes/U32 Shadow/Objectivism Library/Courses/ITOE/ITOE - Class 17-01.txt: API error occurred: Status 503. Body: {"object":"error","message":"Service unavailable.","type":"internal_server_error","param":null,"code":"3800"}
+Unexpected error for /Volumes/U32 Shadow/Objectivism Library/Courses/ITOE/ITOE - Class 17-02.txt: API error occurred: Status 503. Body: {"object":"error","message":"Service unavailable.","type":"internal_server_error","param":null,"code":"3800"}
+Unexpected error for /Volumes/U32 Shadow/Objectivism Library/Courses/In Defense of Financial Markets/In Defense of Financial Markets - Lesson 01 - Introduction_ The Attack on Financial Markets.txt: API error occurred: Status 503. Body: {"object":"error","message":"Service unavailable.","type":"internal_server_error","param":null,"code":"3800"}
+Unexpected error for /Volumes/U32 Shadow/Objectivism Library/Courses/In Defense of Financial Markets/In Defense of Financial Markets - Lesson 02 - The Importance of Financial Markets.txt: API error occurred: Status 503. Body: {"object":"error","message":"Service unavailable.","type":"internal_server_error","param":null,"code":"3800"}
+Unexpected error for /Volumes/U32 Shadow/Objectivism Library/Courses/In Defense of Financial Markets/In Defense of Financial Markets - Lesson 03 - The Ideas Behind the Attacks Against Financiers.txt: API error occurred: Status 503. Body: {"object":"error","message":"Service unavailable.","type":"internal_server_error","param":null,"code":"3800"}
+Unexpected error for /Volumes/U32 Shadow/Objectivism Library/Courses/In Defense of Financial Markets/In Defense of Financial Markets - Lesson 04 - The Role of the Stock Market.txt: API error occurred: Status 503. Body: {"object":"error","message":"Service unavailable.","type":"internal_server_error","param":null,"code":"3800"}
+Unexpected error for /Volumes/U32 Shadow/Objectivism Library/Courses/Individualism in an Age of Tribalism/Individualism in an Age of Tribalism - Lesson 04 - Tribalism and Family Relationships.txt: API error occurred: Status 503. Body: {"object":"error","message":"Service unavailable.","type":"internal_server_error","param":null,"code":"3800"}
+Unexpected error for /Volumes/U32 Shadow/Objectivism Library/Courses/Induction in Physics and Philosophy/Induction in Physics and Philosophy - Lesson 01 - The Axioms of Induction, Part 1.txt: API error occurred: Status 503. Body: {"object":"error","message":"Service unavailable.","type":"internal_server_error","param":null,"code":"3800"}
+Unexpected error for /Volumes/U32 Shadow/Objectivism Library/Courses/Induction in Physics and Philosophy/Induction in Physics and Philosophy - Lesson 02 - The Axioms of Induction, Part 2.txt: API error occurred: Status 503. Body: {"object":"error","message":"Service unavailable.","type":"internal_server_error","param":null,"code":"3800"}
+Unexpected error for /Volumes/U32 Shadow/Objectivism Library/Courses/Induction in Physics and Philosophy/Induction in Physics and Philosophy - Lesson 03 - Generalizations in Physics, Part 1.txt: API error occurred: Status 503. Body: {"object":"error","message":"Service unavailable.","type":"internal_server_error","param":null,"code":"3800"}
+Unexpected error for /Volumes/U32 Shadow/Objectivism Library/Courses/Introduction to Finance/Introduction to Finance 01.txt: API error occurred: Status 503. Body: {"object":"error","message":"Service unavailable.","type":"internal_server_error","param":null,"code":"3800"}
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/Introduction to Finance/Introduction to Finance 04.txt, backing off 1.2s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/Introduction to Finance/Introduction to Finance 04.txt, backing off 2.5s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/Introduction to Finance/Introduction to Finance 05.txt, backing off 1.9s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/Introduction to Finance/Introduction to Finance 05.txt, backing off 2.7s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/Introduction to Finance/Introduction to Finance 08.txt, backing off 1.7s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/Introduction to Finance/Introduction to Finance 08.txt, backing off 2.5s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/Introduction to Writing/Introduction to Writing - Lesson 07 - Q1 Week 2 – 2.txt, backing off 1.3s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/Introduction to Writing/Introduction to Writing - Lesson 07 - Q1 Week 2 – 2.txt, backing off 2.0s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/Introduction to Writing/Introduction to Writing - Lesson 08 - Q1 Week 3 – 1.txt, backing off 1.4s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/Introduction to Writing/Introduction to Writing - Lesson 08 - Q1 Week 3 – 1.txt, backing off 2.2s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/Introduction to Writing/Introduction to Writing - Lesson 15 - Q1 Week 6 – 1.txt, backing off 1.1s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/Introduction to Writing/Introduction to Writing - Lesson 15 - Q1 Week 6 – 1.txt, backing off 2.4s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/Introduction to Writing/Introduction to Writing - Lesson 16 - Q1 Week 6 – 2.txt, backing off 1.6s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/Introduction to Writing/Introduction to Writing - Lesson 16 - Q1 Week 6 – 2.txt, backing off 3.0s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/Introduction to Writing/Introduction to Writing - Lesson 22 - Q1 Week 9 – 2.txt, backing off 1.8s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/Introduction to Writing/Introduction to Writing - Lesson 22 - Q1 Week 9 – 2.txt, backing off 2.2s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/Introduction to the Objectivist Ethics /Introduction to the Objectivist Ethics - 01.txt, backing off 2.0s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/Introduction to the Objectivist Ethics /Introduction to the Objectivist Ethics - 01.txt, backing off 2.7s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/Introduction to the Objectivist Ethics /Introduction to the Objectivist Ethics - 02.txt, backing off 1.5s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/Introduction to the Objectivist Ethics /Introduction to the Objectivist Ethics - 02.txt, backing off 2.9s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/Introduction to the Objectivist Ethics /Introduction to the Objectivist Ethics - 03.txt, backing off 1.3s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/Introduction to the Objectivist Ethics /Introduction to the Objectivist Ethics - 03.txt, backing off 2.6s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/Introduction to the Objectivist Ethics /Introduction to the Objectivist Ethics - 04.txt, backing off 1.0s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/Introduction to the Objectivist Ethics /Introduction to the Objectivist Ethics - 05.txt, backing off 1.9s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Courses/Introduction to the Objectivist Ethics /Introduction to the Objectivist Ethics - 05.txt, backing off 2.8s (attempt 2)

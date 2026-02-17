@@ -1,0 +1,25 @@
+╭────────────────────────── Enriched Upload Pipeline ──────────────────────────╮
+│ Uploading 5 enriched files to objectivism-library-test                       │
+│ Batches: 1 x 100 | Concurrency: 2                                            │
+│ Reset existing: True | Include needs-review: True                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+⠋ Pipeline                                         0/5   0% -:--:-- batch 1/1   
+⠋ Batch 1                                          0/5   0% -:--:-- batch 1 done
+╭────────────────────────── Enriched Upload Complete ──────────────────────────╮
+│     Enriched Upload Summary                                                  │
+│ ┏━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━┓                                             │
+│ ┃ Metric               ┃ Count ┃                                             │
+│ ┡━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━┩                                             │
+│ │ Total files          │     5 │                                             │
+│ │ Succeeded            │     0 │                                             │
+│ │ Failed               │     0 │                                             │
+│ │ Skipped (idempotent) │     5 │                                             │
+│ │ Reset (re-uploaded)  │     0 │                                             │
+│ │ Pending              │     0 │                                             │
+│ └──────────────────────┴───────┘                                             │
+╰──────────────────────────────────────────────────────────────────────────────╯
+Exception ignored in: <function BaseApiClient._get_aiohttp_session.<locals>.AiohttpTCPConnector.__del__ at 0x10e3b8fe0>
+Traceback (most recent call last):
+  File "/Users/david/.pyenv/versions/3.13.5/lib/python3.13/site-packages/google/genai/_api_client.py", line 786, in __del__
+  File "/Users/david/.pyenv/versions/3.13.5/lib/python3.13/site-packages/aiohttp/connector.py", line 1020, in _close
+AttributeError: 'NoneType' object has no attribute 'from_iterable'

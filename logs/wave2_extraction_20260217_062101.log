@@ -1,0 +1,101 @@
+╭──────────────────────── Wave 2 Production Extraction ────────────────────────╮
+│ Processing 96 files with strategy 'minimalist'                               │
+│ Prompt version: 1.0.0                                                        │
+╰──────────────────────────────────────────────────────────────────────────────╯
+Hard validation failure for /Volumes/U32 Shadow/Objectivism Library/Jean Moroney/Charles H. Kepner and Benjamin B. Tregoe - The New Rational Manager (1997).txt (attempt 1), retrying: ["primary_topics: only 2 valid tags (need >= 3). Valid: ['epistemology', 'logic']"]
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Jean Moroney/Jean Moroney - Set Goals that Motivate.txt, backing off 1.2s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Jean Moroney/Jean Moroney - Set Goals that Motivate.txt, backing off 2.5s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/OCON/2024/OCON 2024 - ARU - An Introduction to Psychology - Gena Gorlin.txt, backing off 1.7s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/OCON/2024/OCON 2024 - ARU - An Introduction to Psychology - Gena Gorlin.txt, backing off 2.1s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/OCON/2024/OCON 2024 - Fueling an Intellectual Movement - A New Ideal Special Event - Elan Journo Robert Mayhew Greg Salmieri.txt, backing off 1.5s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/OCON/2024/OCON 2024 - Fueling an Intellectual Movement - A New Ideal Special Event - Elan Journo Robert Mayhew Greg Salmieri.txt, backing off 2.3s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/OCON/2024/OCON 2024 - Racism What It Is and Why It Persists - Greg Salmieri.txt, backing off 1.2s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/OCON/2024/OCON 2024 - Racism What It Is and Why It Persists - Greg Salmieri.txt, backing off 2.5s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/OCON/2024/OCON 2024 - Socratic Wisdom - Jason Rheins.txt, backing off 1.3s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/OCON/2024/OCON 2024 - Socratic Wisdom - Jason Rheins.txt, backing off 2.9s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/OCON/2024/OCON 2024 - The Revolutionary Secular Concept of Individual Rights - Ben Bayer.txt, backing off 1.7s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/OCON/OCON 2023 - Greg Salmieri - Moral Cognition - Telling Right from Wrong- Livestream.txt, backing off 1.5s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/OCON/OCON 2023 - Greg Salmieri - Moral Cognition - Telling Right from Wrong- Livestream.txt, backing off 2.7s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/OCON/OCON 2023 - Robert Mayhew - The Ontological Argument for the Existence of God.txt, backing off 1.1s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/OCON/OCON 2023 - Robert Mayhew - The Ontological Argument for the Existence of God.txt, backing off 2.7s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/OCON/OCON 2023 - Tara Smith - Living Objectively – Integrating Objectivity Into Your Every Day.txt, backing off 1.9s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/OCON/OCON 2023 - Tara Smith - Living Objectively – Integrating Objectivity Into Your Every Day.txt, backing off 2.9s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Peikoff Podcast/Episode 365 [1000338227220].txt, backing off 1.9s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Peikoff Podcast/Episode 365 [1000338227220].txt, backing off 2.1s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/00 - __1 - Role of Emotions.txt, backing off 1.9s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/00 - __1 - Role of Emotions.txt, backing off 2.5s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/02 - Thinking Day 6-17-2023 - Mid-Day Check-in Session 3.txt, backing off 1.9s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/02 - Thinking Day 6-17-2023 - Mid-Day Check-in Session 3.txt, backing off 2.7s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/04 - __2 - Basics of Introspection 6-27-2023.txt, backing off 1.1s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/04 - __2 - Basics of Introspection 6-27-2023.txt, backing off 2.5s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/06 - What Makes a Positive Attitude Rational - Freebie 7-10-2023.txt, backing off 1.6s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/06 - What Makes a Positive Attitude Rational - Freebie 7-10-2023.txt, backing off 2.5s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/07 - __3 - Celebration and Mourning - How to Add Joy to Your Life 7-13-2023.txt, backing off 1.3s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/07 - __3 - Celebration and Mourning - How to Add Joy to Your Life 7-13-2023.txt, backing off 2.0s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/09 - __4 - Getting to Know Yourself - Desire Aversion and the Need for Self-Direction 7-25-2023.txt, backing off 1.3s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/10 - Bonus Group Coaching Call - 7-27-2023.txt, backing off 1.7s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/11 - __5 - Gratitude and Anger - Embracing Allies and Distancing Enemies - 8-8-2023.txt, backing off 1.2s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/12 - Bonus Group Coaching Call - 8-10-2023.txt, backing off 1.1s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/12 - Bonus Group Coaching Call - 8-10-2023.txt, backing off 2.4s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/13 - Open Q and A 8-15-2023.txt, backing off 1.1s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/15 - __6 - Judging Yourself - How to Process Guilt and Stimulate Pride - 8-29-2023.txt, backing off 1.2s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/15 - __6 - Judging Yourself - How to Process Guilt and Stimulate Pride - 8-29-2023.txt, backing off 2.8s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/18 - __7 - Frustration  and  Confidence - Your Assessment of Your Own Efficacy - 9-12-2023.txt, backing off 1.9s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/18 - __7 - Frustration  and  Confidence - Your Assessment of Your Own Efficacy - 9-12-2023.txt, backing off 2.7s (attempt 2)
+Hard validation failure for /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/19 - __8 - Dealing with Threats - 9-26-2023.txt (attempt 1), retrying: ["primary_topics: only 2 valid tags (need >= 3). Valid: ['emotions', 'values']"]
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/21 - Open Q and A 10-17-2023.txt, backing off 1.9s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/21 - Open Q and A 10-17-2023.txt, backing off 2.8s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/29 - __13 - Emotions as Alerts to Values at Stake - 12-5-2023.txt, backing off 1.5s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/29 - __13 - Emotions as Alerts to Values at Stake - 12-5-2023.txt, backing off 2.3s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/31 - __14 - The Importance of Understanding Emotions - 12-19-2023.txt, backing off 1.2s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/31 - __14 - The Importance of Understanding Emotions - 12-19-2023.txt, backing off 2.6s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/32 - The concept of anti-values - MOTM 2-25-2024.txt, backing off 1.2s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/32 - The concept of anti-values - MOTM 2-25-2024.txt, backing off 2.2s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/Developing a Central Purpose/01 - Developing a Central Purpose - Part 1.txt, backing off 1.9s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/Developing a Central Purpose/01 - Developing a Central Purpose - Part 1.txt, backing off 2.9s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/Just-in-Time Planning/TL - JIT - Bonus 01 - Planning Focus Time.txt, backing off 1.3s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/Just-in-Time Planning/TL - JIT - Bonus 04 - How to Generate Helpful Questions for Your Own Thinking.txt, backing off 1.5s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/Just-in-Time Planning/TL - JIT - Thinking Day 20240101 - 1 - Opening Session.txt, backing off 1.5s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/Just-in-Time Planning/TL - JIT - Thinking Day 20240101 - 1 - Opening Session.txt, backing off 2.8s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/Just-in-Time Planning/TL - JIT - Thinking Day 20240316 - 1 - Opening Session.txt, backing off 1.8s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/Just-in-Time Planning/TL - JIT - Thinking Day 20240316 - 1 - Opening Session.txt, backing off 2.7s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/Just-in-Time Planning/TL - JIT - Thinking Day 20240316 - 2 - Mid-day Check-in Session.txt, backing off 1.9s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/Just-in-Time Planning/TL - JIT - Thinking Day 20240316 - 2 - Mid-day Check-in Session.txt, backing off 2.1s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/Just-in-Time Planning/TL - JIT - Unit 00 - Finishing Sooner Rather than Later.txt, backing off 1.7s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/Just-in-Time Planning/TL - JIT - Unit 01 - Workshop Vetting Your Project .txt, backing off 1.5s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/Just-in-Time Planning/TL - JIT - Unit 01 - Workshop Vetting Your Project .txt, backing off 2.5s (attempt 2)
+Hard validation failure for /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/Just-in-Time Planning/TL - JIT - Unit 02 - Workshop Quick & Dirty Planning .txt (attempt 1), retrying: ["primary_topics: only 2 valid tags (need >= 3). Valid: ['productiveness', 'values']"]
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/NonFiction Writing/NonFiction 05 - 7- Pitch 8 - Lead - Nut Graph and Conclusion.txt, backing off 1.1s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/NonFiction Writing/NonFiction 05 - 7- Pitch 8 - Lead - Nut Graph and Conclusion.txt, backing off 2.4s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/NonFiction Writing/NonFiction 06 - 9 - Need to Know List 10 - Short Outline.txt, backing off 1.5s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/NonFiction Writing/NonFiction 06 - 9 - Need to Know List 10 - Short Outline.txt, backing off 2.2s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/NonFiction Writing/NonFiction 09 - 14 - Edit for Clarity 15 - Polish to Add Impact.txt, backing off 1.3s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/NonFiction Writing/NonFiction 11 - Getting to the Point.txt, backing off 1.7s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/NonFiction Writing/NonFiction 11 - Getting to the Point.txt, backing off 2.6s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/Tap Your Own Brilliance/01 - 1 Picking Someones Brain - Yours.txt, backing off 2.0s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/Tap Your Own Brilliance/01 - 1 Picking Someones Brain - Yours.txt, backing off 2.2s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/Tap Your Own Brilliance/02 - 2 Lassoing Runaway Thoughts.txt, backing off 1.2s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/Tap Your Own Brilliance/02 - 2 Lassoing Runaway Thoughts.txt, backing off 2.6s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/Tap Your Own Brilliance/04 - 4 Triggering New Insights.txt, backing off 1.5s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/Tap Your Own Brilliance/04 - 4 Triggering New Insights.txt, backing off 2.4s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/Tap Your Own Brilliance/07 - Bonus Class 3 - Multiply the Power of Thought.txt, backing off 1.1s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/Tap Your Own Brilliance/07 - Bonus Class 3 - Multiply the Power of Thought.txt, backing off 2.3s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/Tap Your Own Brilliance/08 - Bonus Class 4 - Emotions and Values 101.txt, backing off 1.5s (attempt 1)
+      Extraction Summary      
+┏━━━━━━━━━━━━━━━━┳━━━━━━━━━━━┓
+┃ Metric         ┃     Value ┃
+┡━━━━━━━━━━━━━━━━╇━━━━━━━━━━━┩
+│ Extracted      │        57 │
+│ Needs Review   │         2 │
+│ Failed         │        37 │
+│ Total Tokens   │   958,798 │
+│ Estimated Cost │     $1.32 │
+│ Avg Latency    │ 18,052 ms │
+│ Time Elapsed   │   1386.9s │
+└────────────────┴───────────┘
+
+Set 735 file(s) to pending for re-upload.
+
+Next steps:
+  Run objlib metadata review to check results
+  Run objlib metadata approve --min-confidence 0.85 to auto-approve

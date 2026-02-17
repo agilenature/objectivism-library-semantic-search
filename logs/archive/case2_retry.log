@@ -1,0 +1,23 @@
+╭────────────────────────────── Upload Pipeline ───────────────────────────────╮
+│ Uploading 1 files to objectivism-library-test                                │
+│ Batches: 1 x 10 | Concurrency: 7                                             │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  Pipeline ━━━━━━━ 2/1 100% 0:00:… FAIL ...ts to Values at Stake - 12-5-2023.txt
+  Batch 1  ━━━━━━━ 2/1 100% 0:00:… batch 1 done                                 
+╭────────────────────────────── Upload Complete ───────────────────────────────╮
+│     Upload Summary                                                           │
+│ ┏━━━━━━━━━━━━━┳━━━━━━━┓                                                      │
+│ ┃ Metric      ┃ Count ┃                                                      │
+│ ┡━━━━━━━━━━━━━╇━━━━━━━┩                                                      │
+│ │ Total files │     1 │                                                      │
+│ │ Succeeded   │     0 │                                                      │
+│ │ Failed      │     1 │                                                      │
+│ │ Skipped     │     0 │                                                      │
+│ │ Pending     │     0 │                                                      │
+│ └─────────────┴───────┘                                                      │
+╰──────────────────────────────────────────────────────────────────────────────╯
+Exception ignored in: <function BaseApiClient._get_aiohttp_session.<locals>.AiohttpTCPConnector.__del__ at 0x10e34c040>
+Traceback (most recent call last):
+  File "/Users/david/.pyenv/versions/3.13.5/lib/python3.13/site-packages/google/genai/_api_client.py", line 786, in __del__
+  File "/Users/david/.pyenv/versions/3.13.5/lib/python3.13/site-packages/aiohttp/connector.py", line 1020, in _close
+AttributeError: 'NoneType' object has no attribute 'from_iterable'

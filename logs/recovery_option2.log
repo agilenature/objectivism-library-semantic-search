@@ -1,0 +1,71 @@
+╭────────────────────────────── Upload Pipeline ───────────────────────────────╮
+│ Uploading 947 files to objectivism-library-test                              │
+│ Batches: 19 x 50 | Concurrency: 7                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Courses/ITOE Advanced Topics/ITOE Advanced Topics - Class 11-01.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Courses/ITOE/ITOE - Class 04-01.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Courses/ITOE/ITOE - Class 06-01.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Courses/ITOE/ITOE - Class 10-01.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Courses/Induction in Physics and Philosophy/Induction in Physics and Philosophy - Lesson 04 - Generalizations in Physics, Part 2.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Courses/Introduction to Writing/Introduction to Writing - Lesson 02 - Q4 Week 2.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Courses/Introduction to Writing/Introduction to Writing - Lesson 16 - Q1 Week 6 – 2.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Courses/Lectures on Culture and Politics/Lectures on Culture and Politics - Lesson 02 - The Role of Philosophy and Psychology in History.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Courses/Leonard Peikoff at the Ford Hall Forum/Leonard Peikoff at the Ford Hall Forum - Lesson 08 - Philosophy and the Real World Out There.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Courses/Leonard Peikoff at the Ford Hall Forum/Leonard Peikoff at the Ford Hall Forum - Lesson 07 - Why Should One Act on Principle_.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Courses/Objective Communication/Objective Communication - Lesson 07 - Arguing_ Principles and Methods of Informal Debate.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Courses/Objectivism Seminar - Foundations/Year1/Q1/Objectivism Seminar - Foundations - Year 1 - Q1 - Week 1 - Objectivism and Its View of Philosophy.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Courses/Objectivism Through Induction/Objectivism Through Induction - Lesson 12 - Final Exam_ Leonard Peikoff_s Answers.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Courses/Objectivism_ The State of the Art/Objectivism_ The State of the Art - Lesson 04 - Rand_s Distinctive Conception of Logic.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Courses/Principles of Grammar/Principles of Grammar - Lesson 06 - Punctuation.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Courses/The Atlas Project/The Atlas Project - Lesson 03 - Part I Chapter 3 - The Top and the Bottom.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Courses/The Atlas Project/The Atlas Project - Lesson 05 - Part I Chapter 5 - The Climax of the dAnconias.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Courses/The Atlas Project/The Atlas Project - Lesson 07 - Part I Chapter 7 - The Exploiters and the Exploited.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Courses/The Atlas Project/The Atlas Project - Lesson 08 - Part I Chapter 8 - The John Galt Line.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2015-04-26_Masculinity-and-Femininity.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2015-12-30_Mans-Rights.txt: 500 INTERNAL. {'error': {'code': 500, 'message': 'Internal error encountered.', 'status': 'INTERNAL'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2017-02-12_Sunday-Brunch-Free-will-and-the-choice-to-execute-cues-to-recognize-rationalizations.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2017-10-08_Sunday-Brunch-at-HBL-Disc-with-David-Berry-on-emotional-coloration-in-music-comments-on-Rubin-interview-with-Candace-Owen.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2018-05-13_Crypto-currencies-differentiation-and-speculation.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2020-04-27_Wild-cosmological-questions.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2020-06-21_Socially-objective-value-in-economics.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2020-08-23_Autonomous-vehicles.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2021-03-14_Interview-with-Don-Watkins.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2022-02-20_Canadian-Truckers-Strike.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2021-10-10_Interview-of-Jonathan-Hoenig.txt: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'The service is currently unavailable.', 'status': 'UNAVAILABLE'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2024-04-21_Razi-Ginzberg-on-Israel.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2024-07-14_My-Favorite-Economic-Fallacies.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2024-09-01_Pleasure-Principle-and-Ambitious-Goals.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2024-12-15_Interview-with-Greg-Salmieri.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2024-12-29_Concretizing-Concretization-Part.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/OCON/2024/OCON 2024 - Egoism Without Permission – It Begins with Desire - Tara Smith.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/OCON/2024/OCON 2024 - Socratic Wisdom - Jason Rheins.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/OCON/OCON 2021 - Robert Mayhew - Ayn Rand's Intransigent Atheism.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Peikoff Podcast/Episode 293 [1000169520664].txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/00 - __1 - Role of Emotions.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/15 - __6 - Judging Yourself - How to Process Guilt and Stimulate Pride - 8-29-2023.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/21 - Open Q and A 10-17-2023.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/27 - __12 - JOFNR aka Emergency Introspection - 11-21-2023.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/29 - __13 - Emotions as Alerts to Values at Stake - 12-5-2023.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/32 - The concept of anti-values - MOTM 2-25-2024.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/Just-in-Time Planning/TL - JIT - Bonus 05 - Digging into the Details of a Complex Project.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/Just-in-Time Planning/TL - JIT - Thinking Day 20240316 - 1 - Opening Session.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/Tap Your Own Brilliance/07 - Bonus Class 3 - Multiply the Power of Thought.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+  Pipeline ━━━━━ 1048… 100% 0:00:… FAIL ...Class 4 - Emotions and Values 101.txt
+  Batch 19 ━━━━━ 48/47 100% 0:00:… batch 19 done                                
+╭────────────────────────────── Upload Complete ───────────────────────────────╮
+│     Upload Summary                                                           │
+│ ┏━━━━━━━━━━━━━┳━━━━━━━┓                                                      │
+│ ┃ Metric      ┃ Count ┃                                                      │
+│ ┡━━━━━━━━━━━━━╇━━━━━━━┩                                                      │
+│ │ Total files │   947 │                                                      │
+│ │ Succeeded   │   798 │                                                      │
+│ │ Failed      │   149 │                                                      │
+│ │ Skipped     │     0 │                                                      │
+│ │ Pending     │     0 │                                                      │
+│ └─────────────┴───────┘                                                      │
+╰──────────────────────────────────────────────────────────────────────────────╯
+Exception ignored in: <function BaseApiClient._get_aiohttp_session.<locals>.AiohttpTCPConnector.__del__ at 0x10e02b100>
+Traceback (most recent call last):
+  File "/Users/david/.pyenv/versions/3.13.5/lib/python3.13/site-packages/google/genai/_api_client.py", line 786, in __del__
+  File "/Users/david/.pyenv/versions/3.13.5/lib/python3.13/site-packages/aiohttp/connector.py", line 1020, in _close
+AttributeError: 'NoneType' object has no attribute 'from_iterable'

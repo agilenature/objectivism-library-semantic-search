@@ -1,0 +1,41 @@
+╭────────────────────────── Enriched Upload Pipeline ──────────────────────────╮
+│ Uploading 791 enriched files to objectivism-library-test                     │
+│ Batches: 8 x 100 | Concurrency: 2                                            │
+│ Reset existing: True | Include needs-review: True                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Courses/Aristotle_s Theory of Knowledge/Aristotle_s Theory of Knowledge - Lesson 02 - Aristotle_s Theory of Universals.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Courses/Ayn Rand at the Ford Hall Forum/Ayn Rand at the Ford Hall Forum - Lesson 04 - Is Atlas Shrugging_.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Courses/History of Philosophy/History of Philosophy - Lesson 02 - Thales of Miletus and the Birth of Greek Philosophy.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Courses/History of Philosophy/History of Philosophy - Lesson 41 - Immanuel Kant_ Is Reality Knowable_ The Problem Posed By David Hume.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Courses/ITOE/ITOE - Class 16-01.txt: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'The service is currently unavailable.', 'status': 'UNAVAILABLE'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Courses/The Objectivist Ethics HB - Part II/The Objectivist Ethics HB - Part II - Class 09.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Courses/What Is Liberty_/What Is Liberty_ - Lesson 01 - Politics, Liberty and Objectivism_ Part 1.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2022-01-16_History-of-the-Objectivist-Movement-a-personal-account-part.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2022-07-31_New-Ideas-In-The-Esthetics-Of-Music.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2022-09-25_More-epistemology-of-abortion-and-immigration.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/MOTM/MOTM_2022-10-03_Privacy.txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Peikoff Podcast/Episode 195 [1000108721462].txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Peikoff Podcast/Episode 270 [1000160075681].txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Peikoff Podcast/Episode 293 [1000169520664].txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Peikoff Podcast/Episode 400 [1000360856092].txt: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Failed to create file.', 'status': 'INVALID_ARGUMENT'}}
+  Pipeline ━━━━━━━ 826/791 100% 0:00:00 ...nFiction 13 - Carving Out a Topic.txt
+  Batch 8  ━━━━━━━ 92/92   100% 0:00:00 batch 8 done                            
+╭────────────────────────── Enriched Upload Complete ──────────────────────────╮
+│     Enriched Upload Summary                                                  │
+│ ┏━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━┓                                             │
+│ ┃ Metric               ┃ Count ┃                                             │
+│ ┡━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━┩                                             │
+│ │ Total files          │   792 │                                             │
+│ │ Succeeded            │   771 │                                             │
+│ │ Failed               │    35 │                                             │
+│ │ Skipped (idempotent) │     2 │                                             │
+│ │ Reset (re-uploaded)  │     1 │                                             │
+│ │ Retried (successful) │    12 │                                             │
+│ │ Pending              │   -16 │                                             │
+│ └──────────────────────┴───────┘                                             │
+╰──────────────────────────────────────────────────────────────────────────────╯
+Exception ignored in: <function BaseApiClient._get_aiohttp_session.<locals>.AiohttpTCPConnector.__del__ at 0x10deacd60>
+Traceback (most recent call last):
+  File "/Users/david/.pyenv/versions/3.13.5/lib/python3.13/site-packages/google/genai/_api_client.py", line 786, in __del__
+  File "/Users/david/.pyenv/versions/3.13.5/lib/python3.13/site-packages/aiohttp/connector.py", line 1020, in _close
+AttributeError: 'NoneType' object has no attribute 'from_iterable'

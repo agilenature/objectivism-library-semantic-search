@@ -1,0 +1,24 @@
+╭────────────────────────────── Upload Pipeline ───────────────────────────────╮
+│ Uploading 3 files to objectivism-library-test                                │
+│ Batches: 1 x 10 | Concurrency: 7                                             │
+╰──────────────────────────────────────────────────────────────────────────────╯
+Failed to upload /Volumes/U32 Shadow/Objectivism Library/Courses/ITOE/ITOE - Class 16-01.txt: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'The service is currently unavailable.', 'status': 'UNAVAILABLE'}}
+  Pipeline ━━━━━━━ 3/3 100% 0:00:… FAIL ...y/Courses/ITOE/ITOE - Class 16-01.txt
+  Batch 1  ━━━━━━━ 3/3 100% 0:00:… batch 1 done                                 
+╭────────────────────────────── Upload Complete ───────────────────────────────╮
+│     Upload Summary                                                           │
+│ ┏━━━━━━━━━━━━━┳━━━━━━━┓                                                      │
+│ ┃ Metric      ┃ Count ┃                                                      │
+│ ┡━━━━━━━━━━━━━╇━━━━━━━┩                                                      │
+│ │ Total files │     3 │                                                      │
+│ │ Succeeded   │     2 │                                                      │
+│ │ Failed      │     1 │                                                      │
+│ │ Skipped     │     0 │                                                      │
+│ │ Pending     │     0 │                                                      │
+│ └─────────────┴───────┘                                                      │
+╰──────────────────────────────────────────────────────────────────────────────╯
+Exception ignored in: <function BaseApiClient._get_aiohttp_session.<locals>.AiohttpTCPConnector.__del__ at 0x109f679c0>
+Traceback (most recent call last):
+  File "/Users/david/.pyenv/versions/3.13.5/lib/python3.13/site-packages/google/genai/_api_client.py", line 786, in __del__
+  File "/Users/david/.pyenv/versions/3.13.5/lib/python3.13/site-packages/aiohttp/connector.py", line 1020, in _close
+AttributeError: 'NoneType' object has no attribute 'from_iterable'

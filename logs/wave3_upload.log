@@ -1,0 +1,20 @@
+╭────────────────────────── Enriched Upload Pipeline ──────────────────────────╮
+│ Uploading 30 enriched files to objectivism-library-test                      │
+│ Batches: 1 x 100 | Concurrency: 2                                            │
+│ Reset existing: False | Include needs-review: True                           │
+╰──────────────────────────────────────────────────────────────────────────────╯
+⠹ Pipeline                                        0/30   0% -:--:-- batch 1/1   
+⠹ Batch 1                                         0/30   0% -:--:-- batch 1 done
+╭────────────────────────── Enriched Upload Complete ──────────────────────────╮
+│     Enriched Upload Summary                                                  │
+│ ┏━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━┓                                             │
+│ ┃ Metric               ┃ Count ┃                                             │
+│ ┡━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━┩                                             │
+│ │ Total files          │    30 │                                             │
+│ │ Succeeded            │     0 │                                             │
+│ │ Failed               │     0 │                                             │
+│ │ Skipped (idempotent) │    30 │                                             │
+│ │ Reset (re-uploaded)  │     0 │                                             │
+│ │ Pending              │     0 │                                             │
+│ └──────────────────────┴───────┘                                             │
+╰──────────────────────────────────────────────────────────────────────────────╯

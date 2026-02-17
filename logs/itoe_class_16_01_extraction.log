@@ -1,0 +1,30 @@
+╭──────────────────────── Wave 2 Production Extraction ────────────────────────╮
+│ Processing 12 files with strategy 'minimalist'                               │
+│ Prompt version: 1.0.0                                                        │
+╰──────────────────────────────────────────────────────────────────────────────╯
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Peikoff Podcast/Episode 365 [1000338227220].txt, backing off 1.0s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Peikoff Podcast/Episode 365 [1000338227220].txt, backing off 2.6s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/00 - __1 - Role of Emotions.txt, backing off 1.3s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/All About Emotions/00 - __1 - Role of Emotions.txt, backing off 2.9s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/Developing a Central Purpose/01 - Developing a Central Purpose - Part 1.txt, backing off 1.1s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/Developing a Central Purpose/01 - Developing a Central Purpose - Part 1.txt, backing off 2.5s (attempt 2)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/Just-in-Time Planning/TL - JIT - Thinking Day 20240101 - 1 - Opening Session.txt, backing off 1.4s (attempt 1)
+Rate limited on /Volumes/U32 Shadow/Objectivism Library/Thinking Lab/Just-in-Time Planning/TL - JIT - Thinking Day 20240101 - 1 - Opening Session.txt, backing off 2.7s (attempt 2)
+      Extraction Summary      
+┏━━━━━━━━━━━━━━━━┳━━━━━━━━━━━┓
+┃ Metric         ┃     Value ┃
+┡━━━━━━━━━━━━━━━━╇━━━━━━━━━━━┩
+│ Extracted      │         8 │
+│ Needs Review   │         0 │
+│ Failed         │         4 │
+│ Total Tokens   │   134,995 │
+│ Estimated Cost │     $0.16 │
+│ Avg Latency    │ 21,118 ms │
+│ Time Elapsed   │    187.9s │
+└────────────────┴───────────┘
+
+Set 762 file(s) to pending for re-upload.
+
+Next steps:
+  Run objlib metadata review to check results
+  Run objlib metadata approve --min-confidence 0.85 to auto-approve
