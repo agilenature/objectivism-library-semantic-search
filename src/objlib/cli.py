@@ -787,6 +787,8 @@ def enriched_upload(
     summary_table.add_row("Failed", f"[red]{result['failed']}[/red]")
     summary_table.add_row("Skipped (idempotent)", f"[yellow]{result['skipped']}[/yellow]")
     summary_table.add_row("Reset (re-uploaded)", f"[cyan]{result['reset']}[/cyan]")
+    if result.get("retried", 0) > 0:
+        summary_table.add_row("Retried (successful)", f"[magenta]{result['retried']}[/magenta]")
     summary_table.add_row("Pending", str(result["pending"]))
 
     console.print(Panel(summary_table, title="Enriched Upload Complete"))

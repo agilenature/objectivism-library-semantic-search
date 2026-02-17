@@ -471,6 +471,7 @@ class EnrichedUploadOrchestrator(UploadOrchestrator):
         self._include_needs_review = include_needs_review
         self._file_limit = file_limit
         self._reset_count = 0
+        self._retry_succeeded = 0  # Track post-batch retry successes
 
     # ------------------------------------------------------------------
     # Enriched upload entry point
@@ -651,10 +652,17 @@ class EnrichedUploadOrchestrator(UploadOrchestrator):
     async def _process_enriched_batch(
         self, files: list[dict], batch_number: int
     ) -> None:
-        """Process a batch of enriched files with staggered launches.
+        """Process a batch of enriched files with staggered launches and retry pass.
 
         Same structure as parent _process_batch but uses enriched upload
-        method and adds 1-second delay between task launches.
+        method, adds 1-second delay between task launches, and includes
+        a post-batch retry pass for transient failures.
+
+        Retry Pass:
+          - Collects all failures after main batch polling
+          - Waits 30 seconds (API cooldown)
+          - Retries failed files once more
+          - Reports final success/failure counts
         """
         batch_id = await self._state.create_batch(batch_number, len(files))
 
@@ -667,11 +675,13 @@ class EnrichedUploadOrchestrator(UploadOrchestrator):
 
         # Phase 1: Upload all files with staggered launches
         upload_tasks = []
+        file_map = {}  # Track file_path -> file_info for retry
         for i, f in enumerate(files):
             if i > 0:
                 await asyncio.sleep(1.0)  # Stagger to prevent burst
             task = asyncio.create_task(self._upload_enriched_file(f))
             upload_tasks.append(task)
+            file_map[f["file_path"]] = f
 
         upload_results = await asyncio.gather(*upload_tasks, return_exceptions=True)
 
@@ -691,20 +701,77 @@ class EnrichedUploadOrchestrator(UploadOrchestrator):
                 operations.append(result)
 
         # Phase 2: Poll all operations
+        failed_files = []
         if operations:
             poll_tasks = [self._poll_single_operation(op) for op in operations]
             poll_results = await asyncio.gather(*poll_tasks, return_exceptions=True)
 
-            for result in poll_results:
+            for i, result in enumerate(poll_results):
                 if isinstance(result, Exception):
                     batch_failed += 1
                     logger.error("Poll task exception: %s", result)
+                    # Track for retry
+                    file_path = operations[i][0]
+                    if file_path in file_map:
+                        failed_files.append(file_map[file_path])
                 elif result is True:
                     batch_succeeded += 1
                 else:
                     batch_failed += 1
+                    # Track for retry
+                    file_path = operations[i][0]
+                    if file_path in file_map:
+                        failed_files.append(file_map[file_path])
 
-        # Update batch record
+        # Phase 3: Retry pass for failures (Option 3)
+        retry_succeeded = 0
+        retry_failed = 0
+        if failed_files and not self._shutdown_event.is_set():
+            logger.info(
+                "Batch %d: %d failures detected, starting retry pass after 30s cooldown...",
+                batch_number,
+                len(failed_files),
+            )
+            await asyncio.sleep(30.0)  # API cooldown
+
+            # Retry each failed file
+            retry_operations = []
+            for f in failed_files:
+                result = await self._upload_enriched_file(f)
+                if result is not None:
+                    retry_operations.append(result)
+
+            # Poll retry operations
+            if retry_operations:
+                retry_poll_tasks = [
+                    self._poll_single_operation(op) for op in retry_operations
+                ]
+                retry_poll_results = await asyncio.gather(
+                    *retry_poll_tasks, return_exceptions=True
+                )
+
+                for result in retry_poll_results:
+                    if isinstance(result, Exception):
+                        retry_failed += 1
+                        logger.error("Retry poll exception: %s", result)
+                    elif result is True:
+                        retry_succeeded += 1
+                        # Adjust batch counters
+                        batch_succeeded += 1
+                        batch_failed -= 1
+                        # Track global retry successes
+                        self._retry_succeeded += 1
+                    else:
+                        retry_failed += 1
+
+            logger.info(
+                "Batch %d retry pass: %d succeeded, %d still failed",
+                batch_number,
+                retry_succeeded,
+                retry_failed,
+            )
+
+        # Update batch record with final counts
         status = "completed" if batch_failed == 0 else "failed"
         await self._state.update_batch(
             batch_id, batch_succeeded, batch_failed, status
@@ -714,10 +781,11 @@ class EnrichedUploadOrchestrator(UploadOrchestrator):
             self._progress.complete_batch(batch_number)
 
         logger.info(
-            "Enriched batch %d complete: %d succeeded, %d failed",
+            "Enriched batch %d complete: %d succeeded, %d failed%s",
             batch_number,
             batch_succeeded,
             batch_failed,
+            f" (after {retry_succeeded} retries)" if retry_succeeded > 0 else "",
         )
 
     # ------------------------------------------------------------------
@@ -853,5 +921,6 @@ class EnrichedUploadOrchestrator(UploadOrchestrator):
             "failed": self._failed,
             "skipped": self._skipped,
             "reset": self._reset_count,
+            "retried": self._retry_succeeded,  # Post-batch retry successes
             "pending": self._total - self._succeeded - self._failed - self._skipped,
         }
