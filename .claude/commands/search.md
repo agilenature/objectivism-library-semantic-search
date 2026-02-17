@@ -1,3 +1,12 @@
+---
+name: search
+description: Search the Objectivism Library using Gemini File Search
+argument-hint: <query>
+allowed-tools:
+  - Bash
+  - Read
+---
+
 Search the Objectivism Library using Gemini File Search for: $ARGUMENTS
 
 Execute the following command to search the library:
