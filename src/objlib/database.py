@@ -392,7 +392,17 @@ class Database:
                 except sqlite3.OperationalError:
                     pass  # Column already exists
 
-        self.conn.execute("PRAGMA user_version = 4")
+        if version < 5:
+            for alter_sql in [
+                "ALTER TABLE files ADD COLUMN upload_attempt_count INTEGER DEFAULT 0",
+                "ALTER TABLE files ADD COLUMN last_upload_hash TEXT",
+            ]:
+                try:
+                    self.conn.execute(alter_sql)
+                except sqlite3.OperationalError:
+                    pass  # Column already exists
+
+        self.conn.execute("PRAGMA user_version = 5")
 
     def upsert_file(self, record: FileRecord) -> None:
         """Insert or update a single file record.
