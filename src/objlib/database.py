@@ -1017,6 +1017,237 @@ class Database:
             "max_confidence": round(conf_row["max_conf"], 2) if conf_row and conf_row["max_conf"] else 0.0,
         }
 
+    # ---- Entity extraction persistence methods (Phase 6.1) ----
+
+    def save_transcript_entities(self, file_path: str, result: object) -> None:
+        """Save entity extraction results for a transcript.
+
+        Uses delete-then-insert for idempotent re-extraction.
+        Updates files.entity_extraction_status and entity_extraction_version.
+
+        Args:
+            file_path: Primary key matching files.file_path.
+            result: EntityExtractionResult from the extractor (duck-typed
+                    to avoid import cycle -- expects .entities, .status,
+                    .extraction_version attributes).
+        """
+        with self.conn:
+            # Clean slate for re-extraction
+            self.conn.execute(
+                "DELETE FROM transcript_entity WHERE transcript_id = ?",
+                (file_path,),
+            )
+            # Insert each entity
+            for entity in result.entities:
+                self.conn.execute(
+                    """INSERT INTO transcript_entity
+                       (transcript_id, person_id, mention_count, first_seen_char,
+                        max_confidence, evidence_sample, extraction_version)
+                       VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                    (
+                        file_path,
+                        entity.person_id,
+                        entity.mention_count,
+                        entity.first_seen_char,
+                        entity.max_confidence,
+                        entity.evidence_sample,
+                        result.extraction_version,
+                    ),
+                )
+            # Update files table status
+            self.conn.execute(
+                """UPDATE files
+                   SET entity_extraction_status = ?,
+                       entity_extraction_version = ?
+                   WHERE file_path = ?""",
+                (result.status, result.extraction_version, file_path),
+            )
+
+    def get_entity_stats(self) -> dict:
+        """Return entity extraction statistics.
+
+        Returns dict with:
+            total_txt: total .txt files (excluding LOCAL_DELETE)
+            entities_done: files with entity_extraction_status='entities_done'
+            pending: files with entity_extraction_status='pending' or NULL
+            errors: files with entity_extraction_status in ('error','blocked_entity_extraction')
+            total_mentions: sum of all mention_count in transcript_entity
+            unique_persons: count of distinct person_id in transcript_entity
+            person_frequency: list of (canonical_name, transcript_count, total_mentions)
+                ordered by transcript_count desc
+        """
+        # Total .txt files
+        row = self.conn.execute(
+            "SELECT COUNT(*) as cnt FROM files "
+            "WHERE filename LIKE '%.txt' AND status != 'LOCAL_DELETE'"
+        ).fetchone()
+        total_txt = row["cnt"] if row else 0
+
+        # Status counts
+        done_row = self.conn.execute(
+            "SELECT COUNT(*) as cnt FROM files "
+            "WHERE entity_extraction_status = 'entities_done' "
+            "AND filename LIKE '%.txt' AND status != 'LOCAL_DELETE'"
+        ).fetchone()
+        entities_done = done_row["cnt"] if done_row else 0
+
+        pending_row = self.conn.execute(
+            "SELECT COUNT(*) as cnt FROM files "
+            "WHERE (entity_extraction_status IS NULL OR entity_extraction_status = 'pending') "
+            "AND filename LIKE '%.txt' AND status != 'LOCAL_DELETE'"
+        ).fetchone()
+        pending = pending_row["cnt"] if pending_row else 0
+
+        error_row = self.conn.execute(
+            "SELECT COUNT(*) as cnt FROM files "
+            "WHERE entity_extraction_status IN ('error', 'blocked_entity_extraction') "
+            "AND filename LIKE '%.txt' AND status != 'LOCAL_DELETE'"
+        ).fetchone()
+        errors = error_row["cnt"] if error_row else 0
+
+        # Aggregate entity stats
+        mention_row = self.conn.execute(
+            "SELECT COALESCE(SUM(mention_count), 0) as total, "
+            "COUNT(DISTINCT person_id) as unique_persons "
+            "FROM transcript_entity"
+        ).fetchone()
+        total_mentions = mention_row["total"] if mention_row else 0
+        unique_persons = mention_row["unique_persons"] if mention_row else 0
+
+        # Person frequency: join with person table for canonical name
+        freq_rows = self.conn.execute(
+            """SELECT p.canonical_name,
+                      COUNT(DISTINCT te.transcript_id) as transcript_count,
+                      SUM(te.mention_count) as total_mentions
+               FROM transcript_entity te
+               JOIN person p ON te.person_id = p.person_id
+               GROUP BY te.person_id
+               ORDER BY transcript_count DESC"""
+        ).fetchall()
+        person_frequency = [
+            (row["canonical_name"], row["transcript_count"], row["total_mentions"])
+            for row in freq_rows
+        ]
+
+        return {
+            "total_txt": total_txt,
+            "entities_done": entities_done,
+            "pending": pending,
+            "errors": errors,
+            "total_mentions": total_mentions,
+            "unique_persons": unique_persons,
+            "person_frequency": person_frequency,
+        }
+
+    def get_files_needing_entity_extraction(
+        self, mode: str = "pending", limit: int = 500
+    ) -> list[dict]:
+        """Return files that need entity extraction.
+
+        Args:
+            mode: "pending" (default), "backfill", "force", or "upgrade"
+                - pending: entity_extraction_status IS NULL or 'pending', .txt files
+                - backfill: status='uploaded' AND entity_extraction_status IS NULL/pending
+                - force: all .txt files regardless of entity status
+                - upgrade: entity_extraction_version != current version
+            limit: Max files to return.
+
+        Returns:
+            List of dicts with file_path, filename, file_size keys.
+        """
+        if mode == "pending":
+            sql = """SELECT file_path, filename, file_size FROM files
+                     WHERE filename LIKE '%.txt'
+                       AND (entity_extraction_status IS NULL OR entity_extraction_status = 'pending')
+                       AND status != 'LOCAL_DELETE'
+                     ORDER BY file_path LIMIT ?"""
+        elif mode == "backfill":
+            sql = """SELECT file_path, filename, file_size FROM files
+                     WHERE filename LIKE '%.txt'
+                       AND status = 'uploaded'
+                       AND (entity_extraction_status IS NULL OR entity_extraction_status = 'pending')
+                     ORDER BY file_path LIMIT ?"""
+        elif mode == "force":
+            sql = """SELECT file_path, filename, file_size FROM files
+                     WHERE filename LIKE '%.txt'
+                       AND status != 'LOCAL_DELETE'
+                     ORDER BY file_path LIMIT ?"""
+        elif mode == "upgrade":
+            sql = """SELECT file_path, filename, file_size FROM files
+                     WHERE filename LIKE '%.txt'
+                       AND entity_extraction_version != '6.1.0'
+                       AND entity_extraction_status = 'entities_done'
+                       AND status != 'LOCAL_DELETE'
+                     ORDER BY file_path LIMIT ?"""
+        else:
+            raise ValueError(f"Unknown mode: {mode}. Valid: pending, backfill, force, upgrade")
+
+        rows = self.conn.execute(sql, (limit,)).fetchall()
+        return [
+            {"file_path": row["file_path"], "filename": row["filename"], "file_size": row["file_size"]}
+            for row in rows
+        ]
+
+    def get_transcripts_by_person(self, person_id: str, limit: int = 50) -> list[dict]:
+        """Return transcripts that mention a specific person.
+
+        Returns list of dicts with file_path, filename, mention_count,
+        max_confidence, evidence_sample keys, ordered by mention_count DESC.
+        """
+        rows = self.conn.execute(
+            """SELECT f.file_path, f.filename, te.mention_count,
+                      te.max_confidence, te.evidence_sample
+               FROM transcript_entity te
+               JOIN files f ON te.transcript_id = f.file_path
+               WHERE te.person_id = ?
+               ORDER BY te.mention_count DESC
+               LIMIT ?""",
+            (person_id, limit),
+        ).fetchall()
+        return [
+            {
+                "file_path": row["file_path"],
+                "filename": row["filename"],
+                "mention_count": row["mention_count"],
+                "max_confidence": row["max_confidence"],
+                "evidence_sample": row["evidence_sample"],
+            }
+            for row in rows
+        ]
+
+    def get_person_by_name_or_alias(self, query: str) -> str | None:
+        """Look up a person_id by canonical name or alias text.
+
+        Case-insensitive. Returns person_id or None.
+        Used by CLI to resolve user input like 'Peikoff' to 'leonard-peikoff'.
+        """
+        # Try canonical name first
+        row = self.conn.execute(
+            "SELECT person_id FROM person WHERE canonical_name = ? COLLATE NOCASE",
+            (query,),
+        ).fetchone()
+        if row:
+            return row["person_id"]
+
+        # Try alias text (non-blocked)
+        row = self.conn.execute(
+            "SELECT person_id FROM person_alias "
+            "WHERE alias_text = ? COLLATE NOCASE AND is_blocked = 0",
+            (query,),
+        ).fetchone()
+        if row:
+            return row["person_id"]
+
+        # Try partial match (LIKE) on canonical name
+        row = self.conn.execute(
+            "SELECT person_id FROM person WHERE canonical_name LIKE ? COLLATE NOCASE",
+            (f"%{query}%",),
+        ).fetchone()
+        if row:
+            return row["person_id"]
+
+        return None
+
     def close(self) -> None:
         """Close the database connection."""
         self.conn.close()
