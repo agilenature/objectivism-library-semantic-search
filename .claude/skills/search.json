@@ -1,6 +1,0 @@
-{
-  "name": "search",
-  "description": "Search the Objectivism Library with semantic search",
-  "instructions": "Execute a semantic search against the Objectivism Library using Gemini File Search.\n\nYou will receive a query from the user. Your task:\n\n1. Execute the search command:\n   ```bash\n   python -m objlib --store objectivism-library-test search \"<query>\"\n   ```\n\n2. Present the results to the user:\n   - Show the synthesized answer\n   - Display the sources cited\n   - Offer to drill down into specific sources if requested\n\n3. If the user asks follow-up questions:\n   - You can view specific source files using:\n     ```bash\n     python -m objlib view \"<filename>\"\n     ```\n   - You can search for related topics\n   - You can explain or elaborate on the answer\n\nThe search command handles:\n- Query against 1,748 enriched files\n- Semantic retrieval using vector embeddings\n- AI-synthesized answers from multiple sources\n- Citation tracking with metadata\n\nExample queries:\n- \"What is context dropping?\"\n- \"Explain the trader principle\"\n- \"When did Ayn Rand finish Galt's speech?\"\n- \"What is the virtue of rationality?\"\n\nAfter executing the search, analyze the results and present them clearly to the user.",
-  "version": "1.0.0"
-}

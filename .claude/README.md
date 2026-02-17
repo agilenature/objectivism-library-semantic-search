@@ -2,7 +2,7 @@
 
 This directory contains Claude Code configuration and custom skills for the Objectivism Library Semantic Search project.
 
-## Custom Skills
+## Custom Commands
 
 ### `/search` - Semantic Search Command
 
@@ -10,15 +10,9 @@ Search the Objectivism Library using Gemini File Search.
 
 **Usage:**
 ```
-/search <your query>
-```
-
-**Examples:**
-```
 /search what is context dropping?
 /search explain the trader principle
 /search when did Ayn Rand finish Galt's speech?
-/search what is the virtue of rationality?
 ```
 
 **What it does:**
@@ -27,10 +21,10 @@ Search the Objectivism Library using Gemini File Search.
 3. Shows citations with metadata (course, year, relevance)
 4. Allows drilling down into specific sources
 
-**Behind the scenes:**
-```bash
-python -m objlib --store objectivism-library-test search "<query>"
-```
+**Implementation:**
+- Command file: `.claude/commands/search.md`
+- Uses `$ARGUMENTS` to pass your query
+- Executes: `python -m objlib --store objectivism-library-test search "$ARGUMENTS"`
 
 **Features:**
 - ✅ Semantic retrieval using vector embeddings
@@ -46,13 +40,26 @@ python -m objlib --store objectivism-library-test search "<query>"
 ```
 .claude/
 ├── README.md          ← This file
-├── skills/
-│   └── search.json    ← /search command definition
+├── commands/
+│   └── search.md      ← /search command definition
 └── projects/
     └── -Users-david-projects-objectivism-library-semantic-search/
         └── memory/
             └── MEMORY.md  ← Persistent project memory
 ```
+
+## How Commands Work
+
+Claude Code looks for command definitions in:
+- **Project commands**: `.claude/commands/` (this project only)
+- **Global commands**: `~/.claude/commands/` (all projects)
+
+Commands are simple Markdown files with:
+- The prompt/instructions
+- Optional `$ARGUMENTS` placeholder for parameters
+
+Example: `/search what is evasion?`
+→ Runs `.claude/commands/search.md` with `$ARGUMENTS = "what is evasion?"`
 
 ## Memory System
 
