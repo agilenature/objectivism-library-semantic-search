@@ -23,6 +23,8 @@ from typing import Any
 from objlib.models import UploadConfig
 from objlib.upload.circuit_breaker import CircuitState, RollingWindowCircuitBreaker
 from objlib.upload.client import GeminiFileSearchClient, RateLimitError
+from objlib.upload.content_preparer import cleanup_temp_file, prepare_enriched_content
+from objlib.upload.metadata_builder import build_enriched_metadata, compute_upload_hash
 from objlib.upload.recovery import RecoveryManager
 from objlib.upload.state import AsyncUploadStateManager
 
@@ -424,5 +426,432 @@ class UploadOrchestrator:
             "succeeded": self._succeeded,
             "failed": self._failed,
             "skipped": self._skipped,
+            "pending": self._total - self._succeeded - self._failed - self._skipped,
+        }
+
+
+class EnrichedUploadOrchestrator(UploadOrchestrator):
+    """Upload orchestrator for enriched metadata uploads.
+
+    Extends :class:`UploadOrchestrator` to upload files with 4-tier AI
+    metadata, entity mentions, and Tier 4 content injection. Key differences
+    from the parent:
+
+    * Uses ``get_enriched_pending_files()`` instead of ``get_pending_files()``
+      (strict entity gate: AI metadata + entity extraction + pending status).
+    * Optionally resets already-uploaded files for re-upload with enriched
+      metadata (``--reset-existing``).
+    * Builds ``CustomMetadata`` with ``string_list_value`` fields via
+      ``build_enriched_metadata()``.
+    * Prepends Tier 4 AI analysis to file content via
+      ``prepare_enriched_content()``.
+    * Skips files whose ``last_upload_hash`` matches (idempotency).
+    * Conservative concurrency: ``Semaphore(2)`` default with 1-second
+      staggered launch delay.
+
+    Usage::
+
+        orchestrator = EnrichedUploadOrchestrator(client, state, cb, config)
+        await orchestrator.run_enriched("objectivism-library-test")
+    """
+
+    def __init__(
+        self,
+        client: GeminiFileSearchClient,
+        state: AsyncUploadStateManager,
+        circuit_breaker: RollingWindowCircuitBreaker,
+        config: UploadConfig,
+        progress: Any | None = None,
+        reset_existing: bool = True,
+        include_needs_review: bool = True,
+        file_limit: int = 0,
+    ) -> None:
+        super().__init__(client, state, circuit_breaker, config, progress)
+        self._reset_existing = reset_existing
+        self._include_needs_review = include_needs_review
+        self._file_limit = file_limit
+        self._reset_count = 0
+
+    # ------------------------------------------------------------------
+    # Enriched upload entry point
+    # ------------------------------------------------------------------
+
+    async def run_enriched(self, store_display_name: str) -> dict[str, int]:
+        """Execute the enriched upload pipeline.
+
+        1. Ensure Gemini store exists
+        2. Acquire single-writer lock
+        3. Optionally reset already-uploaded files for re-upload
+        4. Fetch enriched pending files from SQLite
+        5. Split into batches and process with enriched upload
+        6. Release lock and return summary
+
+        Args:
+            store_display_name: Display name for the Gemini File Search store.
+
+        Returns:
+            Summary dict with total, succeeded, failed, skipped, reset counts.
+        """
+        self.setup_signal_handlers()
+
+        # Step 0: Run crash recovery
+        recovery = RecoveryManager(self._client, self._state, self._config)
+        recovery_result = await recovery.run()
+        if recovery_result.recovered_operations > 0 or recovery_result.reset_to_pending > 0:
+            logger.info(
+                "Recovery: %d ops recovered, %d files reset to pending",
+                recovery_result.recovered_operations,
+                recovery_result.reset_to_pending,
+            )
+
+        # Step 1: Ensure store exists
+        logger.info("Ensuring store '%s' exists...", store_display_name)
+        await self._client.get_or_create_store(store_display_name)
+
+        # Step 2: Acquire single-writer lock
+        locked = await self._state.acquire_lock(self._instance_id)
+        if not locked:
+            logger.error("Could not acquire upload lock -- another instance may be running")
+            return self.enriched_summary
+
+        try:
+            # Step 3: Reset already-uploaded files if requested
+            if self._reset_existing:
+                await self._reset_existing_files()
+
+            # Step 4: Get enriched pending files
+            limit = self._file_limit if self._file_limit > 0 else 10000
+            pending = await self._state.get_enriched_pending_files(
+                limit=limit,
+                include_needs_review=self._include_needs_review,
+            )
+            self._total = len(pending)
+
+            if not pending:
+                logger.info("No enriched pending files to upload")
+                return self.enriched_summary
+
+            logger.info(
+                "Found %d enriched pending files, processing in batches of %d",
+                self._total,
+                self._config.batch_size,
+            )
+
+            # Step 5: Split into batches and process
+            batches = [
+                pending[i : i + self._config.batch_size]
+                for i in range(0, len(pending), self._config.batch_size)
+            ]
+
+            if self._progress is not None:
+                self._progress.start()
+
+            try:
+                for batch_num, batch_files in enumerate(batches, start=1):
+                    if self._shutdown_event.is_set():
+                        logger.warning("Shutdown requested, skipping remaining batches")
+                        self._skipped += sum(
+                            len(b)
+                            for b in batches[batch_num:]
+                        )
+                        break
+                    await self._process_enriched_batch(batch_files, batch_num)
+            finally:
+                if self._progress is not None:
+                    self._progress.stop()
+
+        except asyncio.CancelledError:
+            logger.warning("Upload cancelled, saving state...")
+        finally:
+            # Step 6: Release lock
+            await self._state.release_lock()
+            logger.info(
+                "Enriched upload complete: %d succeeded, %d failed, %d skipped, "
+                "%d reset of %d total",
+                self._succeeded,
+                self._failed,
+                self._skipped,
+                self._reset_count,
+                self._total,
+            )
+
+        return self.enriched_summary
+
+    # ------------------------------------------------------------------
+    # Reset already-uploaded files
+    # ------------------------------------------------------------------
+
+    async def _reset_existing_files(self) -> None:
+        """Delete already-uploaded files from Gemini and reset to pending.
+
+        Identifies files that were uploaded with Phase 1 metadata only
+        (or failed) and have enriched metadata available. For each:
+        1. Delete from Gemini via client.delete_file() if gemini_file_id exists
+        2. Reset status to 'pending' in the database
+        """
+        files_to_reset = await self._state.get_files_to_reset_for_enriched_upload()
+
+        if not files_to_reset:
+            logger.info("No files need resetting for enriched re-upload")
+            return
+
+        logger.info(
+            "Resetting %d already-uploaded/failed files for enriched re-upload",
+            len(files_to_reset),
+        )
+
+        db = self._state._ensure_connected()
+        now = self._state._now_iso()
+
+        for file_info in files_to_reset:
+            file_path = file_info["file_path"]
+            gemini_file_id = file_info.get("gemini_file_id")
+
+            try:
+                # Delete from Gemini if there's a remote file
+                if gemini_file_id:
+                    # Normalize to full resource name if needed
+                    if not gemini_file_id.startswith("files/"):
+                        gemini_file_id = f"files/{gemini_file_id}"
+                    try:
+                        await self._client.delete_file(gemini_file_id)
+                        logger.info("Deleted %s from Gemini", gemini_file_id)
+                    except Exception as exc:
+                        # File may already be expired/deleted -- continue
+                        logger.warning(
+                            "Could not delete %s from Gemini: %s",
+                            gemini_file_id,
+                            exc,
+                        )
+
+                # Reset to pending in database
+                await db.execute(
+                    """UPDATE files
+                       SET status = 'pending',
+                           error_message = NULL,
+                           upload_attempt_count = 0,
+                           gemini_file_uri = NULL,
+                           gemini_file_id = NULL,
+                           remote_expiration_ts = NULL,
+                           upload_timestamp = NULL,
+                           updated_at = ?
+                       WHERE file_path = ?""",
+                    (now, file_path),
+                )
+                await db.commit()
+                self._reset_count += 1
+
+            except Exception as exc:
+                logger.error("Failed to reset %s: %s", file_path, exc)
+
+    # ------------------------------------------------------------------
+    # Enriched batch processing
+    # ------------------------------------------------------------------
+
+    async def _process_enriched_batch(
+        self, files: list[dict], batch_number: int
+    ) -> None:
+        """Process a batch of enriched files with staggered launches.
+
+        Same structure as parent _process_batch but uses enriched upload
+        method and adds 1-second delay between task launches.
+        """
+        batch_id = await self._state.create_batch(batch_number, len(files))
+
+        if self._progress is not None:
+            self._progress.start_batch(batch_number, len(files))
+
+        logger.info(
+            "Starting enriched batch %d (%d files)", batch_number, len(files)
+        )
+
+        # Phase 1: Upload all files with staggered launches
+        upload_tasks = []
+        for i, f in enumerate(files):
+            if i > 0:
+                await asyncio.sleep(1.0)  # Stagger to prevent burst
+            task = asyncio.create_task(self._upload_enriched_file(f))
+            upload_tasks.append(task)
+
+        upload_results = await asyncio.gather(*upload_tasks, return_exceptions=True)
+
+        # Collect successful operations for polling
+        operations: list[tuple[str, Any]] = []
+        batch_succeeded = 0
+        batch_failed = 0
+
+        for result in upload_results:
+            if isinstance(result, Exception):
+                batch_failed += 1
+                logger.error("Upload task exception: %s", result)
+            elif result is None:
+                # Skipped (shutdown, circuit breaker open, or idempotent)
+                pass
+            else:
+                operations.append(result)
+
+        # Phase 2: Poll all operations
+        if operations:
+            poll_tasks = [self._poll_single_operation(op) for op in operations]
+            poll_results = await asyncio.gather(*poll_tasks, return_exceptions=True)
+
+            for result in poll_results:
+                if isinstance(result, Exception):
+                    batch_failed += 1
+                    logger.error("Poll task exception: %s", result)
+                elif result is True:
+                    batch_succeeded += 1
+                else:
+                    batch_failed += 1
+
+        # Update batch record
+        status = "completed" if batch_failed == 0 else "failed"
+        await self._state.update_batch(
+            batch_id, batch_succeeded, batch_failed, status
+        )
+
+        if self._progress is not None:
+            self._progress.complete_batch(batch_number)
+
+        logger.info(
+            "Enriched batch %d complete: %d succeeded, %d failed",
+            batch_number,
+            batch_succeeded,
+            batch_failed,
+        )
+
+    # ------------------------------------------------------------------
+    # Enriched single file upload
+    # ------------------------------------------------------------------
+
+    async def _upload_enriched_file(
+        self, file_info: dict
+    ) -> tuple[str, Any] | None:
+        """Upload a single file with enriched metadata and content injection.
+
+        1. Parse Phase 1 metadata, AI metadata, and entity names
+        2. Compute upload hash for idempotency
+        3. Build enriched CustomMetadata via build_enriched_metadata()
+        4. Prepare enriched content via prepare_enriched_content()
+        5. Upload with semaphore-limited concurrency
+        6. Record success and update upload hash
+
+        Returns:
+            Tuple of (file_path, operation) on success, or None if skipped.
+        """
+        file_path = file_info["file_path"]
+
+        # Check shutdown
+        if self._shutdown_event.is_set():
+            self._skipped += 1
+            return None
+
+        # Check circuit breaker
+        if self._circuit_breaker.state == CircuitState.OPEN:
+            logger.warning("Circuit breaker OPEN, skipping %s", file_path)
+            self._skipped += 1
+            if self._progress is not None:
+                self._progress.file_rate_limited(file_path)
+            return None
+
+        # Parse metadata
+        phase1_json = file_info.get("phase1_metadata_json") or "{}"
+        ai_json = file_info.get("ai_metadata_json") or "{}"
+        phase1_metadata = json.loads(phase1_json)
+        ai_metadata = json.loads(ai_json)
+        entity_names = file_info.get("entity_names", [])
+        content_hash = file_info.get("content_hash", "")
+
+        # Idempotency check via upload hash
+        upload_hash = compute_upload_hash(
+            phase1_metadata, ai_metadata, entity_names, content_hash
+        )
+        if file_info.get("last_upload_hash") == upload_hash:
+            logger.debug("Skipping %s (upload hash unchanged)", file_path)
+            self._skipped += 1
+            return None
+
+        # Build enriched CustomMetadata
+        custom_metadata = build_enriched_metadata(
+            phase1_metadata, ai_metadata, entity_names
+        )
+
+        # Prepare enriched content (temp file with Tier 4 header)
+        temp_path = None
+        try:
+            temp_path = prepare_enriched_content(file_path, ai_metadata)
+            upload_path = temp_path if temp_path is not None else file_path
+
+            # Build display name (truncated to 512 chars)
+            display_name = file_info.get("filename", os.path.basename(file_path))[:512]
+
+            # Record intent BEFORE API call
+            await self._state.record_upload_intent(file_path)
+
+            # Upload with semaphore-limited concurrency
+            async with self._upload_semaphore:
+                file_obj, operation = await self._client.upload_and_import(
+                    upload_path, display_name, custom_metadata
+                )
+
+            # Record success AFTER API response
+            await self._state.record_upload_success(
+                file_path,
+                getattr(file_obj, "uri", ""),
+                getattr(file_obj, "name", ""),
+                getattr(operation, "name", ""),
+            )
+
+            # Update upload hash and attempt count
+            db = self._state._ensure_connected()
+            now = self._state._now_iso()
+            await db.execute(
+                """UPDATE files
+                   SET last_upload_hash = ?,
+                       upload_attempt_count = COALESCE(upload_attempt_count, 0) + 1,
+                       updated_at = ?
+                   WHERE file_path = ?""",
+                (upload_hash, now, file_path),
+            )
+            await db.commit()
+
+            if self._progress is not None:
+                self._progress.file_uploaded(file_path)
+
+            return (file_path, operation)
+
+        except RateLimitError as exc:
+            logger.warning("Rate limited uploading %s: %s", file_path, exc)
+            await self._state.record_upload_failure(file_path, str(exc))
+            self._failed += 1
+            if self._progress is not None:
+                self._progress.file_rate_limited(file_path)
+            return None
+
+        except Exception as exc:
+            logger.error("Failed to upload %s: %s", file_path, exc)
+            await self._state.record_upload_failure(file_path, str(exc))
+            self._failed += 1
+            if self._progress is not None:
+                self._progress.file_failed(file_path, str(exc))
+            return None
+
+        finally:
+            # Always clean up temp file
+            cleanup_temp_file(temp_path)
+
+    # ------------------------------------------------------------------
+    # Enriched summary
+    # ------------------------------------------------------------------
+
+    @property
+    def enriched_summary(self) -> dict[str, int]:
+        """Return enriched upload summary counts."""
+        return {
+            "total": self._total,
+            "succeeded": self._succeeded,
+            "failed": self._failed,
+            "skipped": self._skipped,
+            "reset": self._reset_count,
             "pending": self._total - self._succeeded - self._failed - self._skipped,
         }

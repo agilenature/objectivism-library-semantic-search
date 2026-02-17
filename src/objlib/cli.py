@@ -564,6 +564,234 @@ def upload(
     console.print(Panel(summary_table, title="Upload Complete"))
 
 
+@app.command("enriched-upload")
+def enriched_upload(
+    store_name: Annotated[
+        str,
+        typer.Option("--store", "-s", help="Gemini File Search store display name"),
+    ] = "objectivism-library-test",
+    db_path: Annotated[
+        Path,
+        typer.Option("--db", "-d", help="Path to SQLite database file"),
+    ] = Path("data/library.db"),
+    batch_size: Annotated[
+        int,
+        typer.Option("--batch-size", "-b", help="Files per logical batch"),
+    ] = 100,
+    max_concurrent: Annotated[
+        int,
+        typer.Option("--concurrency", "-n", help="Max concurrent uploads (default 2)"),
+    ] = 2,
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run", help="Show what would be uploaded without uploading"),
+    ] = False,
+    limit: Annotated[
+        int,
+        typer.Option("--limit", "-l", help="Max files to upload (0 = no limit). Use for staged testing."),
+    ] = 0,
+    include_needs_review: Annotated[
+        bool,
+        typer.Option("--include-needs-review/--exclude-needs-review", help="Include low-confidence files"),
+    ] = True,
+    reset_existing: Annotated[
+        bool,
+        typer.Option("--reset-existing/--no-reset-existing", help="Delete and re-upload already-uploaded files"),
+    ] = True,
+) -> None:
+    """Upload files with enriched 4-tier AI metadata to Gemini File Search.
+
+    Requires AI metadata extraction (Phase 6) and entity extraction (Phase 6.1)
+    to be complete. Files missing either are excluded by the strict entity gate.
+
+    The Gemini API key is read from the system keyring (service: objlib-gemini).
+
+    Three-stage testing approach:
+      Stage 1: objlib enriched-upload --limit 20       # Validate metadata schema
+      Stage 2: objlib enriched-upload --limit 100      # Validate search quality
+      Stage 3: objlib enriched-upload --limit 250      # Validate pipeline at scale
+      Full:    objlib enriched-upload                   # All enriched files
+    """
+    import json as json_mod
+
+    # Validate database exists
+    if not db_path.exists():
+        console.print(
+            f"[red]Error:[/red] Database not found: {db_path}\n"
+            "Run [bold]objlib scan --library /path/to/library[/bold] first."
+        )
+        raise typer.Exit(code=1)
+
+    # Dry-run mode: show enriched pending files without uploading
+    if dry_run:
+        import asyncio
+
+        from objlib.upload.state import AsyncUploadStateManager
+
+        async def _dry_run() -> list[dict]:
+            async with AsyncUploadStateManager(str(db_path)) as state:
+                return await state.get_enriched_pending_files(
+                    limit=limit if limit > 0 else 10000,
+                    include_needs_review=include_needs_review,
+                )
+
+        pending = asyncio.run(_dry_run())
+        count = len(pending)
+
+        if count == 0:
+            console.print(
+                "[yellow]No enriched pending files to upload.[/yellow]\n"
+                "Ensure AI metadata extraction and entity extraction have run:\n"
+                "  [cyan]objlib metadata extract[/cyan]\n"
+                "  [cyan]objlib entities extract[/cyan]"
+            )
+            return
+
+        console.print(
+            Panel(
+                f"[bold]{count}[/bold] files ready for enriched upload to "
+                f"[bold]{store_name}[/bold]",
+                title="Dry Run - Enriched Upload",
+            )
+        )
+
+        # Show first 20 files in a table
+        preview_table = Table(title=f"Enriched Pending Files (showing first {min(20, count)})")
+        preview_table.add_column("Filename", style="cyan", no_wrap=True)
+        preview_table.add_column("Entities", justify="right", style="green")
+        preview_table.add_column("AI Category", style="bold")
+        preview_table.add_column("Topics", style="dim")
+
+        for row in pending[:20]:
+            ai_meta = json_mod.loads(row.get("ai_metadata_json") or "{}")
+            entities = row.get("entity_names", [])
+            topics = ai_meta.get("primary_topics", [])
+            preview_table.add_row(
+                row.get("filename", ""),
+                str(len(entities)),
+                ai_meta.get("category", "unknown"),
+                ", ".join(topics[:3]) if topics else "",
+            )
+
+        if count > 20:
+            preview_table.add_row(f"... and {count - 20} more", "", "", "")
+
+        console.print(preview_table)
+
+        console.print(
+            f"\nRun [bold]objlib enriched-upload --store {store_name} --db {db_path}[/bold] "
+            "to start uploading."
+        )
+        return
+
+    # Get API key from system keyring
+    try:
+        from objlib.config import get_api_key_from_keyring
+
+        api_key = get_api_key_from_keyring()
+    except RuntimeError as e:
+        console.print(f"[red]{e}[/red]")
+        raise typer.Exit(code=1)
+
+    # Import upload modules here to keep CLI startup fast
+    import asyncio
+
+    from objlib.models import UploadConfig
+    from objlib.upload.circuit_breaker import RollingWindowCircuitBreaker
+    from objlib.upload.client import GeminiFileSearchClient
+    from objlib.upload.orchestrator import EnrichedUploadOrchestrator
+    from objlib.upload.progress import UploadProgressTracker
+    from objlib.upload.rate_limiter import AdaptiveRateLimiter, RateLimiterConfig
+    from objlib.upload.state import AsyncUploadStateManager
+
+    # Build configuration
+    config = UploadConfig(
+        store_name=store_name,
+        api_key=api_key,
+        max_concurrent_uploads=max_concurrent,
+        batch_size=batch_size,
+        db_path=str(db_path),
+        rate_limit_tier="tier1",
+    )
+
+    # Get enriched pending file count for progress tracker
+    async def _get_count() -> int:
+        async with AsyncUploadStateManager(str(db_path)) as state:
+            files = await state.get_enriched_pending_files(
+                limit=limit if limit > 0 else 10000,
+                include_needs_review=include_needs_review,
+            )
+            return len(files)
+
+    pending_count = asyncio.run(_get_count())
+
+    if pending_count == 0:
+        console.print(
+            "[yellow]No enriched pending files to upload.[/yellow]\n"
+            "Ensure AI metadata extraction and entity extraction have run:\n"
+            "  [cyan]objlib metadata extract[/cyan]\n"
+            "  [cyan]objlib entities extract[/cyan]"
+        )
+        return
+
+    total_batches = (pending_count + batch_size - 1) // batch_size
+
+    console.print(
+        Panel(
+            f"Uploading [bold]{pending_count}[/bold] enriched files to "
+            f"[bold]{store_name}[/bold]\n"
+            f"Batches: {total_batches} x {batch_size} | "
+            f"Concurrency: {max_concurrent}\n"
+            f"Reset existing: {reset_existing} | "
+            f"Include needs-review: {include_needs_review}",
+            title="Enriched Upload Pipeline",
+        )
+    )
+
+    # Create components
+    circuit_breaker = RollingWindowCircuitBreaker()
+    rate_limiter_config = RateLimiterConfig(tier=config.rate_limit_tier)
+    rate_limiter = AdaptiveRateLimiter(rate_limiter_config, circuit_breaker)
+    client = GeminiFileSearchClient(
+        api_key=api_key,
+        circuit_breaker=circuit_breaker,
+        rate_limiter=rate_limiter,
+    )
+    progress = UploadProgressTracker(
+        total_files=pending_count, total_batches=total_batches
+    )
+
+    async def _run_enriched_upload() -> dict[str, int]:
+        async with AsyncUploadStateManager(str(db_path)) as state:
+            orchestrator = EnrichedUploadOrchestrator(
+                client=client,
+                state=state,
+                circuit_breaker=circuit_breaker,
+                config=config,
+                progress=progress,
+                reset_existing=reset_existing,
+                include_needs_review=include_needs_review,
+                file_limit=limit,
+            )
+            return await orchestrator.run_enriched(store_name)
+
+    result = asyncio.run(_run_enriched_upload())
+
+    # Print final summary
+    summary_table = Table(title="Enriched Upload Summary")
+    summary_table.add_column("Metric", style="bold")
+    summary_table.add_column("Count", justify="right")
+
+    summary_table.add_row("Total files", str(result["total"]))
+    summary_table.add_row("Succeeded", f"[green]{result['succeeded']}[/green]")
+    summary_table.add_row("Failed", f"[red]{result['failed']}[/red]")
+    summary_table.add_row("Skipped (idempotent)", f"[yellow]{result['skipped']}[/yellow]")
+    summary_table.add_row("Reset (re-uploaded)", f"[cyan]{result['reset']}[/cyan]")
+    summary_table.add_row("Pending", str(result["pending"]))
+
+    console.print(Panel(summary_table, title="Enriched Upload Complete"))
+
+
 @app.command()
 def search(
     ctx: typer.Context,
