@@ -140,13 +140,14 @@ Extracts person name entities from transcripts, fuzzy matches against canonical 
 
 **Goal**: User can upload all files to Gemini File Search with enriched 4-tier metadata (category, difficulty, topics, aspects, descriptions) plus entity mentions -- enabling powerful metadata-based filtering and semantic search with full philosophical context
 **Depends on**: Phase 6.1 (entity extraction), Phase 2 (upload pipeline)
-**Plans:** 0 plans
+**Plans:** 2 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 6.2 to break down)
+- [ ] 06.2-01-PLAN.md -- Schema v5 migration, enriched metadata builder, content preparer, enriched pipeline query
+- [ ] 06.2-02-PLAN.md -- EnrichedUploadOrchestrator, CLI enriched-upload command, three-stage testing checkpoint
 
 **Details:**
-Extends Phase 2 upload pipeline to include 4-tier metadata from Phase 6 extraction and entity mentions from Phase 6.1. Flattens nested structures (semantic_description) into Gemini custom_metadata format (7 searchable fields). Implements parallel upload (3-5 concurrent), tracks per-file upload status, handles failures gracefully. Tests with ~280 already-extracted files first, then processes new files as extraction completes.
+Extends Phase 2 upload pipeline to include 4-tier metadata from Phase 6 extraction and entity mentions from Phase 6.1. Flattens nested structures (semantic_description) into Gemini custom_metadata format (7-9 searchable fields using string_list_value). Implements conservative concurrent upload (Semaphore(2)), tracks per-file upload status with idempotency hashing. Three-stage testing (20 -> 100 -> 250 docs) validates metadata schema and search quality before full deployment.
 
 ### Phase 7: Interactive TUI
 **Goal**: User can interact with the library through a modern terminal UI with keyboard/mouse navigation, live search, visual browsing, split-pane views, and session management -- transforming the CLI into an immersive research environment
