@@ -5,30 +5,30 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** Three equally critical pillars -- semantic search quality, metadata preservation, incremental updates
-**Current focus:** Phase 6: AI-Powered Metadata -- COMPLETE
+**Current focus:** Phase 6.1: Entity Extraction & Name Normalization -- IN PROGRESS
 **Execution strategy:** Phase 6 before full upload (1,721 files) to enrich metadata first
 
 ## Current Position
 
-Phase: 6 of 7 (AI-Powered Metadata - COMPLETE)
-Plan: 5 of 5
-Status: Phase complete
-Last activity: 2026-02-16 - Completed 06-05-PLAN.md (CLI integration: extract, review, approve, stats)
+Phase: 6.1 of 7+ (Entity Extraction & Name Normalization)
+Plan: 1 of 2
+Status: In progress
+Last activity: 2026-02-17 - Completed 06.1-01-PLAN.md (schema v4, person registry, entity extractor)
 
-Progress: [#########.] ~88% (15 plans of ~17 estimated total)
-**Note:** Phase 6 COMPLETE. Next: Phase 4 (enrichment upload) or Phase 5 (advanced search)
+Progress: [#############..] ~89% (16 plans of ~18 estimated total)
 
 Phase 1 Progress: [##########] 3/3 plans -- COMPLETE
 Phase 2 Progress: [##########] 4/4 plans -- COMPLETE
 Phase 3 Progress: [##########] 3/3 plans -- COMPLETE
 Phase 6 Progress: [##########] 5/5 plans -- COMPLETE
+Phase 6.1 Progress: [#####.....] 1/2 plans -- IN PROGRESS
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 15
-- Average duration: 4.4 min
-- Total execution time: 66 min
+- Total plans completed: 16
+- Average duration: 4.5 min
+- Total execution time: 72 min
 
 **By Phase:**
 
@@ -38,10 +38,11 @@ Phase 6 Progress: [##########] 5/5 plans -- COMPLETE
 | 02-upload-pipeline | 4/4 | 17 min | 4.3 min |
 | 03-search-and-cli | 3/3 | 13 min | 4.3 min |
 | 06-ai-powered-metadata | 5/5 | 24 min | 4.8 min |
+| 06.1-entity-extraction | 1/2 | 6 min | 6.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 06-01 (4 min), 06-02 (4 min), 06-03 (5 min), 06-04 (6 min), 06-05 (5 min)
-- Trend: Stable at 4-6 min per plan
+- Last 5 plans: 06-03 (5 min), 06-04 (6 min), 06-05 (5 min), 06.1-01 (6 min)
+- Trend: Stable at 5-6 min per plan
 
 *Updated after each plan completion*
 
@@ -114,6 +115,11 @@ Recent decisions affecting current work:
 - [06-05]: Auto-approve default threshold: 0.85 (85% confidence)
 - [06-05]: Stats coverage = (extracted+approved+needs_review) / total_unknown_txt
 - [06-05]: Extract command loads winning strategy from data/wave1_selection.json
+- [06.1-01]: transcript_id uses TEXT type to match existing files.file_path pattern (not INTEGER)
+- [06.1-01]: Blocked aliases stored in person_alias with is_blocked=1 flag
+- [06.1-01]: Fuzzy match threshold: >= 92 accept, 80-91 LLM fallback, < 80 reject
+- [06.1-01]: Canonical name without accent: "Tristan de Liege"
+- [06.1-01]: Confidence threshold 0.5 for entity inclusion in output
 
 ### Pending Todos
 
@@ -126,6 +132,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-16
-Stopped at: Phase 6 COMPLETE (all 5 plans). Full AI metadata extraction pipeline ready. Next: run production extraction on ~453 files, then proceed to Phase 4 (enrichment upload) or Phase 5 (advanced search).
-Resume file: N/A - Phase 6 complete. Begin Phase 4 or 5 planning.
+Last session: 2026-02-17
+Stopped at: Phase 6.1 Plan 01 COMPLETE. Entity extraction engine built with schema v4, PersonRegistry, and EntityExtractor. Next: Plan 06.1-02 (CLI integration for entity extraction).
+Resume file: .planning/phases/06.1-entity-extraction-name-normalization/06.1-02-PLAN.md
