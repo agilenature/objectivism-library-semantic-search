@@ -5,31 +5,31 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** Three equally critical pillars -- semantic search quality, metadata preservation, incremental updates
-**Current focus:** Phase 6.2: Metadata-Enriched Gemini Upload -- IN PROGRESS
+**Current focus:** Phase 6.2: Metadata-Enriched Gemini Upload -- CHECKPOINT (awaiting human verification)
 **Execution strategy:** Phase 6 before full upload (1,721 files) to enrich metadata first
 
 ## Current Position
 
 Phase: 6.2 of 7+ (Metadata-Enriched Gemini Upload)
-Plan: 1 of 2
-Status: In progress
-Last activity: 2026-02-17 - Completed 06.2-01-PLAN.md (data transformation layer)
+Plan: 2 of 2
+Status: Checkpoint - awaiting human verification of staged testing
+Last activity: 2026-02-17 - Completed 06.2-02-PLAN.md Task 1 (enriched upload orchestrator + CLI)
 
-Progress: [###############] ~95% (18 plans of ~19 estimated total)
+Progress: [################] ~100% (19 plans of ~19 estimated total)
 
 Phase 1 Progress: [##########] 3/3 plans -- COMPLETE
 Phase 2 Progress: [##########] 4/4 plans -- COMPLETE
 Phase 3 Progress: [##########] 3/3 plans -- COMPLETE
 Phase 6 Progress: [##########] 5/5 plans -- COMPLETE
 Phase 6.1 Progress: [##########] 2/2 plans -- COMPLETE
-Phase 6.2 Progress: [#####.....] 1/2 plans -- IN PROGRESS
+Phase 6.2 Progress: [##########] 2/2 plans -- COMPLETE (code done, awaiting staged upload verification)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 18
+- Total plans completed: 19
 - Average duration: 4.3 min
-- Total execution time: 78 min
+- Total execution time: 81 min
 
 **By Phase:**
 
@@ -40,10 +40,10 @@ Phase 6.2 Progress: [#####.....] 1/2 plans -- IN PROGRESS
 | 03-search-and-cli | 3/3 | 13 min | 4.3 min |
 | 06-ai-powered-metadata | 5/5 | 24 min | 4.8 min |
 | 06.1-entity-extraction | 2/2 | 9 min | 4.5 min |
-| 06.2-metadata-enriched-upload | 1/2 | 3 min | 3.0 min |
+| 06.2-metadata-enriched-upload | 2/2 | 6 min | 3.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 06-05 (5 min), 06.1-01 (6 min), 06.1-02 (3 min), 06.2-01 (3 min)
+- Last 5 plans: 06.1-01 (6 min), 06.1-02 (3 min), 06.2-01 (3 min), 06.2-02 (3 min)
 - Trend: Stable at 3-6 min per plan
 
 *Updated after each plan completion*
@@ -130,10 +130,15 @@ Recent decisions affecting current work:
 - [06.2-01]: build_enriched_metadata uses AI metadata with Phase 1 fallback for category/difficulty
 - [06.2-01]: prepare_enriched_content returns None when no Tier 4 content (skip injection, use original file)
 - [06.2-01]: get_enriched_pending_files includes needs_review files by default (configurable)
+- [06.2-02]: Conservative concurrency Semaphore(2) with 1-second stagger (not parent default 7)
+- [06.2-02]: Store name default objectivism-library-test for enriched uploads
+- [06.2-02]: Reset flow handles already-expired 48hr TTL files gracefully via try/except on delete_file
+- [06.2-02]: Upload hash idempotency via SHA-256 of (phase1 + ai + entities + content_hash)
 
 ### Pending Todos
 
-None.
+- Run entity extraction before enriched upload: `python -m objlib entities extract`
+- Execute three-stage testing: --limit 20, --limit 100, --limit 250
 
 ### Blockers/Concerns
 
@@ -143,5 +148,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Phase 6.2 Plan 01 COMPLETE. Data transformation layer built: schema v5 migration, enriched metadata builder (string_list_value), content preparer (Tier 4 injection), enriched pipeline query (strict entity gate). Next: execute Plan 02 (CLI integration, orchestrator wiring).
+Stopped at: Phase 6.2 Plan 02 code COMPLETE, checkpoint reached. EnrichedUploadOrchestrator and CLI enriched-upload command ready. Awaiting human verification of three-stage testing (20 -> 100 -> 250 docs). Entity extraction must run first (`objlib entities extract`).
 Resume file: .planning/phases/06.2-metadata-enriched-gemini-upload/06.2-02-PLAN.md
