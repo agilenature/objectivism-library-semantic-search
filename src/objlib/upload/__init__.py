@@ -21,6 +21,7 @@ from objlib.upload.client import (
     RateLimitError,
     TransientError,
 )
+from objlib.upload.content_preparer import cleanup_temp_file, prepare_enriched_content
 from objlib.upload.metadata_builder import build_enriched_metadata, compute_upload_hash
 from objlib.upload.orchestrator import UploadOrchestrator
 from objlib.upload.progress import UploadProgressTracker
@@ -44,5 +45,7 @@ __all__ = [
     "UploadOrchestrator",
     "UploadProgressTracker",
     "build_enriched_metadata",
+    "cleanup_temp_file",
     "compute_upload_hash",
+    "prepare_enriched_content",
 ]

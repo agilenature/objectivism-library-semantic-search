@@ -351,3 +351,119 @@ class AsyncUploadStateManager:
             (now, instance_id),
         )
         await db.commit()
+
+    # ------------------------------------------------------------------
+    # Enriched upload queries (Phase 6.2)
+    # ------------------------------------------------------------------
+
+    async def get_enriched_pending_files(
+        self, limit: int = 200, include_needs_review: bool = True
+    ) -> list[dict]:
+        """Return files ready for enriched upload.
+
+        Requires ALL of:
+        - ``.txt`` file extension
+        - AI metadata extracted (``file_metadata_ai.is_current=1``)
+        - Entity extraction complete (``entity_extraction_status='entities_done'``)
+        - Upload status ``pending``
+        - AI metadata status in ``('extracted', 'approved')`` or also
+          ``'needs_review'`` if *include_needs_review* is True
+
+        For each file, also fetches canonical entity names from
+        ``transcript_entity JOIN person``.
+
+        Args:
+            limit: Maximum rows to return.
+            include_needs_review: Whether to include files with
+                ``ai_metadata_status='needs_review'``.
+
+        Returns:
+            List of dicts with file_path, content_hash, filename,
+            file_size, phase1_metadata_json, ai_metadata_json,
+            last_upload_hash, and entity_names (list[str]).
+        """
+        db = self._ensure_connected()
+
+        if include_needs_review:
+            status_clause = "AND f.ai_metadata_status IN ('extracted', 'approved', 'needs_review')"
+        else:
+            status_clause = "AND f.ai_metadata_status IN ('extracted', 'approved')"
+
+        cursor = await db.execute(
+            f"""SELECT f.file_path, f.content_hash, f.filename, f.file_size,
+                       f.metadata_json AS phase1_metadata_json,
+                       m.metadata_json AS ai_metadata_json,
+                       f.last_upload_hash
+                FROM files f
+                JOIN file_metadata_ai m
+                    ON f.file_path = m.file_path AND m.is_current = 1
+                WHERE f.filename LIKE '%.txt'
+                  AND f.entity_extraction_status = 'entities_done'
+                  AND f.status = 'pending'
+                  {status_clause}
+                ORDER BY f.file_path
+                LIMIT ?""",
+            (limit,),
+        )
+        rows = await cursor.fetchall()
+
+        results = []
+        for row in rows:
+            file_dict = dict(row)
+            entity_cursor = await db.execute(
+                """SELECT p.canonical_name
+                   FROM transcript_entity te
+                   JOIN person p ON te.person_id = p.person_id
+                   WHERE te.transcript_id = ?
+                   ORDER BY te.mention_count DESC""",
+                (row["file_path"],),
+            )
+            entity_rows = await entity_cursor.fetchall()
+            file_dict["entity_names"] = [r["canonical_name"] for r in entity_rows]
+            results.append(file_dict)
+
+        return results
+
+    async def get_files_to_reset_for_enriched_upload(self) -> list[dict]:
+        """Return already-uploaded or failed files that have enriched metadata.
+
+        These files were uploaded with Phase 1 metadata only (or failed
+        during a previous attempt) and need to be deleted from Gemini
+        and re-uploaded with enriched metadata for consistency.
+
+        Returns:
+            List of dicts with file_path, filename, status,
+            gemini_file_id, ai_metadata_json, and entity_names.
+        """
+        db = self._ensure_connected()
+        cursor = await db.execute(
+            """SELECT f.file_path, f.filename, f.status,
+                      f.gemini_file_id,
+                      m.metadata_json AS ai_metadata_json
+               FROM files f
+               JOIN file_metadata_ai m
+                   ON f.file_path = m.file_path AND m.is_current = 1
+               WHERE f.status IN ('uploaded', 'failed')
+                 AND f.filename LIKE '%.txt'
+                 AND f.entity_extraction_status = 'entities_done'
+                 AND f.ai_metadata_status IN ('extracted', 'approved', 'needs_review')
+               ORDER BY f.file_path"""
+        )
+        rows = await cursor.fetchall()
+
+        results = []
+        for row in rows:
+            file_dict = dict(row)
+            entity_cursor = await db.execute(
+                """SELECT p.canonical_name
+                   FROM transcript_entity te
+                   JOIN person p ON te.person_id = p.person_id
+                   WHERE te.transcript_id = ?
+                   ORDER BY te.mention_count DESC""",
+                (row["file_path"],),
+            )
+            entity_rows = await entity_cursor.fetchall()
+            file_dict["entity_names"] = [r["canonical_name"] for r in entity_rows]
+            results.append(file_dict)
+
+        return results
