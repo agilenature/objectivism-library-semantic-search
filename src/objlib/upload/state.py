@@ -481,8 +481,15 @@ class AsyncUploadStateManager:
                 phase1_metadata, ai_metadata, entity_names, row["content_hash"]
             )
 
-            # Only include if hash has changed (or is NULL, meaning never uploaded with enriched metadata)
-            if row["last_upload_hash"] is None or row["last_upload_hash"] != current_hash:
+            # Always retry failed files (polling timeout, API errors, etc.)
+            # For uploaded files, only reset if hash changed
+            should_reset = (
+                row["status"] == "failed"  # Always retry failures
+                or row["last_upload_hash"] is None  # Never uploaded with enriched metadata
+                or row["last_upload_hash"] != current_hash  # Metadata changed
+            )
+
+            if should_reset:
                 file_dict = dict(row)
                 file_dict["entity_names"] = entity_names
                 results.append(file_dict)
