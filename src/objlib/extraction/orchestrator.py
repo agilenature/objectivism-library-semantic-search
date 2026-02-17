@@ -535,8 +535,8 @@ class ExtractionOrchestrator:
 
                         self._total_calls += 1
 
-                        # Validate extraction
-                        validation = validate_extraction(metadata_dict)
+                        # Validate extraction (pass transcript for semantic topic normalization)
+                        validation = validate_extraction(metadata_dict, document_text=transcript)
 
                         if not validation.hard_failures:
                             # Passed validation (extracted or needs_review)

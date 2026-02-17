@@ -228,18 +228,18 @@ def validate_extraction(raw_data: dict, document_text: str | None = None) -> Val
             f"Invalid difficulty: '{difficulty}'. Must be one of: {sorted(_VALID_DIFFICULTIES)}"
         )
 
-    # Primary topics: 3-8 items from controlled vocabulary (will normalize to 8 post-batch)
+    # Primary topics: MUST be exactly 8 items from controlled vocabulary
     # Note: Semantic normalization to 8 topics happens in repair phase when document_text available
     topics = raw_data.get("primary_topics", [])
     if not isinstance(topics, list):
         hard_failures.append("primary_topics must be a list")
     else:
         valid_topics = [t for t in topics if t in CONTROLLED_VOCABULARY]
-        if len(valid_topics) < 3:
+        if len(valid_topics) != 8:
             hard_failures.append(
-                f"primary_topics: only {len(valid_topics)} valid tags (need >= 3). Valid: {valid_topics}"
+                f"primary_topics: must be exactly 8 topics (found {len(valid_topics)}). "
+                f"Semantic normalization should have corrected this. Valid: {valid_topics}"
             )
-        # Note: >8 and <8 topics are handled by semantic normalization in repair phase
 
     # Confidence score must be float 0.0-1.0
     confidence = raw_data.get("confidence_score")
@@ -257,17 +257,7 @@ def validate_extraction(raw_data: dict, document_text: str | None = None) -> Val
 
     # --- Soft rules ---
 
-    # Topic aspects: 3-10 items
-    aspects = raw_data.get("topic_aspects", [])
-    if isinstance(aspects, list):
-        if len(aspects) < 3:
-            soft_warnings.append(
-                f"topic_aspects: only {len(aspects)} items (recommended 3-10)"
-            )
-        elif len(aspects) > 10:
-            soft_warnings.append(
-                f"topic_aspects: {len(aspects)} items (recommended 3-10)"
-            )
+    # Topic aspects: No count limit (thorough extraction is good)
 
     # Semantic description checks
     sem_desc = raw_data.get("semantic_description", {})

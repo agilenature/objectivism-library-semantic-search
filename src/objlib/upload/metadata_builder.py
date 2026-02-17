@@ -62,19 +62,21 @@ def build_enriched_metadata(
             "string_list_value": {"values": topics[:8]},
         })
 
-    # Tier 3: topic_aspects (string_list_value)
+    # Tier 3: topic_aspects (string_list_value, max 10 items, max 100 chars each)
     aspects = ai_metadata.get("topic_aspects", [])
     if aspects:
+        # Cap each aspect string at 100 chars to avoid Gemini rejection
+        capped_aspects = [asp[:100] for asp in aspects[:10]]
         result.append({
             "key": "aspects",
-            "string_list_value": {"values": aspects[:10]},
+            "string_list_value": {"values": capped_aspects},
         })
 
-    # Phase 6.1: entity canonical names (string_list_value)
+    # Phase 6.1: entity canonical names (string_list_value, max 10)
     if entity_names:
         result.append({
             "key": "entities",
-            "string_list_value": {"values": list(entity_names)},
+            "string_list_value": {"values": list(entity_names)[:10]},
         })
 
     # Tier 4: key themes from key_arguments (string_list_value)
