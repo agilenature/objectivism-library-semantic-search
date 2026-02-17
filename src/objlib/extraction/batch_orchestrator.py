@@ -33,6 +33,24 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Token limits for Mistral models
+# Leave headroom for system/user prompts (~8K tokens)
+MAX_DOCUMENT_TOKENS = 100_000  # Mistral has 128K context window
+TOKENS_PER_WORD = 1.3  # Approximation for English text
+
+
+def _estimate_token_count(text: str) -> int:
+    """Estimate token count for text (words * 1.3 approximation).
+
+    Args:
+        text: Input text string.
+
+    Returns:
+        Estimated token count.
+    """
+    word_count = len(text.split())
+    return int(word_count * TOKENS_PER_WORD)
+
 
 class BatchExtractionOrchestrator:
     """Orchestrator for batch metadata extraction using Mistral Batch API.
@@ -94,8 +112,10 @@ class BatchExtractionOrchestrator:
         start_time = time.time()
 
         # Step 1: Load pending files
+        print("DEBUG: Loading pending files...", flush=True)
         logger.info("Loading pending files from database...")
         pending_files = self._get_pending_files(max_files)
+        print(f"DEBUG: Got {len(pending_files)} pending files", flush=True)
 
         if not pending_files:
             logger.warning("No pending files found for batch extraction")
@@ -110,12 +130,15 @@ class BatchExtractionOrchestrator:
 
         logger.info("Found %d pending files for batch extraction", len(pending_files))
 
-        # Step 2: Build batch requests
+        # Step 2: Build batch requests (skip oversized files)
+        print("DEBUG: Building batch requests...", flush=True)
         logger.info("Building batch requests...")
         batch_requests = []
         file_map = {}  # custom_id -> file_path mapping
+        oversized_files = []  # Track files too large for Mistral
 
         for idx, file_record in enumerate(pending_files):
+            print(f"DEBUG: Processing file {idx+1}/{len(pending_files)}", flush=True)
             file_path = file_record["file_path"]
             custom_id = str(idx)  # Use simple numeric ID
 
@@ -124,6 +147,20 @@ class BatchExtractionOrchestrator:
                 content = Path(file_path).read_text(encoding="utf-8")
             except Exception as e:
                 logger.error("Failed to read file %s: %s", file_path, e)
+                continue
+
+            # Check if file is too large for Mistral context window
+            estimated_tokens = _estimate_token_count(content)
+            if estimated_tokens > MAX_DOCUMENT_TOKENS:
+                logger.warning(
+                    "Skipping oversized file %s (~%d tokens, max %d)",
+                    Path(file_path).name,
+                    estimated_tokens,
+                    MAX_DOCUMENT_TOKENS,
+                )
+                oversized_files.append(file_path)
+                # Mark as skipped in database (will upload to Gemini without enrichment)
+                self._mark_oversized(file_path, estimated_tokens)
                 continue
 
             # Build prompts using existing extraction logic
@@ -148,25 +185,41 @@ class BatchExtractionOrchestrator:
                 "batch_id": None,
                 "total": len(pending_files),
                 "succeeded": 0,
-                "failed": len(pending_files),
-                "failed_files": [f["file_path"] for f in pending_files],
+                "failed": len(pending_files) - len(oversized_files),
+                "failed_files": [f["file_path"] for f in pending_files if f["file_path"] not in oversized_files],
+                "oversized_files": oversized_files,
                 "processing_time_seconds": time.time() - start_time,
             }
 
         logger.info("Built %d batch requests", len(batch_requests))
 
+        # Debug: Log first request structure
+        if batch_requests:
+            import json
+            logger.info("Sample request structure: %s", json.dumps(
+                {
+                    "custom_id": batch_requests[0].custom_id,
+                    "method": batch_requests[0].method,
+                    "url": batch_requests[0].url,
+                    "body_keys": list(batch_requests[0].body.keys()) if batch_requests[0].body else []
+                },
+                indent=2
+            ))
+
         # Step 3: Submit batch
+        print(f"DEBUG: About to submit {len(batch_requests)} requests...", flush=True)
         logger.info("Submitting batch job to Mistral...")
         batch_id = await self._client.submit_batch(
             requests=batch_requests,
             job_name=job_name or f"extraction-{len(batch_requests)}",
             metadata={"strategy": self._strategy_name},
-            use_inline=len(batch_requests) <= 10_000,  # Use inline if possible
         )
+        print(f"DEBUG: Batch submitted, ID: {batch_id}", flush=True)
 
         logger.info("Batch job submitted: %s", batch_id)
 
         # Step 4: Poll until completion
+        print(f"DEBUG: Starting to poll (interval={poll_interval}s)...", flush=True)
         logger.info("Polling for batch completion (interval=%ds)...", poll_interval)
         try:
             final_status = await self._client.wait_for_completion(
@@ -174,6 +227,7 @@ class BatchExtractionOrchestrator:
                 poll_interval=poll_interval,
                 timeout=7200,  # 2 hours max
             )
+            print(f"DEBUG: Polling completed, status: {final_status}", flush=True)
 
             logger.info(
                 "Batch completed: %d succeeded, %d failed",
@@ -188,6 +242,7 @@ class BatchExtractionOrchestrator:
                 "succeeded": 0,
                 "failed": len(batch_requests),
                 "failed_files": list(file_map.values()),
+                "oversized_files": oversized_files,
                 "processing_time_seconds": time.time() - start_time,
             }
 
@@ -196,7 +251,15 @@ class BatchExtractionOrchestrator:
         results = await self._client.download_results(batch_id)
 
         # Step 6: Process results and update database
-        logger.info("Processing %d results...", len(results))
+        logger.info("Processing %d results (submitted %d requests)...", len(results), len(batch_requests))
+
+        # Debug: Check if all requests got results
+        if len(results) != len(batch_requests):
+            logger.warning(
+                "Result count mismatch! Submitted %d requests but received %d results",
+                len(batch_requests),
+                len(results),
+            )
         succeeded_count = 0
         failed_files = []
 
@@ -218,12 +281,12 @@ class BatchExtractionOrchestrator:
                     # Response should have choices[0].message.content with JSON
                     metadata_dict = self._extract_metadata_from_response(result.response)
 
-                    # Read transcript for confidence calculation
+                    # Read transcript for confidence calculation and semantic topic selection
                     transcript_text = Path(file_path).read_text(encoding="utf-8")
                     transcript_length = len(transcript_text)
 
-                    # Validate extraction
-                    validation = validate_extraction(metadata_dict)
+                    # Validate extraction (with document text for semantic topic selection)
+                    validation = validate_extraction(metadata_dict, document_text=transcript_text)
 
                     if not validation.hard_failures:
                         # Passed validation (extracted or needs_review)
@@ -239,8 +302,8 @@ class BatchExtractionOrchestrator:
                             transcript_length=transcript_length,
                         )
 
-                        # Determine status based on confidence and soft failures
-                        if validation.soft_failures or confidence < 0.85:
+                        # Determine status based on confidence and soft warnings
+                        if validation.soft_warnings or confidence < 0.85:
                             status = "needs_review"
                         else:
                             status = "extracted"
@@ -253,7 +316,7 @@ class BatchExtractionOrchestrator:
                             status,
                         )
                         succeeded_count += 1
-                        logger.info("✓ Saved: %s (conf: %.1f%%, status=%s)", Path(file_path).name, confidence * 100, status)
+                        print(f"✓ Saved: {Path(file_path).name} (conf: {confidence*100:.1f}%, status={status})")
                     else:
                         # Hard validation failures - reject
                         logger.warning("Hard validation failures for %s: %s", file_path, validation.hard_failures)
@@ -272,9 +335,10 @@ class BatchExtractionOrchestrator:
         processing_time = time.time() - start_time
 
         logger.info(
-            "Batch extraction complete: %d succeeded, %d failed (%.1fs)",
+            "Batch extraction complete: %d succeeded, %d failed, %d oversized (%.1fs)",
             succeeded_count,
             len(failed_files),
+            len(oversized_files),
             processing_time,
         )
 
@@ -284,6 +348,7 @@ class BatchExtractionOrchestrator:
             "succeeded": succeeded_count,
             "failed": len(failed_files),
             "failed_files": failed_files,
+            "oversized_files": oversized_files,
             "processing_time_seconds": processing_time,
         }
 
@@ -346,20 +411,55 @@ class BatchExtractionOrchestrator:
         confidence_score: float,
         status: str = "extracted",
     ) -> None:
-        """Save extracted metadata to database."""
+        """Save extracted metadata to database (matches synchronous orchestrator pattern)."""
         import json
 
-        self._db.conn.execute(
-            """
-            UPDATE files
-            SET ai_metadata_json = ?,
-                ai_metadata_status = ?,
-                ai_confidence_score = ?,
-                updated_at = strftime('%Y-%m-%dT%H:%M:%f', 'now')
-            WHERE file_path = ?
-            """,
-            (json.dumps(metadata), status, confidence_score, file_path),
-        )
+        with self._db.conn:
+            # 1. Update files table status
+            self._db.conn.execute(
+                "UPDATE files SET ai_metadata_status = ?, ai_confidence_score = ? "
+                "WHERE file_path = ?",
+                (status, confidence_score, file_path),
+            )
+
+            # 2. Mark previous versions as not current
+            self._db.conn.execute(
+                "UPDATE file_metadata_ai SET is_current = 0 "
+                "WHERE file_path = ? AND is_current = 1",
+                (file_path,),
+            )
+
+            # 3. Insert new versioned metadata
+            self._db.conn.execute(
+                """INSERT INTO file_metadata_ai
+                   (file_path, metadata_json, model, prompt_version,
+                    extraction_config_hash, is_current)
+                   VALUES (?, ?, ?, ?, ?, 1)""",
+                (
+                    file_path,
+                    json.dumps(metadata),
+                    "magistral-medium-latest",  # Model used in batch
+                    "batch-v1",  # Batch API version
+                    f"batch-{self._strategy_name}",  # Config identifier
+                ),
+            )
+
+            # 4. Insert primary topics
+            valid_topics = metadata.get("primary_topics", [])
+            if valid_topics:
+                # Clear existing topics
+                self._db.conn.execute(
+                    "DELETE FROM file_primary_topics WHERE file_path = ?",
+                    (file_path,),
+                )
+                # Insert new topics
+                for topic in valid_topics:
+                    self._db.conn.execute(
+                        "INSERT INTO file_primary_topics (file_path, topic_tag) "
+                        "VALUES (?, ?)",
+                        (file_path, topic),
+                    )
+
         self._db.conn.commit()
 
     def _mark_failed(self, file_path: str, error_message: str) -> None:
@@ -373,5 +473,27 @@ class BatchExtractionOrchestrator:
             WHERE file_path = ?
             """,
             (error_message, file_path),
+        )
+        self._db.conn.commit()
+
+    def _mark_oversized(self, file_path: str, token_count: int) -> None:
+        """Mark file as oversized (skip extraction, use Gemini File Search only).
+
+        These files exceed Mistral's context window and will be uploaded to
+        Gemini File Search without enriched metadata extraction.
+
+        Args:
+            file_path: Path to oversized file.
+            token_count: Estimated token count.
+        """
+        self._db.conn.execute(
+            """
+            UPDATE files
+            SET ai_metadata_status = 'skipped',
+                error_message = ?,
+                updated_at = strftime('%Y-%m-%dT%H:%M:%f', 'now')
+            WHERE file_path = ?
+            """,
+            (f"Oversized for extraction (~{token_count} tokens, max {MAX_DOCUMENT_TOKENS}). Will use Gemini File Search without enrichment.", file_path),
         )
         self._db.conn.commit()

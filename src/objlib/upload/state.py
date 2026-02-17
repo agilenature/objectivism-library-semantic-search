@@ -431,14 +431,23 @@ class AsyncUploadStateManager:
         during a previous attempt) and need to be deleted from Gemini
         and re-uploaded with enriched metadata for consistency.
 
+        IMPORTANT: Only returns files where the enriched metadata has changed
+        since last upload (or was never uploaded with enriched metadata).
+        Files with matching upload hashes are excluded to prevent unnecessary
+        re-uploads.
+
         Returns:
             List of dicts with file_path, filename, status,
             gemini_file_id, ai_metadata_json, and entity_names.
         """
+        from objlib.upload.metadata_builder import compute_upload_hash
+        import json
+
         db = self._ensure_connected()
         cursor = await db.execute(
             """SELECT f.file_path, f.filename, f.status,
-                      f.gemini_file_id,
+                      f.gemini_file_id, f.last_upload_hash,
+                      f.content_hash, f.metadata_json AS phase1_metadata_json,
                       m.metadata_json AS ai_metadata_json
                FROM files f
                JOIN file_metadata_ai m
@@ -453,7 +462,7 @@ class AsyncUploadStateManager:
 
         results = []
         for row in rows:
-            file_dict = dict(row)
+            # Get entity names
             entity_cursor = await db.execute(
                 """SELECT p.canonical_name
                    FROM transcript_entity te
@@ -463,7 +472,19 @@ class AsyncUploadStateManager:
                 (row["file_path"],),
             )
             entity_rows = await entity_cursor.fetchall()
-            file_dict["entity_names"] = [r["canonical_name"] for r in entity_rows]
-            results.append(file_dict)
+            entity_names = [r["canonical_name"] for r in entity_rows]
+
+            # Compute current upload hash
+            phase1_metadata = json.loads(row["phase1_metadata_json"] or "{}")
+            ai_metadata = json.loads(row["ai_metadata_json"] or "{}")
+            current_hash = compute_upload_hash(
+                phase1_metadata, ai_metadata, entity_names, row["content_hash"]
+            )
+
+            # Only include if hash has changed (or is NULL, meaning never uploaded with enriched metadata)
+            if row["last_upload_hash"] is None or row["last_upload_hash"] != current_hash:
+                file_dict = dict(row)
+                file_dict["entity_names"] = entity_names
+                results.append(file_dict)
 
         return results

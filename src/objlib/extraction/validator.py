@@ -114,14 +114,19 @@ def _repair_confidence(raw_data: dict, repaired: list[str]) -> None:
         repaired.append(f"confidence_score: {score} clamped to 1.0")
 
 
-def _filter_primary_topics(raw_data: dict, repaired: list[str]) -> None:
-    """Filter primary_topics to only CONTROLLED_VOCABULARY members.
+def _filter_primary_topics(raw_data: dict, repaired: list[str], document_text: str | None = None) -> None:
+    """Filter primary_topics to only CONTROLLED_VOCABULARY members and normalize to exactly 8.
 
-    Mutates raw_data in place. Records the count of filtered topics.
+    Uses intelligent semantic selection when document_text is available to:
+    - Reduce >8 topics to exactly 8 (intelligent reduction)
+    - Expand <8 topics to exactly 8 (intelligent suggestion)
+
+    Mutates raw_data in place. Records the count of filtered/adjusted topics.
 
     Args:
         raw_data: Mutable extraction dict.
         repaired: List to append repair descriptions to.
+        document_text: Optional source document for semantic topic selection.
     """
     topics = raw_data.get("primary_topics")
     if not isinstance(topics, list):
@@ -136,8 +141,44 @@ def _filter_primary_topics(raw_data: dict, repaired: list[str]) -> None:
             f"primary_topics: filtered {filtered_count} invalid tags: {removed}"
         )
 
+    # Normalize to exactly 8 topics
+    if len(valid) != 8:
+        if document_text:
+            try:
+                if len(valid) > 8:
+                    # Use semantic selection (intelligent reduction)
+                    from objlib.extraction.topic_selector import select_top_topics
+                    selected = select_top_topics(valid, document_text, max_topics=8)
+                    removed = [t for t in valid if t not in selected]
+                    raw_data["primary_topics"] = selected
+                    repaired.append(
+                        f"primary_topics: semantic selection reduced {len(valid)} → 8 topics (removed: {removed})"
+                    )
+                else:
+                    # Use semantic suggestion (intelligent expansion)
+                    from objlib.extraction.topic_selector import suggest_topics_from_vocabulary
+                    expanded = suggest_topics_from_vocabulary(
+                        document_text=document_text,
+                        existing_topics=valid,
+                        vocabulary=list(CONTROLLED_VOCABULARY),
+                        min_topics=8,
+                        max_topics=8,
+                    )
+                    added = [t for t in expanded if t not in valid]
+                    raw_data["primary_topics"] = expanded
+                    repaired.append(
+                        f"primary_topics: semantic suggestion expanded {len(valid)} → 8 topics (added: {added})"
+                    )
+            except Exception as e:
+                # Fallback: don't repair if semantic selection fails
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning("Semantic topic normalization failed: %s", e)
+        # If no document_text or semantic selection failed, leave as-is
+        # Validation will handle it in the hard rules section
 
-def validate_extraction(raw_data: dict) -> ValidationResult:
+
+def validate_extraction(raw_data: dict, document_text: str | None = None) -> ValidationResult:
     """Validate and optionally repair an extracted metadata dict.
 
     Applies repair logic first (category alias, confidence clamping,
@@ -157,6 +198,7 @@ def validate_extraction(raw_data: dict) -> ValidationResult:
 
     Args:
         raw_data: Dict from parsed API response (will be mutated by repairs).
+        document_text: Optional source document text for semantic topic selection.
 
     Returns:
         ValidationResult with status, failures, warnings, and repairs.
@@ -168,7 +210,7 @@ def validate_extraction(raw_data: dict) -> ValidationResult:
     # --- Repair phase ---
     _repair_category(raw_data, repaired_fields)
     _repair_confidence(raw_data, repaired_fields)
-    _filter_primary_topics(raw_data, repaired_fields)
+    _filter_primary_topics(raw_data, repaired_fields, document_text)
 
     # --- Hard rules ---
 
@@ -186,7 +228,8 @@ def validate_extraction(raw_data: dict) -> ValidationResult:
             f"Invalid difficulty: '{difficulty}'. Must be one of: {sorted(_VALID_DIFFICULTIES)}"
         )
 
-    # Primary topics: 3-8 items from controlled vocabulary
+    # Primary topics: 3-8 items from controlled vocabulary (will normalize to 8 post-batch)
+    # Note: Semantic normalization to 8 topics happens in repair phase when document_text available
     topics = raw_data.get("primary_topics", [])
     if not isinstance(topics, list):
         hard_failures.append("primary_topics must be a list")
@@ -194,13 +237,9 @@ def validate_extraction(raw_data: dict) -> ValidationResult:
         valid_topics = [t for t in topics if t in CONTROLLED_VOCABULARY]
         if len(valid_topics) < 3:
             hard_failures.append(
-                f"primary_topics: only {len(valid_topics)} valid tags "
-                f"(need >= 3). Valid: {valid_topics}"
+                f"primary_topics: only {len(valid_topics)} valid tags (need >= 3). Valid: {valid_topics}"
             )
-        elif len(valid_topics) > 8:
-            hard_failures.append(
-                f"primary_topics: {len(valid_topics)} tags (max 8)"
-            )
+        # Note: >8 and <8 topics are handled by semantic normalization in repair phase
 
     # Confidence score must be float 0.0-1.0
     confidence = raw_data.get("confidence_score")

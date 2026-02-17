@@ -133,7 +133,6 @@ class MistralBatchClient:
         requests: list[BatchRequest],
         job_name: str | None = None,
         metadata: dict[str, str] | None = None,
-        use_inline: bool = False,
     ) -> str:
         """Submit a batch job to Mistral.
 
@@ -141,86 +140,56 @@ class MistralBatchClient:
             requests: List of BatchRequest objects to process.
             job_name: Optional descriptive name for the job.
             metadata: Optional metadata dict (key-value pairs).
-            use_inline: If True and <=10k requests, use inline batching
-                (skips file upload). Default: False (always use file upload).
 
         Returns:
             Batch job ID for polling and retrieval.
 
         Raises:
             SDKError: On API errors.
-            ValueError: If requests list is empty or exceeds limits.
+            ValueError: If requests list is empty.
         """
         if not requests:
             raise ValueError("Cannot submit empty batch")
 
-        if use_inline and len(requests) > 10_000:
-            raise ValueError(
-                f"Inline batches limited to 10,000 requests (got {len(requests)}). "
-                "Use file upload (use_inline=False) for larger batches."
-            )
-
         logger.info(
-            "Submitting batch job: %d requests, model=%s, name=%s, inline=%s",
+            "Submitting batch job: %d requests, model=%s, name=%s",
             len(requests),
             self._model,
             job_name or "unnamed",
-            use_inline,
         )
 
-        if use_inline:
-            # Inline batching (<=10k requests, no file upload)
-            request_dicts = [
-                {
-                    "custom_id": req.custom_id,
-                    "body": req.body,
-                }
-                for req in requests
-            ]
+        # File-based batching (Mistral API only supports file upload, no inline batching)
+        # Build JSONL content
+        jsonl_lines = [req.to_jsonl_line() for req in requests]
+        jsonl_content = "\n".join(jsonl_lines)
 
-            batch_job = await self._client.batch.jobs.create_async(
-                requests=request_dicts,
-                model=self._model,
-                endpoint="/v1/chat/completions",
-                metadata=metadata or {},
-            )
+        # Upload input file using File object (correct format for SDK)
+        from mistralai import File
 
-            logger.info(
-                "Batch job created (inline): %s (status=%s)",
-                batch_job.id,
-                batch_job.status,
-            )
-        else:
-            # File-based batching (supports up to 1M requests)
-            # Build JSONL content
-            jsonl_lines = [req.to_jsonl_line() for req in requests]
-            jsonl_content = "\n".join(jsonl_lines)
+        input_file = await self._client.files.upload_async(
+            file=File(
+                file_name=f"{job_name or 'batch'}.jsonl",
+                content=jsonl_content.encode("utf-8"),
+            ),
+            purpose="batch",
+        )
 
-            # Upload input file
-            # Note: file parameter is a dict with file_name and content (bytes)
-            input_file = await self._client.files.upload_async(
-                file={
-                    "file_name": f"{job_name or 'batch'}.jsonl",
-                    "content": jsonl_content.encode("utf-8"),
-                },
-                purpose="batch",
-            )
+        logger.info("Uploaded input file: %s (%d bytes)", input_file.id, len(jsonl_content))
 
-            logger.info("Uploaded input file: %s (%d bytes)", input_file.id, len(jsonl_content))
+        # Create batch job
+        batch_job = await self._client.batch.jobs.create_async(
+            input_files=[input_file.id],
+            model=self._model,
+            endpoint="/v1/chat/completions",
+            timeout_hours=6,  # For ~1.2M token batches; 4-8 hours is plenty
+            metadata=metadata or {},
+        )
 
-            # Create batch job
-            batch_job = await self._client.batch.jobs.create_async(
-                input_files=[input_file.id],
-                model=self._model,
-                endpoint="/v1/chat/completions",
-                metadata=metadata or {},
-            )
-
-            logger.info(
-                "Batch job created (file): %s (status=%s)",
-                batch_job.id,
-                batch_job.status,
-            )
+        logger.info(
+            "Batch job created: %s (status=%s)",
+            batch_job.id,
+            batch_job.status,
+        )
 
         return batch_job.id
 
@@ -267,15 +236,19 @@ class MistralBatchClient:
     async def wait_for_completion(
         self,
         batch_id: str,
-        poll_interval: int = 30,
-        timeout: int = 3600,
+        poll_interval: int = 30,  # Backward compatibility
+        poll_interval_start: int | None = None,
+        poll_interval_max: int = 120,
+        timeout: int = 7200,
     ) -> dict[str, Any]:
-        """Poll batch job until completion or timeout.
+        """Poll batch job until completion with exponential backoff.
 
         Args:
             batch_id: Batch job ID.
-            poll_interval: Seconds between status checks (default: 30).
-            timeout: Maximum seconds to wait (default: 3600 = 1 hour).
+            poll_interval: Initial seconds between checks (backward compat, default: 30).
+            poll_interval_start: Override for initial interval (if provided).
+            poll_interval_max: Maximum seconds between checks (default: 120).
+            timeout: Maximum seconds to wait (default: 7200 = 2 hours).
 
         Returns:
             Final status dict.
@@ -285,9 +258,12 @@ class MistralBatchClient:
             RuntimeError: If job status is "failed" or "cancelled".
         """
         elapsed = 0
+        interval = poll_interval_start if poll_interval_start is not None else poll_interval
 
         while elapsed < timeout:
+            print(f"DEBUG: Checking status (elapsed={elapsed}s, interval={interval}s)...", flush=True)
             status = await self.get_status(batch_id)
+            print(f"DEBUG: Got status: {status['status']}", flush=True)
 
             logger.info(
                 "Batch %s: %s (%d/%d requests completed)",
@@ -307,8 +283,10 @@ class MistralBatchClient:
             if status["status"] in ("CANCELLED", "TIMEOUT_EXCEEDED"):
                 raise RuntimeError(f"Batch job {status['status'].lower()}: {status}")
 
-            await asyncio.sleep(poll_interval)
-            elapsed += poll_interval
+            await asyncio.sleep(interval)
+            elapsed += interval
+            # Exponential backoff: increase by 1.5x, cap at max
+            interval = min(int(interval * 1.5), poll_interval_max)
 
         raise TimeoutError(
             f"Batch job {batch_id} did not complete within {timeout}s"
@@ -330,12 +308,32 @@ class MistralBatchClient:
         # Get job details
         job = await self._client.batch.jobs.get_async(job_id=batch_id)
 
+        logger.info(
+            "Batch job status: %s, total_requests=%s, succeeded=%s, failed=%s",
+            job.status,
+            getattr(job, "total_requests", "N/A"),
+            getattr(job, "succeeded_requests", "N/A"),
+            getattr(job, "failed_requests", "N/A"),
+        )
+
         if job.status != "SUCCESS":
             raise RuntimeError(
                 f"Cannot download results: job status is {job.status}"
             )
 
         if not hasattr(job, "output_file") or not job.output_file:
+            logger.error(
+                "Batch job has no output_file! Job details: %s",
+                {
+                    "id": job.id,
+                    "status": job.status,
+                    "total_requests": getattr(job, "total_requests", None),
+                    "succeeded_requests": getattr(job, "succeeded_requests", None),
+                    "failed_requests": getattr(job, "failed_requests", None),
+                    "has_output_file": hasattr(job, "output_file"),
+                    "output_file_value": getattr(job, "output_file", None),
+                },
+            )
             raise RuntimeError(f"Batch job {batch_id} has no output file")
 
         logger.info("Downloading output file: %s", job.output_file)
