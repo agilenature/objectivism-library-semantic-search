@@ -5,15 +5,15 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** Three equally critical pillars -- semantic search quality, metadata preservation, incremental updates
-**Current focus:** Phase 6.2: Metadata-Enriched Gemini Upload -- CHECKPOINT (awaiting human verification)
+**Current focus:** Phase 6.2: Metadata-Enriched Gemini Upload -- COMPLETE
 **Execution strategy:** Phase 6 before full upload (1,721 files) to enrich metadata first
 
 ## Current Position
 
 Phase: 6.2 of 7+ (Metadata-Enriched Gemini Upload)
 Plan: 2 of 2
-Status: Checkpoint - awaiting human verification of staged testing
-Last activity: 2026-02-17 - Completed 06.2-02-PLAN.md Task 1 (enriched upload orchestrator + CLI)
+Status: Phase complete (checkpoint approved, verification passed)
+Last activity: 2026-02-17 - Phase 6.2 complete with enriched upload pipeline, automatic retry, and bug fixes
 
 Progress: [################] ~100% (19 plans of ~19 estimated total)
 
@@ -134,11 +134,13 @@ Recent decisions affecting current work:
 - [06.2-02]: Store name default objectivism-library-test for enriched uploads
 - [06.2-02]: Reset flow handles already-expired 48hr TTL files gracefully via try/except on delete_file
 - [06.2-02]: Upload hash idempotency via SHA-256 of (phase1 + ai + entities + content_hash)
+- [06.2-fix]: get_files_to_reset_for_enriched_upload checks upload hash - only reset if changed or NULL (prevents unnecessary re-uploads)
+- [06.2-fix]: Failed files (status='failed') always retry regardless of hash (handles polling timeouts)
+- [06.2-fix]: Post-batch retry pass with 30s cooldown - one retry per failed file per batch (Option 3)
 
 ### Pending Todos
 
-- Run entity extraction before enriched upload: `python -m objlib entities extract`
-- Execute three-stage testing: --limit 20, --limit 100, --limit 250
+None - Phase 6.2 complete. Ready for full library upload.
 
 ### Blockers/Concerns
 
@@ -148,5 +150,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Phase 6.2 Plan 02 code COMPLETE, checkpoint reached. EnrichedUploadOrchestrator and CLI enriched-upload command ready. Awaiting human verification of three-stage testing (20 -> 100 -> 250 docs). Entity extraction must run first (`objlib entities extract`).
-Resume file: .planning/phases/06.2-metadata-enriched-gemini-upload/06.2-02-PLAN.md
+Stopped at: Phase 6.2 COMPLETE (all 2 plans). Enriched upload pipeline ready with 4-tier AI metadata, entity mentions, content injection, idempotency, automatic retry, and bug fixes (status tracking, retry logic). Entity extraction complete (500/1,748 files, 28.6% coverage). 238 files ready for enriched upload. Validation passed (15 files uploaded successfully with retry recovery). Next: Full library upload (1,721 files) or proceed to Phase 4/5.
+Resume file: N/A - Phase 6.2 complete. Begin full upload or next phase planning.

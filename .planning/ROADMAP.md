@@ -143,8 +143,8 @@ Extracts person name entities from transcripts, fuzzy matches against canonical 
 **Plans:** 2 plans
 
 Plans:
-- [ ] 06.2-01-PLAN.md -- Schema v5 migration, enriched metadata builder, content preparer, enriched pipeline query
-- [ ] 06.2-02-PLAN.md -- EnrichedUploadOrchestrator, CLI enriched-upload command, three-stage testing checkpoint
+- [x] 06.2-01-PLAN.md -- Schema v5 migration, enriched metadata builder, content preparer, enriched pipeline query
+- [x] 06.2-02-PLAN.md -- EnrichedUploadOrchestrator, CLI enriched-upload command, three-stage testing checkpoint
 
 **Details:**
 Extends Phase 2 upload pipeline to include 4-tier metadata from Phase 6 extraction and entity mentions from Phase 6.1. Flattens nested structures (semantic_description) into Gemini custom_metadata format (7-9 searchable fields using string_list_value). Implements conservative concurrent upload (Semaphore(2)), tracks per-file upload status with idempotency hashing. Three-stage testing (20 -> 100 -> 250 docs) validates metadata schema and search quality before full deployment.
@@ -192,8 +192,8 @@ Phases execute in strategic order (not strictly numeric):
 | 3. Search & CLI | 3/3 | Complete | 2026-02-16 |
 | 6. AI-Powered Metadata | 5/5 | Complete | 2026-02-16 |
 | 6.1. Entity Extraction | 2/2 | Complete | 2026-02-16 |
-| **6.2. Enriched Upload** | **0/TBD** | **Next** | **-** |
-| **[FULL UPLOAD: 1,721 files]** | **-** | **After Phase 6.2** | **-** |
+| 6.2. Enriched Upload | 2/2 | Complete | 2026-02-17 |
+| **[FULL UPLOAD: 1,721 files]** | **-** | **Next** | **-** |
 | 4. Quality Enhancements | 0/TBD | Deferred | - |
 | 5. Incremental Updates | 0/TBD | Deferred | - |
 | 7. Interactive TUI | 0/TBD | Deferred | - |
