@@ -63,36 +63,36 @@ class TestExactMatch:
 class TestAliasMatch:
     """Alias matches (partials, title variants, nicknames) should return confidence 1.0."""
 
-    def test_peikoff_partial(self, extractor):
+    def test_alias_peikoff_partial(self, extractor):
         result = extractor.extract("Peikoff argued that concepts are valid.", "test.txt")
         entities = {e.person_id: e for e in result.entities}
         assert "leonard-peikoff" in entities
         assert entities["leonard-peikoff"].max_confidence == 1.0
 
-    def test_rand_partial(self, extractor):
+    def test_alias_rand_partial(self, extractor):
         result = extractor.extract("Rand wrote extensively about objectivism.", "test.txt")
         entities = {e.person_id: e for e in result.entities}
         assert "ayn-rand" in entities
         assert entities["ayn-rand"].max_confidence == 1.0
 
-    def test_dr_peikoff_title(self, extractor):
+    def test_alias_dr_peikoff_title(self, extractor):
         result = extractor.extract("Dr. Peikoff explained the hierarchy of knowledge.", "test.txt")
         entities = {e.person_id: e for e in result.entities}
         assert "leonard-peikoff" in entities
         assert entities["leonard-peikoff"].max_confidence == 1.0
 
-    def test_onkar_nickname(self, extractor):
+    def test_alias_onkar_nickname(self, extractor):
         result = extractor.extract("Onkar explained the problem with altruism.", "test.txt")
         entities = {e.person_id: e for e in result.entities}
         assert "onkar-ghate" in entities
         assert entities["onkar-ghate"].max_confidence == 1.0
 
-    def test_ghate_partial(self, extractor):
+    def test_alias_ghate_partial(self, extractor):
         result = extractor.extract("Ghate presented on free will.", "test.txt")
         entities = {e.person_id: e for e in result.entities}
         assert "onkar-ghate" in entities
 
-    def test_binswanger_partial(self, extractor):
+    def test_alias_binswanger_partial(self, extractor):
         result = extractor.extract("Binswanger discussed consciousness.", "test.txt")
         entities = {e.person_id: e for e in result.entities}
         assert "harry-binswanger" in entities
@@ -135,19 +135,19 @@ class TestBlockedAlias:
 class TestDisambiguation:
     """Full names should disambiguate blocked partial names."""
 
-    def test_tara_smith_disambiguated(self, extractor):
+    def test_disambiguation_tara_smith(self, extractor):
         result = extractor.extract("Tara Smith discussed rational egoism.", "test.txt")
         entities = {e.person_id: e for e in result.entities}
         assert "tara-smith" in entities
         assert entities["tara-smith"].max_confidence == 1.0
 
-    def test_aaron_smith_disambiguated(self, extractor):
+    def test_disambiguation_aaron_smith(self, extractor):
         result = extractor.extract("Aaron Smith presented on epistemology.", "test.txt")
         entities = {e.person_id: e for e in result.entities}
         assert "aaron-smith" in entities
         assert entities["aaron-smith"].max_confidence == 1.0
 
-    def test_both_smiths_and_bare_smith(self, extractor):
+    def test_disambiguation_both_smiths_and_bare_smith(self, extractor):
         """Text containing 'Tara Smith' and 'Smith' alone: only full name matched."""
         text = "Tara Smith discussed ethics. Later, Smith was referenced in the bibliography."
         result = extractor.extract(text, "test.txt")
@@ -202,7 +202,7 @@ class TestSpeakerLabel:
 class TestFullTranscript:
     """Multi-paragraph text with multiple entities and blocked aliases."""
 
-    def test_multi_entity_transcript(self, extractor):
+    def test_full_transcript_multi_entity(self, extractor):
         text = """
         In this lecture, Ayn Rand discusses the nature of concepts and their role
         in human cognition. She references the work of her student, Peikoff, who
@@ -239,7 +239,7 @@ class TestFullTranscript:
 class TestFuzzyMatch:
     """Fuzzy matching with RapidFuzz for minor typos."""
 
-    def test_peikof_typo(self, extractor):
+    def test_fuzzy_peikof_typo(self, extractor):
         """Minor typo: 'Peikof' (missing f) should still match if score >= 92."""
         result = extractor.extract("Peikof discussed the issue of universals.", "test.txt")
         # This should match leonard-peikoff via fuzzy if score >= 92
@@ -247,14 +247,14 @@ class TestFuzzyMatch:
         if "leonard-peikoff" in entities:
             assert entities["leonard-peikoff"].max_confidence >= 0.92
 
-    def test_binwanger_typo(self, extractor):
+    def test_fuzzy_binwanger_typo(self, extractor):
         """Minor typo: 'Binwanger' (missing s) should match if score >= 92."""
         result = extractor.extract("Binwanger discussed consciousness.", "test.txt")
         entities = {e.person_id: e for e in result.entities}
         if "harry-binswanger" in entities:
             assert entities["harry-binswanger"].max_confidence >= 0.92
 
-    def test_random_name_rejected(self, extractor):
+    def test_fuzzy_random_name_rejected(self, extractor):
         """Completely unrelated name should not match any canonical person."""
         result = extractor.extract("Xyz Random Person talked about philosophy.", "test.txt")
         # No canonical persons should be found
@@ -266,7 +266,7 @@ class TestFuzzyMatch:
 class TestNoEntities:
     """Text with no person mentions should return empty entity list."""
 
-    def test_no_persons_mentioned(self, extractor):
+    def test_no_entities_in_conceptual_text(self, extractor):
         result = extractor.extract(
             "The concept of free will is central to moral philosophy.",
             "test.txt",
@@ -274,7 +274,7 @@ class TestNoEntities:
         assert len(result.entities) == 0
         assert result.status == "entities_done"
 
-    def test_empty_text(self, extractor):
+    def test_no_entities_empty_text(self, extractor):
         result = extractor.extract("", "test.txt")
         assert len(result.entities) == 0
         assert result.status == "entities_done"
