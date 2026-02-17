@@ -126,11 +126,12 @@ Plans:
 
 **Goal**: User can automatically extract and normalize person names mentioned in transcripts against a canonical list of Objectivist philosophers and ARI instructors -- transforming raw text mentions into structured, searchable entity metadata
 **Depends on**: Phase 6 (AI metadata extraction)
+**Status**: Complete (2026-02-16)
 **Plans:** 2 plans
 
 Plans:
-- [ ] 06.1-01-PLAN.md -- Schema v4 migration, person registry, entity extraction engine with TDD
-- [ ] 06.1-02-PLAN.md -- CLI commands (extract, stats, report) and database persistence methods
+- [x] 06.1-01-PLAN.md -- Schema v4 migration, person registry, entity extraction engine with TDD
+- [x] 06.1-02-PLAN.md -- CLI commands (extract, stats, report) and database persistence methods
 
 **Details:**
 Extracts person name entities from transcripts, fuzzy matches against canonical list (Ayn Rand, Leonard Peikoff, Onkar Ghate, Robert Mayhew, Tara Smith, Ben Bayer, Mike Mazza, Aaron Smith, Tristan de Liège, Gregory Salmieri, Harry Binswanger, Jean Moroney, Yaron Brook, Don Watkins, Keith Lockitch), normalizes spelling variations, stores mention counts and normalized names as additional metadata for inclusion in Gemini upload.
@@ -188,8 +189,10 @@ Phases execute in strategic order (not strictly numeric):
 | 1. Foundation | 3/3 | Complete | 2026-02-15 |
 | 2. Upload Pipeline | 4/4 | Complete | 2026-02-16 |
 | 3. Search & CLI | 3/3 | Complete | 2026-02-16 |
-| **6. AI-Powered Metadata** | **0/TBD** | **Next** | **-** |
-| **[FULL UPLOAD: 1,721 files]** | **-** | **After Phase 6** | **-** |
+| 6. AI-Powered Metadata | 5/5 | Complete | 2026-02-16 |
+| 6.1. Entity Extraction | 2/2 | Complete | 2026-02-16 |
+| **6.2. Enriched Upload** | **0/TBD** | **Next** | **-** |
+| **[FULL UPLOAD: 1,721 files]** | **-** | **After Phase 6.2** | **-** |
 | 4. Quality Enhancements | 0/TBD | Deferred | - |
 | 5. Incremental Updates | 0/TBD | Deferred | - |
 | 7. Interactive TUI | 0/TBD | Deferred | - |
