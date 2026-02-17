@@ -183,6 +183,124 @@ CREATE TABLE IF NOT EXISTS wave1_results (
 );
 """
 
+MIGRATION_V4_SQL = """
+-- Canonical person registry
+CREATE TABLE IF NOT EXISTS person (
+    person_id TEXT PRIMARY KEY,
+    canonical_name TEXT NOT NULL UNIQUE,
+    type TEXT NOT NULL CHECK(type IN ('philosopher', 'ari_instructor')),
+    notes TEXT,
+    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')),
+    updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now'))
+);
+
+-- Alias lookup table
+CREATE TABLE IF NOT EXISTS person_alias (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    alias_text TEXT NOT NULL,
+    person_id TEXT NOT NULL,
+    alias_type TEXT CHECK(alias_type IN ('nickname', 'misspelling', 'partial', 'initials', 'title_variant', 'full_name')),
+    is_blocked BOOLEAN DEFAULT 0,
+    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')),
+    FOREIGN KEY (person_id) REFERENCES person(person_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_person_alias_text ON person_alias(alias_text COLLATE NOCASE);
+
+-- Transcript-level entity summary
+CREATE TABLE IF NOT EXISTS transcript_entity (
+    transcript_id TEXT NOT NULL,
+    person_id TEXT NOT NULL,
+    mention_count INTEGER NOT NULL CHECK(mention_count >= 1),
+    first_seen_char INTEGER,
+    max_confidence REAL CHECK(max_confidence >= 0.0 AND max_confidence <= 1.0),
+    evidence_sample TEXT,
+    extraction_version TEXT NOT NULL,
+    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')),
+    PRIMARY KEY (transcript_id, person_id),
+    FOREIGN KEY (person_id) REFERENCES person(person_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_transcript_entity_person ON transcript_entity(person_id);
+
+-- Seed 15 canonical persons
+INSERT OR IGNORE INTO person (person_id, canonical_name, type) VALUES
+    ('ayn-rand', 'Ayn Rand', 'philosopher'),
+    ('leonard-peikoff', 'Leonard Peikoff', 'ari_instructor'),
+    ('onkar-ghate', 'Onkar Ghate', 'ari_instructor'),
+    ('robert-mayhew', 'Robert Mayhew', 'ari_instructor'),
+    ('tara-smith', 'Tara Smith', 'ari_instructor'),
+    ('ben-bayer', 'Ben Bayer', 'ari_instructor'),
+    ('mike-mazza', 'Mike Mazza', 'ari_instructor'),
+    ('aaron-smith', 'Aaron Smith', 'ari_instructor'),
+    ('tristan-de-liege', 'Tristan de Liege', 'ari_instructor'),
+    ('gregory-salmieri', 'Gregory Salmieri', 'ari_instructor'),
+    ('harry-binswanger', 'Harry Binswanger', 'ari_instructor'),
+    ('jean-moroney', 'Jean Moroney', 'ari_instructor'),
+    ('yaron-brook', 'Yaron Brook', 'ari_instructor'),
+    ('don-watkins', 'Don Watkins', 'ari_instructor'),
+    ('keith-lockitch', 'Keith Lockitch', 'ari_instructor');
+
+-- Seed aliases: full names as alias_type='full_name'
+INSERT OR IGNORE INTO person_alias (alias_text, person_id, alias_type) VALUES
+    ('Ayn Rand', 'ayn-rand', 'full_name'),
+    ('Leonard Peikoff', 'leonard-peikoff', 'full_name'),
+    ('Onkar Ghate', 'onkar-ghate', 'full_name'),
+    ('Robert Mayhew', 'robert-mayhew', 'full_name'),
+    ('Tara Smith', 'tara-smith', 'full_name'),
+    ('Ben Bayer', 'ben-bayer', 'full_name'),
+    ('Mike Mazza', 'mike-mazza', 'full_name'),
+    ('Aaron Smith', 'aaron-smith', 'full_name'),
+    ('Tristan de Liege', 'tristan-de-liege', 'full_name'),
+    ('Gregory Salmieri', 'gregory-salmieri', 'full_name'),
+    ('Harry Binswanger', 'harry-binswanger', 'full_name'),
+    ('Jean Moroney', 'jean-moroney', 'full_name'),
+    ('Yaron Brook', 'yaron-brook', 'full_name'),
+    ('Don Watkins', 'don-watkins', 'full_name'),
+    ('Keith Lockitch', 'keith-lockitch', 'full_name');
+
+-- Seed aliases: high-uniqueness surname partials
+INSERT OR IGNORE INTO person_alias (alias_text, person_id, alias_type) VALUES
+    ('Rand', 'ayn-rand', 'partial'),
+    ('Peikoff', 'leonard-peikoff', 'partial'),
+    ('Ghate', 'onkar-ghate', 'partial'),
+    ('Mayhew', 'robert-mayhew', 'partial'),
+    ('Salmieri', 'gregory-salmieri', 'partial'),
+    ('Mazza', 'mike-mazza', 'partial'),
+    ('Liege', 'tristan-de-liege', 'partial'),
+    ('Lockitch', 'keith-lockitch', 'partial'),
+    ('Moroney', 'jean-moroney', 'partial'),
+    ('Brook', 'yaron-brook', 'partial'),
+    ('Watkins', 'don-watkins', 'partial'),
+    ('Bayer', 'ben-bayer', 'partial'),
+    ('Binswanger', 'harry-binswanger', 'partial');
+
+-- Seed aliases: title variants
+INSERT OR IGNORE INTO person_alias (alias_text, person_id, alias_type) VALUES
+    ('Dr. Peikoff', 'leonard-peikoff', 'title_variant'),
+    ('Professor Salmieri', 'gregory-salmieri', 'title_variant'),
+    ('Dr. Ghate', 'onkar-ghate', 'title_variant'),
+    ('Dr. Binswanger', 'harry-binswanger', 'title_variant');
+
+-- Seed aliases: nickname/partial first names (high-uniqueness only)
+INSERT OR IGNORE INTO person_alias (alias_text, person_id, alias_type) VALUES
+    ('Onkar', 'onkar-ghate', 'nickname'),
+    ('Tristan', 'tristan-de-liege', 'nickname'),
+    ('Yaron', 'yaron-brook', 'nickname');
+
+-- Seed blocked aliases (ambiguous names requiring full name for resolution)
+INSERT OR IGNORE INTO person_alias (alias_text, person_id, alias_type, is_blocked) VALUES
+    ('Smith', 'tara-smith', 'partial', 1),
+    ('Aaron', 'aaron-smith', 'nickname', 1),
+    ('Tara', 'tara-smith', 'nickname', 1),
+    ('Ben', 'ben-bayer', 'nickname', 1),
+    ('Mike', 'mike-mazza', 'nickname', 1),
+    ('Harry', 'harry-binswanger', 'nickname', 1),
+    ('Greg', 'gregory-salmieri', 'nickname', 1),
+    ('Keith', 'keith-lockitch', 'nickname', 1),
+    ('Don', 'don-watkins', 'nickname', 1);
+"""
+
 UPSERT_SQL = """
 INSERT INTO files(file_path, content_hash, filename, file_size,
                   metadata_json, metadata_quality, status)
@@ -262,7 +380,19 @@ class Database:
             # Create new tables (IF NOT EXISTS handles idempotency)
             self.conn.executescript(MIGRATION_V3_SQL)
 
-        self.conn.execute("PRAGMA user_version = 3")
+        if version < 4:
+            self.conn.executescript(MIGRATION_V4_SQL)
+            # Add entity extraction columns to files table
+            for alter_sql in [
+                "ALTER TABLE files ADD COLUMN entity_extraction_version TEXT",
+                "ALTER TABLE files ADD COLUMN entity_extraction_status TEXT DEFAULT 'pending'",
+            ]:
+                try:
+                    self.conn.execute(alter_sql)
+                except sqlite3.OperationalError:
+                    pass  # Column already exists
+
+        self.conn.execute("PRAGMA user_version = 4")
 
     def upsert_file(self, record: FileRecord) -> None:
         """Insert or update a single file record.
