@@ -141,3 +141,53 @@ def _apply_rankings(
     indexed.sort(key=lambda x: (-x[2], x[0]))
 
     return [citation for _, citation, _ in indexed]
+
+
+# -- Difficulty-aware ordering --
+
+DIFFICULTY_BUCKETS = {"introductory": 0, "intermediate": 1, "advanced": 2}
+
+
+def apply_difficulty_ordering(
+    citations: list[Citation],
+    mode: str = "learn",
+    window: int = 20,
+) -> list[Citation]:
+    """Reorder citations by difficulty level within a top window.
+
+    In **learn** mode, the top ``window`` citations are sorted so
+    introductory content appears first, then intermediate, then
+    advanced. Within the same difficulty bucket, original relevance
+    order is preserved. Citations beyond the window are unchanged.
+
+    In **research** mode, citations are returned in their original
+    (pure relevance) order.
+
+    Args:
+        citations: Pre-ranked citation list (e.g., from rerank_passages).
+        mode: ``"learn"`` for difficulty ordering, ``"research"`` for
+              pure relevance.
+        window: Number of top citations to reorder (default 20).
+
+    Returns:
+        Reordered citation list.
+    """
+    if mode == "research" or len(citations) <= 1:
+        return citations
+
+    top = citations[:window]
+    rest = citations[window:]
+
+    # Build (bucket, original_index, citation) tuples for stable sort
+    keyed: list[tuple[int, int, Citation]] = []
+    for i, citation in enumerate(top):
+        difficulty = ""
+        if citation.metadata:
+            difficulty = citation.metadata.get("difficulty", "")
+        bucket = DIFFICULTY_BUCKETS.get(difficulty, 1)  # default intermediate
+        keyed.append((bucket, i, citation))
+
+    keyed.sort(key=lambda x: (x[0], x[1]))
+
+    reordered_top = [citation for _, _, citation in keyed]
+    return reordered_top + rest
