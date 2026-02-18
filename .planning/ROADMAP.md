@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Foundation** - SQLite state tracking and library scanning with metadata extraction
 - [x] **Phase 2: Upload Pipeline** - Reliable batch upload to Gemini File Search with rate limiting and resume
 - [x] **Phase 3: Search & CLI** - Semantic search, filtering, and CLI interface for querying the indexed library
-- [ ] **Phase 4: Quality Enhancements** - Reranking, synthesis, query expansion, and difficulty-aware ordering
+- [x] **Phase 4: Quality Enhancements** - Reranking, synthesis, query expansion, and difficulty-aware ordering
 - [ ] **Phase 5: Incremental Updates & Offline Mode** - Change detection, selective re-upload, and disk-independent querying
 - [ ] **Phase 6: AI-Powered Metadata** - LLM-based category inference, difficulty detection, and topic extraction
 - [ ] **Phase 7: Interactive TUI** - Modern terminal UI with live search, visual browsing, and session management
@@ -105,6 +105,13 @@ Plans:
   6. When source disk is disconnected, running `view --full` gracefully degrades to metadata-only view with clear messaging ("Source disk required for full document view") -- no crashes or confusing errors
   7. When source disk is disconnected, running `scan` or `upload` commands fail with clear, actionable error messages ("Library disk not connected at /Volumes/U32 Shadow/Objectivism Library") -- maintenance operations are explicitly disk-dependent
   8. The system automatically detects disk availability and adjusts operation modes accordingly -- user doesn't need to manually specify offline mode
+**Plans:** 4 plans
+
+Plans:
+- [ ] 05-01-PLAN.md — Schema V7 migration (table rebuild for CHECK constraint), new sync columns, library_config table, disk availability utility
+- [ ] 05-02-PLAN.md — Gemini store document API: delete_store_document, list_store_documents, find_store_document_name
+- [ ] 05-03-PLAN.md — SyncDetector (mtime-optimized change detection), SyncOrchestrator (full pipeline), CLI sync command with all flags
+- [ ] 05-04-PLAN.md — Offline mode guards: disk availability checks on scan/upload, improved view --full messaging
 
 ### Phase 6: AI-Powered Metadata Enhancement
 **Goal**: User can automatically infer and enhance metadata (categories, difficulty, topics) using LLM analysis of file content -- transforming generic "unknown" categories into rich, searchable metadata without manual effort
@@ -197,6 +204,6 @@ Phases execute in strategic order (not strictly numeric):
 | 6.1. Entity Extraction | 2/2 | Complete | 2026-02-16 |
 | 6.2. Enriched Upload | 2/2 | Complete | 2026-02-17 |
 | **[FULL UPLOAD: 1,721 files]** | **-** | **Next** | **-** |
-| 4. Quality Enhancements | 0/5 | Planning | - |
-| 5. Incremental Updates | 0/TBD | Deferred | - |
+| 4. Quality Enhancements | 5/5 | Complete | 2026-02-18 |
+| 5. Incremental Updates | 0/4 | Planning | - |
 | 7. Interactive TUI | 0/TBD | Deferred | - |
