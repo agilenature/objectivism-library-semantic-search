@@ -122,6 +122,14 @@ app.add_typer(metadata_app, name="metadata")
 entities_app = typer.Typer(help="Extract and manage person entity mentions in transcripts")
 app.add_typer(entities_app, name="entities")
 
+# Session management command group
+session_app = typer.Typer(help="Manage research sessions (start, list, resume, note, export)")
+app.add_typer(session_app, name="session")
+
+# Glossary management command group
+glossary_app = typer.Typer(help="Manage query expansion glossary")
+app.add_typer(glossary_app, name="glossary")
+
 
 @app.command()
 def scan(
@@ -2904,3 +2912,163 @@ def entities_report(
                 "  objlib entities report Peikoff\n"
                 "  objlib entities report --low-confidence"
             )
+
+
+# ---- Session Commands ----
+
+
+@session_app.command("start")
+def session_start(
+    name: Annotated[str | None, typer.Argument(help="Session name (auto-generated if omitted)")] = None,
+    db_path: Annotated[Path, typer.Option("--db", help="Database path")] = Path("data/library.db"),
+) -> None:
+    """Start a new research session."""
+    from objlib.session.manager import SessionManager
+    with Database(db_path) as db:
+        mgr = SessionManager(db.conn)
+        sid = mgr.create(name)
+        session = mgr.get_session(sid)
+        console.print(Panel(
+            f"[bold]Session ID:[/bold] {sid}\n"
+            f"[bold]Name:[/bold] {session['name']}\n\n"
+            f"[dim]To auto-attach searches:[/dim]\n"
+            f"[bold cyan]export OBJLIB_SESSION={sid}[/bold cyan]",
+            title="Session Created",
+            border_style="cyan",
+        ))
+
+
+@session_app.command("list")
+def session_list(
+    db_path: Annotated[Path, typer.Option("--db", help="Database path")] = Path("data/library.db"),
+) -> None:
+    """List all research sessions."""
+    from objlib.session.manager import SessionManager
+    with Database(db_path) as db:
+        mgr = SessionManager(db.conn)
+        sessions = mgr.list_sessions()
+    if not sessions:
+        console.print("[dim]No sessions found. Run 'objlib session start' to create one.[/dim]")
+        return
+    table = Table(title="Research Sessions", border_style="cyan")
+    table.add_column("ID", style="dim", width=10)
+    table.add_column("Name", style="bold")
+    table.add_column("Created")
+    table.add_column("Events", justify="right")
+    for s in sessions:
+        table.add_row(s["id"][:8], s["name"] or "(unnamed)", s["created_at"][:19], str(s["event_count"]))
+    console.print(table)
+
+
+@session_app.command("resume")
+def session_resume(
+    session_id: Annotated[str, typer.Argument(help="Session ID or prefix")],
+    db_path: Annotated[Path, typer.Option("--db", help="Database path")] = Path("data/library.db"),
+) -> None:
+    """Resume a session -- display its saved timeline."""
+    from objlib.session.manager import SessionManager
+    with Database(db_path) as db:
+        mgr = SessionManager(db.conn)
+        session = mgr.find_by_prefix(session_id) or mgr.get_session(session_id)
+        if not session:
+            console.print(f"[red]Session not found:[/red] {session_id}")
+            raise typer.Exit(code=1)
+        mgr.display_timeline(session["id"], console)
+
+
+@session_app.command("note")
+def session_note(
+    text: Annotated[str, typer.Argument(help="Note text to add")],
+    db_path: Annotated[Path, typer.Option("--db", help="Database path")] = Path("data/library.db"),
+) -> None:
+    """Add a note to the active session (requires OBJLIB_SESSION env var)."""
+    from objlib.session.manager import SessionManager
+    sid = SessionManager.get_active_session_id()
+    if not sid:
+        console.print("[red]No active session.[/red] Set OBJLIB_SESSION or use 'session start'.")
+        raise typer.Exit(code=1)
+    with Database(db_path) as db:
+        mgr = SessionManager(db.conn)
+        mgr.add_event(sid, "note", {"text": text})
+    console.print("[green]Note added to session.[/green]")
+
+
+@session_app.command("export")
+def session_export(
+    session_id: Annotated[str, typer.Argument(help="Session ID or prefix")],
+    output: Annotated[Path | None, typer.Option("--output", "-o", help="Output file path")] = None,
+    db_path: Annotated[Path, typer.Option("--db", help="Database path")] = Path("data/library.db"),
+) -> None:
+    """Export a session as a Markdown file."""
+    from objlib.session.manager import SessionManager
+    with Database(db_path) as db:
+        mgr = SessionManager(db.conn)
+        session = mgr.find_by_prefix(session_id) or mgr.get_session(session_id)
+        if not session:
+            console.print(f"[red]Session not found:[/red] {session_id}")
+            raise typer.Exit(code=1)
+        out_path = mgr.export_markdown(session["id"], output)
+    console.print(f"[green]Exported to:[/green] [bold]{out_path}[/bold]")
+
+
+# ---- Glossary Commands ----
+
+
+@glossary_app.command("list")
+def glossary_list() -> None:
+    """List all terms in the query expansion glossary."""
+    from objlib.search.expansion import load_glossary
+    glossary = load_glossary()
+    table = Table(title="Query Expansion Glossary", border_style="blue")
+    table.add_column("Term", style="bold")
+    table.add_column("Synonyms")
+    for term, synonyms in sorted(glossary.items()):
+        table.add_row(term, ", ".join(synonyms))
+    console.print(table)
+
+
+@glossary_app.command("add")
+def glossary_add(
+    term: Annotated[str, typer.Argument(help="Term to add")],
+    synonyms: Annotated[list[str], typer.Argument(help="Synonyms for the term")],
+) -> None:
+    """Add a term and its synonyms to the glossary."""
+    from objlib.search.expansion import add_term
+    add_term(term, synonyms)
+    console.print(f"[green]Added:[/green] [bold]{term}[/bold] -> {', '.join(synonyms)}")
+
+
+@glossary_app.command("suggest")
+def glossary_suggest(
+    term: Annotated[str, typer.Argument(help="Term to get synonym suggestions for")],
+) -> None:
+    """Use Gemini Flash to suggest synonyms for a term (requires API key)."""
+    from google import genai
+    from google.genai import types
+    from objlib.config import get_api_key
+    try:
+        api_key = get_api_key()
+    except RuntimeError as e:
+        console.print(f"[red]{e}[/red]")
+        raise typer.Exit(code=1)
+    client = genai.Client(api_key=api_key)
+    prompt = (
+        f"In Objectivist philosophy, what are 3-5 synonyms or closely related terms for '{term}'? "
+        "List only the terms, one per line, without explanation."
+    )
+    try:
+        resp = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
+        suggestions = [line.strip().strip("-").strip() for line in (resp.text or "").split("\n") if line.strip()]
+        console.print(Panel(
+            "\n".join(f"  {s}" for s in suggestions if s),
+            title=f"Suggestions for: {term}",
+            border_style="blue",
+        ))
+        if suggestions:
+            console.print(
+                f"\n[dim]To add:[/dim] objlib glossary add \"{term}\" "
+                + " ".join(f'"{s}"' for s in suggestions[:2])
+            )
+    except Exception as e:
+        console.print(f"[red]Suggestion failed:[/red] {e}")
+        raise typer.Exit(code=1)

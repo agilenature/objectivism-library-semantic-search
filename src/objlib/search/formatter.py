@@ -7,7 +7,7 @@ detailed/full document views. All output adapts to terminal width.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from rich.console import Console
 from rich.panel import Panel
@@ -266,3 +266,144 @@ def display_no_results(console: Console | None = None) -> None:
     """
     con = console or Console()
     con.print("[dim]No results found. Try a broader query.[/dim]")
+
+
+def display_synthesis(
+    synthesis: Any,  # SynthesisOutput
+    citations: list[Citation],
+    console: Console | None = None,
+) -> None:
+    """Display synthesis output with cited claims in a Rich panel.
+
+    Shows a bridging intro, bullet-pointed claims with inline quotes,
+    and a bridging conclusion inside a magenta-bordered panel.
+
+    Args:
+        synthesis: SynthesisOutput instance with claims, bridging_intro,
+                   and bridging_conclusion attributes.
+        citations: List of Citation objects (for context).
+        console: Optional Rich Console instance.
+    """
+    con = console or Console()
+    lines: list[str] = []
+
+    if synthesis.bridging_intro:
+        lines.append(synthesis.bridging_intro)
+        lines.append("")
+
+    for claim in synthesis.claims:
+        lines.append(f"  {claim.claim_text}")
+        if claim.citation and claim.citation.quote:
+            lines.append(f'  [dim]"{claim.citation.quote[:200]}"[/dim]')
+        lines.append("")
+
+    if synthesis.bridging_conclusion:
+        lines.append(synthesis.bridging_conclusion)
+
+    content = "\n".join(lines).strip()
+    if not content:
+        content = "[dim]No synthesis content generated.[/dim]"
+
+    con.print()
+    con.print(Panel(content, title="[bold magenta]Synthesis[/bold magenta]", border_style="magenta"))
+
+
+def display_concept_evolution(
+    citations: list[Citation],
+    query: str,
+    client: Any | None = None,
+    console: Console | None = None,
+    no_synthesis: bool = False,
+) -> None:
+    """Display search results grouped by difficulty tier for concept evolution tracking.
+
+    Groups citations into introductory/intermediate/advanced tiers and
+    displays them in color-coded Rich panels. Optionally generates a
+    per-tier synthesis sentence via Gemini Flash.
+
+    Args:
+        citations: List of enriched Citation objects with metadata.
+        query: Original search query (used for tier synthesis prompt).
+        client: Optional Gemini client for per-tier synthesis sentences.
+        console: Optional Rich Console instance.
+        no_synthesis: If True, skip per-tier synthesis even if client provided.
+    """
+    con = console or Console()
+
+    TIERS = [
+        ("introductory", "green"),
+        ("intermediate", "yellow"),
+        ("advanced", "red"),
+    ]
+
+    # Group by difficulty
+    tier_citations: dict[str, list[Citation]] = {t[0]: [] for t in TIERS}
+    for citation in citations:
+        diff = (citation.metadata or {}).get("difficulty", "").lower()
+        if diff in tier_citations:
+            tier_citations[diff].append(citation)
+        else:
+            tier_citations["intermediate"].append(citation)  # Default to intermediate
+
+    con.print()
+    con.print(f"[bold]Concept Evolution:[/bold] {query}")
+    con.print()
+
+    for tier_name, border_color in TIERS:
+        tier_cits = tier_citations[tier_name]
+        if not tier_cits:
+            continue
+
+        lines: list[str] = []
+
+        # Optional per-tier synthesis sentence
+        if client and not no_synthesis and len(tier_cits) >= 2:
+            try:
+                from google.genai import types
+                passages_text = "\n\n".join(
+                    f"[{i}]: {c.text[:300]}" for i, c in enumerate(tier_cits[:3])
+                )
+                tier_prompt = (
+                    f"In one sentence, summarize the {tier_name}-level treatment "
+                    f"of '{query}' across these passages:\n\n{passages_text}"
+                )
+                tier_config = types.GenerateContentConfig(
+                    max_output_tokens=100, temperature=0.3
+                )
+                tier_resp = client.models.generate_content(
+                    model="gemini-2.0-flash", contents=tier_prompt, config=tier_config
+                )
+                if tier_resp.text:
+                    lines.append(f"[italic]{tier_resp.text.strip()}[/italic]")
+                    lines.append("")
+            except Exception:
+                pass  # Skip synthesis for this tier on failure
+
+        # Show top 3 citations per tier
+        for citation in tier_cits[:3]:
+            meta = citation.metadata or {}
+            course = meta.get("course", "")
+            year = meta.get("year", "")
+            week = meta.get("week", "")
+            meta_parts = [
+                p for p in [
+                    course,
+                    str(year) if year else "",
+                    f"Week {week}" if week else "",
+                ] if p
+            ]
+            meta_str = " | ".join(meta_parts) if meta_parts else ""
+
+            lines.append(f"[bold]{citation.title or citation.file_path or 'Unknown'}[/bold]")
+            if meta_str:
+                lines.append(f"[dim]{meta_str}[/dim]")
+            if citation.text:
+                lines.append(truncate_text(citation.text, 200))
+            lines.append("")
+
+        content = "\n".join(lines).strip()
+        con.print(Panel(
+            content,
+            title=f"[bold]{tier_name.title()} Level[/bold]",
+            border_style=border_color,
+        ))
