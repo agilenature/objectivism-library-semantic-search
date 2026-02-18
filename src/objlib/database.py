@@ -301,6 +301,41 @@ INSERT OR IGNORE INTO person_alias (alias_text, person_id, alias_type, is_blocke
     ('Don', 'don-watkins', 'nickname', 1);
 """
 
+MIGRATION_V6_SQL = """
+-- Passages cache for citation stability
+CREATE TABLE IF NOT EXISTS passages (
+    passage_id TEXT PRIMARY KEY,
+    file_id TEXT NOT NULL,
+    content_hash TEXT,
+    passage_text TEXT NOT NULL,
+    source TEXT DEFAULT 'gemini_grounding',
+    is_stale BOOLEAN DEFAULT 0,
+    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')),
+    last_seen_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now'))
+);
+CREATE INDEX IF NOT EXISTS idx_passages_file ON passages(file_id);
+CREATE INDEX IF NOT EXISTS idx_passages_hash ON passages(content_hash);
+
+-- Research session tracking
+CREATE TABLE IF NOT EXISTS sessions (
+    id TEXT PRIMARY KEY,
+    name TEXT,
+    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')),
+    updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now'))
+);
+
+-- Session event log
+CREATE TABLE IF NOT EXISTS session_events (
+    id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL,
+    event_type TEXT NOT NULL CHECK(event_type IN ('search', 'view', 'synthesize', 'note', 'error')),
+    payload_json TEXT NOT NULL,
+    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')),
+    FOREIGN KEY (session_id) REFERENCES sessions(id)
+);
+CREATE INDEX IF NOT EXISTS idx_session_events_session ON session_events(session_id);
+"""
+
 UPSERT_SQL = """
 INSERT INTO files(file_path, content_hash, filename, file_size,
                   metadata_json, metadata_quality, status)
@@ -357,9 +392,11 @@ class Database:
     def _setup_schema(self) -> None:
         """Create tables, indexes, and triggers if they don't exist.
 
-        Handles migration from v2 to v3:
-        - Adds ai_metadata_status and ai_confidence_score columns to files
-        - Creates file_metadata_ai, file_primary_topics, wave1_results tables
+        Handles migrations:
+        - v3: ai_metadata_status/ai_confidence_score columns, AI metadata tables
+        - v4: Person registry, aliases, transcript entities
+        - v5: upload_attempt_count, last_upload_hash columns
+        - v6: passages cache, sessions, session_events tables
         """
         self.conn.executescript(SCHEMA_SQL)
 
@@ -402,7 +439,10 @@ class Database:
                 except sqlite3.OperationalError:
                     pass  # Column already exists
 
-        self.conn.execute("PRAGMA user_version = 5")
+        if version < 6:
+            self.conn.executescript(MIGRATION_V6_SQL)
+
+        self.conn.execute("PRAGMA user_version = 6")
 
     def upsert_file(self, record: FileRecord) -> None:
         """Insert or update a single file record.
@@ -1026,6 +1066,55 @@ class Database:
             "min_confidence": round(conf_row["min_conf"], 2) if conf_row and conf_row["min_conf"] else 0.0,
             "max_confidence": round(conf_row["max_conf"], 2) if conf_row and conf_row["max_conf"] else 0.0,
         }
+
+    # ---- Passage cache methods (Phase 4) ----
+
+    def upsert_passage(
+        self, passage_id: str, file_id: str, content_hash: str, passage_text: str
+    ) -> None:
+        """Insert a new passage or update last_seen_at if it already exists.
+
+        Uses INSERT OR IGNORE followed by UPDATE for idempotent upsert.
+
+        Args:
+            passage_id: Unique passage identifier.
+            file_id: File this passage belongs to (references files.file_path).
+            content_hash: Hash of the passage text for deduplication.
+            passage_text: The actual passage content.
+        """
+        with self.conn:
+            self.conn.execute(
+                """INSERT OR IGNORE INTO passages
+                   (passage_id, file_id, content_hash, passage_text)
+                   VALUES (?, ?, ?, ?)""",
+                (passage_id, file_id, content_hash, passage_text),
+            )
+            self.conn.execute(
+                """UPDATE passages
+                   SET last_seen_at = strftime('%Y-%m-%dT%H:%M:%f', 'now'),
+                       is_stale = 0
+                   WHERE passage_id = ?""",
+                (passage_id,),
+            )
+
+    def mark_stale_passages(self, file_id: str) -> int:
+        """Mark all non-stale passages for a file as stale.
+
+        Called when a file is re-processed and previous passages may no
+        longer be valid.
+
+        Args:
+            file_id: File identifier whose passages should be marked stale.
+
+        Returns:
+            Number of passages marked stale.
+        """
+        with self.conn:
+            cursor = self.conn.execute(
+                "UPDATE passages SET is_stale = 1 WHERE file_id = ? AND is_stale = 0",
+                (file_id,),
+            )
+            return cursor.rowcount
 
     # ---- Entity extraction persistence methods (Phase 6.1) ----
 
