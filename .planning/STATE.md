@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 Phase: 6.3 of 7+ (Test Foundation & Canon Governance)
-Plan: 2 of 8
+Plan: 3 of 8
 Status: In progress
-Last activity: 2026-02-18 - Completed 06.3-02-PLAN.md (Scanner & Metadata Edge Tests)
+Last activity: 2026-02-18 - Completed 06.3-03-PLAN.md (Search Pipeline Tests)
 
-Progress: [#####################] ~100% (29 plans of ~36 estimated total)
+Progress: [#####################] ~100% (30 plans of ~36 estimated total)
 
 Phase 1 Progress: [##########] 3/3 plans -- COMPLETE
 Phase 2 Progress: [##########] 4/4 plans -- COMPLETE
@@ -25,7 +25,7 @@ Phase 5 Progress: [########  ] 3/4 plans -- IN PROGRESS
 Phase 6 Progress: [##########] 5/5 plans -- COMPLETE
 Phase 6.1 Progress: [##########] 2/2 plans -- COMPLETE
 Phase 6.2 Progress: [##########] 2/2 plans -- COMPLETE
-Phase 6.3 Progress: [##        ] 1/8 plans -- IN PROGRESS
+Phase 6.3 Progress: [###       ] 2/8 plans -- IN PROGRESS
 
 ## Performance Metrics
 
@@ -178,10 +178,13 @@ Recent decisions affecting current work:
 - [06.3-01]: Duck-typed entity results for save_transcript_entities tests (avoids import cycle)
 - [06.3-02]: pyfakefs + in-memory SQLite coexistence pattern: fs patches filesystem, :memory: SQLite avoids C-level open() conflicts
 - [06.3-02]: TestClass grouping by concern for readable test output (TestDiscovery, TestHashing, TestChangeDetection, etc.)
+- [06.3-03]: build_metadata_filter takes list[str] not dict -- tests adapted to match actual CLI-style "field:value" API
+- [06.3-03]: Reranker mock uses model_dump_json() on RankedResults for response.text (matching actual model_validate_json code path)
+- [06.3-03]: Two pre-existing test failures noted: test_formatter score bars, test_search _FakeDB missing method
 
 ### Pending Todos
 
-Phase 6.3 plans 03-08 remaining (upload/search/CLI/sync/Canon tests).
+Phase 6.3 plans 04-08 remaining (upload/CLI/sync/Canon tests).
 
 ### Blockers/Concerns
 
@@ -191,5 +194,5 @@ Phase 6.3 plans 03-08 remaining (upload/search/CLI/sync/Canon tests).
 ## Session Continuity
 
 Last session: 2026-02-18
-Stopped at: Completed 06.3-02. Scanner & metadata edge tests (pyfakefs + in-memory SQLite).
-Resume file: .planning/phases/06.3-test-foundation-canon-governance/06.3-03-PLAN.md
+Stopped at: Completed 06.3-03. Search pipeline tests (expansion, reranker, synthesizer, MMR, citations, filters).
+Resume file: .planning/phases/06.3-test-foundation-canon-governance/06.3-04-PLAN.md
