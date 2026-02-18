@@ -36,6 +36,10 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Offline mode constants: default external library disk paths
+DEFAULT_LIBRARY_ROOT = "/Volumes/U32 Shadow/Objectivism Library"
+DEFAULT_MOUNT_POINT = "/Volumes/U32 Shadow"
+
 app = typer.Typer(
     help="Objectivism Library - Search, browse, and explore your philosophical library",
     rich_markup_mode="rich",
@@ -139,7 +143,6 @@ def scan(
             "--library",
             "-l",
             help="Path to library root directory",
-            exists=True,
             file_okay=False,
             resolve_path=True,
         ),
@@ -181,6 +184,21 @@ def scan(
     # CLI library_path overrides config
     if library_path is not None:
         config.library_path = library_path
+
+    # Check disk availability for external drives (OFFL-03)
+    library_str = str(config.library_path)
+    if library_str.startswith("/Volumes/"):
+        from objlib.sync.disk import check_disk_availability, disk_error_message
+
+        # Derive mount point from library path: /Volumes/<volume_name>
+        parts = library_str.split("/")
+        mount_point = "/".join(parts[:3]) if len(parts) >= 3 else DEFAULT_MOUNT_POINT
+
+        availability = check_disk_availability(library_str, mount_point=mount_point)
+        if availability != "available":
+            msg = disk_error_message(availability, library_str, "scan")
+            console.print(f"[red]Error:[/red] {msg}")
+            raise typer.Exit(code=1)
 
     # Validate library path exists
     if not config.library_path.exists():
@@ -421,6 +439,15 @@ def upload(
     The Gemini API key is read from the system keyring (service: objlib-gemini).
     To set it:  keyring set objlib-gemini api_key
     """
+    # Check disk availability for source files (OFFL-03)
+    from objlib.sync.disk import check_disk_availability, disk_error_message
+
+    availability = check_disk_availability(DEFAULT_LIBRARY_ROOT)
+    if availability != "available":
+        msg = disk_error_message(availability, DEFAULT_LIBRARY_ROOT, "upload")
+        console.print(f"[red]Error:[/red] {msg}")
+        raise typer.Exit(code=1)
+
     # Validate database exists
     if not db_path.exists():
         console.print(
@@ -620,6 +647,15 @@ def enriched_upload(
       Stage 3: objlib enriched-upload --limit 250      # Validate pipeline at scale
       Full:    objlib enriched-upload                   # All enriched files
     """
+    # Check disk availability for source files (OFFL-03)
+    from objlib.sync.disk import check_disk_availability, disk_error_message
+
+    availability = check_disk_availability(DEFAULT_LIBRARY_ROOT)
+    if availability != "available":
+        msg = disk_error_message(availability, DEFAULT_LIBRARY_ROOT, "enriched-upload")
+        console.print(f"[red]Error:[/red] {msg}")
+        raise typer.Exit(code=1)
+
     import json as json_mod
 
     # Validate database exists
@@ -1074,7 +1110,7 @@ def view(
     # Show detailed view
     display_detailed_view(citation, terminal_width)
 
-    # --full: read and display the actual file content
+    # --full: read and display the actual file content (OFFL-02)
     if full:
         source_path = Path(file_path)
         if source_path.exists():
@@ -1084,10 +1120,21 @@ def view(
             except Exception as e:
                 console.print(f"[red]Error reading file:[/red] {e}")
         else:
-            console.print(
-                f"[yellow]Warning:[/yellow] Source file not found on disk: {file_path}\n"
-                "[dim]The file may have been moved or deleted.[/dim]"
-            )
+            # Distinguish disk disconnection from actual file deletion
+            from objlib.sync.disk import check_disk_availability
+
+            availability = check_disk_availability(DEFAULT_LIBRARY_ROOT)
+            if availability != "available":
+                console.print(
+                    f"[yellow]Source disk not connected.[/yellow] Full document text requires "
+                    f"the library disk at [dim]{DEFAULT_MOUNT_POINT}[/dim].\n"
+                    f"Showing metadata only. Connect the disk and retry with [bold]--full[/bold]."
+                )
+            else:
+                console.print(
+                    f"[yellow]Warning:[/yellow] Source file not found on disk: [dim]{file_path}[/dim]\n"
+                    "[dim]The file may have been moved or deleted.[/dim]"
+                )
 
     # --show-related: query Gemini for similar documents
     if show_related:
