@@ -11,16 +11,16 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 Phase: 4 of 7+ (Quality Enhancements)
-Plan: 1 of 5
+Plan: 2 of 5
 Status: In progress
-Last activity: 2026-02-18 - Completed 04-01-PLAN.md (data layer foundation)
+Last activity: 2026-02-18 - Completed 04-02-PLAN.md (reranking pipeline)
 
-Progress: [################..] ~95% (20 plans of ~24 estimated total)
+Progress: [#################.] ~96% (21 plans of ~24 estimated total)
 
 Phase 1 Progress: [##########] 3/3 plans -- COMPLETE
 Phase 2 Progress: [##########] 4/4 plans -- COMPLETE
 Phase 3 Progress: [##########] 3/3 plans -- COMPLETE
-Phase 4 Progress: [##........] 1/5 plans -- IN PROGRESS
+Phase 4 Progress: [####......] 2/5 plans -- IN PROGRESS
 Phase 6 Progress: [##########] 5/5 plans -- COMPLETE
 Phase 6.1 Progress: [##########] 2/2 plans -- COMPLETE
 Phase 6.2 Progress: [##########] 2/2 plans -- COMPLETE
@@ -28,9 +28,9 @@ Phase 6.2 Progress: [##########] 2/2 plans -- COMPLETE
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 20
-- Average duration: 4.2 min
-- Total execution time: 84 min
+- Total plans completed: 21
+- Average duration: 4.1 min
+- Total execution time: 86 min
 
 **By Phase:**
 
@@ -43,11 +43,11 @@ Phase 6.2 Progress: [##########] 2/2 plans -- COMPLETE
 | 06.1-entity-extraction | 2/2 | 9 min | 4.5 min |
 | 06.2-metadata-enriched-upload | 2/2 | 6 min | 3.0 min |
 
-| 04-quality-enhancements | 1/5 | 3 min | 3.0 min |
+| 04-quality-enhancements | 2/5 | 5 min | 2.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 06.1-02 (3 min), 06.2-01 (3 min), 06.2-02 (3 min), 04-01 (3 min)
-- Trend: Stable at 3 min per plan
+- Last 5 plans: 06.2-01 (3 min), 06.2-02 (3 min), 04-01 (3 min), 04-02 (2 min)
+- Trend: Stable at 2-3 min per plan
 
 *Updated after each plan completion*
 
@@ -146,10 +146,15 @@ Recent decisions affecting current work:
 - [04-01]: Original matched term boosted (appears twice in expanded query) per locked decision Q4c
 - [04-01]: Pydantic models in search/models.py separate from top-level models.py (dataclasses)
 - [04-01]: Schema V6 adds passages, sessions, session_events tables (all CREATE TABLE, no ALTER TABLE)
+- [04-02]: Gemini Flash with structured JSON output (RankedResults schema) for passage scoring
+- [04-02]: Temperature 0.0 for deterministic reranking scores
+- [04-02]: Passage truncation at 500 chars to save tokens
+- [04-02]: Default difficulty bucket = intermediate (1) for missing/unknown metadata
+- [04-02]: Window size 20 for difficulty reordering (top results only)
 
 ### Pending Todos
 
-Phase 4 Plans 2-5 remaining (reranking pipeline, synthesis, CLI integration, session tracking).
+Phase 4 Plans 3-5 remaining (synthesis, CLI integration, session tracking).
 
 ### Blockers/Concerns
 
@@ -159,5 +164,5 @@ Phase 4 Plans 2-5 remaining (reranking pipeline, synthesis, CLI integration, ses
 ## Session Continuity
 
 Last session: 2026-02-18
-Stopped at: Phase 4 Plan 1 COMPLETE (data layer foundation). Schema V6 with passages/sessions/session_events tables, Pydantic v2 models for reranking/synthesis, query expansion engine with 46-term glossary. Next: Phase 4 Plan 2 (reranking pipeline) or remaining Phase 4 plans.
-Resume file: .planning/phases/04-quality-enhancements/04-01-SUMMARY.md
+Stopped at: Phase 4 Plan 2 COMPLETE (reranking pipeline). Gemini Flash LLM reranker with structured output scoring, difficulty-aware ordering for learn/research modes. Next: Phase 4 Plan 3 (synthesis) or remaining Phase 4 plans.
+Resume file: .planning/phases/04-quality-enhancements/04-02-SUMMARY.md
