@@ -5,31 +5,32 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** Three equally critical pillars -- semantic search quality, metadata preservation, incremental updates
-**Current focus:** Phase 6.2: Metadata-Enriched Gemini Upload -- COMPLETE
+**Current focus:** Phase 4: Quality Enhancements -- In Progress
 **Execution strategy:** Phase 6 before full upload (1,721 files) to enrich metadata first
 
 ## Current Position
 
-Phase: 6.2 of 7+ (Metadata-Enriched Gemini Upload)
-Plan: 2 of 2
-Status: Phase complete (checkpoint approved, verification passed)
-Last activity: 2026-02-17 - Phase 6.2 complete with enriched upload pipeline, automatic retry, and bug fixes
+Phase: 4 of 7+ (Quality Enhancements)
+Plan: 1 of 5
+Status: In progress
+Last activity: 2026-02-18 - Completed 04-01-PLAN.md (data layer foundation)
 
-Progress: [################] ~100% (19 plans of ~19 estimated total)
+Progress: [################..] ~95% (20 plans of ~24 estimated total)
 
 Phase 1 Progress: [##########] 3/3 plans -- COMPLETE
 Phase 2 Progress: [##########] 4/4 plans -- COMPLETE
 Phase 3 Progress: [##########] 3/3 plans -- COMPLETE
+Phase 4 Progress: [##........] 1/5 plans -- IN PROGRESS
 Phase 6 Progress: [##########] 5/5 plans -- COMPLETE
 Phase 6.1 Progress: [##########] 2/2 plans -- COMPLETE
-Phase 6.2 Progress: [##########] 2/2 plans -- COMPLETE (code done, awaiting staged upload verification)
+Phase 6.2 Progress: [##########] 2/2 plans -- COMPLETE
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 19
-- Average duration: 4.3 min
-- Total execution time: 81 min
+- Total plans completed: 20
+- Average duration: 4.2 min
+- Total execution time: 84 min
 
 **By Phase:**
 
@@ -42,9 +43,11 @@ Phase 6.2 Progress: [##########] 2/2 plans -- COMPLETE (code done, awaiting stag
 | 06.1-entity-extraction | 2/2 | 9 min | 4.5 min |
 | 06.2-metadata-enriched-upload | 2/2 | 6 min | 3.0 min |
 
+| 04-quality-enhancements | 1/5 | 3 min | 3.0 min |
+
 **Recent Trend:**
-- Last 5 plans: 06.1-01 (6 min), 06.1-02 (3 min), 06.2-01 (3 min), 06.2-02 (3 min)
-- Trend: Stable at 3-6 min per plan
+- Last 5 plans: 06.1-02 (3 min), 06.2-01 (3 min), 06.2-02 (3 min), 04-01 (3 min)
+- Trend: Stable at 3 min per plan
 
 *Updated after each plan completion*
 
@@ -137,10 +140,16 @@ Recent decisions affecting current work:
 - [06.2-fix]: get_files_to_reset_for_enriched_upload checks upload hash - only reset if changed or NULL (prevents unnecessary re-uploads)
 - [06.2-fix]: Failed files (status='failed') always retry regardless of hash (handles polling timeouts)
 - [06.2-fix]: Post-batch retry pass with 30s cooldown - one retry per failed file per batch (Option 3)
+- [04-01]: Passage upsert uses INSERT OR IGNORE + UPDATE pattern (not ON CONFLICT) for clarity
+- [04-01]: Glossary cached at module level for performance across repeated search calls
+- [04-01]: Multi-word phrases matched longest-first with span overlap prevention
+- [04-01]: Original matched term boosted (appears twice in expanded query) per locked decision Q4c
+- [04-01]: Pydantic models in search/models.py separate from top-level models.py (dataclasses)
+- [04-01]: Schema V6 adds passages, sessions, session_events tables (all CREATE TABLE, no ALTER TABLE)
 
 ### Pending Todos
 
-None - Phase 6.2 complete. Ready for full library upload.
+Phase 4 Plans 2-5 remaining (reranking pipeline, synthesis, CLI integration, session tracking).
 
 ### Blockers/Concerns
 
@@ -149,6 +158,6 @@ None - Phase 6.2 complete. Ready for full library upload.
 
 ## Session Continuity
 
-Last session: 2026-02-17
-Stopped at: Phase 6.2 COMPLETE (all 2 plans). Enriched upload pipeline ready with 4-tier AI metadata, entity mentions, content injection, idempotency, automatic retry, and bug fixes (status tracking, retry logic). Entity extraction complete (500/1,748 files, 28.6% coverage). 238 files ready for enriched upload. Validation passed (15 files uploaded successfully with retry recovery). Next: Full library upload (1,721 files) or proceed to Phase 4/5.
-Resume file: N/A - Phase 6.2 complete. Begin full upload or next phase planning.
+Last session: 2026-02-18
+Stopped at: Phase 4 Plan 1 COMPLETE (data layer foundation). Schema V6 with passages/sessions/session_events tables, Pydantic v2 models for reranking/synthesis, query expansion engine with 46-term glossary. Next: Phase 4 Plan 2 (reranking pipeline) or remaining Phase 4 plans.
+Resume file: .planning/phases/04-quality-enhancements/04-01-SUMMARY.md
