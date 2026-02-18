@@ -11,17 +11,17 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 Phase: 5 of 7+ (Incremental Updates & Offline Mode)
-Plan: 2 of 4
+Plan: 3 of 4
 Status: In progress
-Last activity: 2026-02-18 - Completed 05-02-PLAN.md
+Last activity: 2026-02-18 - Completed 05-04-PLAN.md
 
-Progress: [#####################] ~100% (25 plans of ~28 estimated total)
+Progress: [#####################] ~100% (26 plans of ~28 estimated total)
 
 Phase 1 Progress: [##########] 3/3 plans -- COMPLETE
 Phase 2 Progress: [##########] 4/4 plans -- COMPLETE
 Phase 3 Progress: [##########] 3/3 plans -- COMPLETE
 Phase 4 Progress: [##########] 5/5 plans -- COMPLETE
-Phase 5 Progress: [#####     ] 1/4 plans -- IN PROGRESS
+Phase 5 Progress: [########  ] 3/4 plans -- IN PROGRESS
 Phase 6 Progress: [##########] 5/5 plans -- COMPLETE
 Phase 6.1 Progress: [##########] 2/2 plans -- COMPLETE
 Phase 6.2 Progress: [##########] 2/2 plans -- COMPLETE
@@ -29,9 +29,9 @@ Phase 6.2 Progress: [##########] 2/2 plans -- COMPLETE
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 24
-- Average duration: 3.8 min
-- Total execution time: 92 min
+- Total plans completed: 26
+- Average duration: 3.7 min
+- Total execution time: 95 min
 
 **By Phase:**
 
@@ -47,8 +47,8 @@ Phase 6.2 Progress: [##########] 2/2 plans -- COMPLETE
 | 04-quality-enhancements | 5/5 | 24 min | 4.8 min |
 
 **Recent Trend:**
-- Last 5 plans: 04-02 (2 min), 04-03 (2 min), 04-04 (2 min), 05-02 (2 min)
-- Trend: Stable at 2 min per plan
+- Last 5 plans: 04-03 (2 min), 04-04 (2 min), 05-02 (2 min), 05-04 (3 min)
+- Trend: Stable at 2-3 min per plan
 
 *Updated after each plan completion*
 
@@ -165,10 +165,13 @@ Recent decisions affecting current work:
 - [05-02]: list_store_documents wraps initial list() in _safe_call; pagination fetches bypass circuit breaker
 - [05-02]: find_store_document_name checks display_name and name attributes (actual SDK Document schema)
 - [05-02]: delete_store_document catches exceptions broadly then inspects string for 404/NOT_FOUND patterns
+- [05-04]: Removed exists=True from scan --library to allow custom disk-disconnection error messages
+- [05-04]: Mount point derived from library path for accurate disk detection on any external drive
+- [05-04]: Upload/enriched-upload check DEFAULT_LIBRARY_ROOT; scan derives mount from user-provided path
 
 ### Pending Todos
 
-Phase 5 plans 03-04 (wave 2) next.
+Phase 5 plan 03 (sync orchestrator) remaining.
 
 ### Blockers/Concerns
 
@@ -178,5 +181,5 @@ Phase 5 plans 03-04 (wave 2) next.
 ## Session Continuity
 
 Last session: 2026-02-18
-Stopped at: Completed 05-02. Store document management methods added to GeminiFileSearchClient.
+Stopped at: Completed 05-04. Offline mode guards added to scan/upload/enriched-upload/view CLI commands.
 Resume file: .planning/phases/05-incremental-updates-offline-mode/05-03-PLAN.md
