@@ -839,6 +839,159 @@ def enriched_upload(
 
 
 @app.command()
+def sync(
+    library_path: Annotated[
+        Path | None,
+        typer.Option(
+            "--library",
+            "-l",
+            help="Path to library root directory",
+        ),
+    ] = None,
+    store_name: Annotated[
+        str,
+        typer.Option("--store", "-s", help="Gemini File Search store display name"),
+    ] = "objectivism-library-test",
+    db_path: Annotated[
+        Path,
+        typer.Option("--db", "-d", help="Path to SQLite database file"),
+    ] = Path("data/library.db"),
+    force: Annotated[
+        bool,
+        typer.Option("--force", help="Re-process all files regardless of change detection"),
+    ] = False,
+    skip_enrichment: Annotated[
+        bool,
+        typer.Option("--skip-enrichment", help="Use simple upload pipeline instead of enriched"),
+    ] = False,
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run", help="Preview changes without executing"),
+    ] = False,
+    prune_missing: Annotated[
+        bool,
+        typer.Option("--prune-missing", help="Delete missing files (>7 days) from Gemini"),
+    ] = False,
+    cleanup_orphans: Annotated[
+        bool,
+        typer.Option("--cleanup-orphans", help="Remove orphaned Gemini entries"),
+    ] = False,
+) -> None:
+    """Incremental sync: detect changes, upload new/modified, mark missing.
+
+    Detects new, modified, and missing files by comparing the library disk
+    against the SQLite database. New and modified files are uploaded to
+    Gemini File Search with enriched metadata by default.
+
+    Disk availability is checked before any filesystem operations.
+    Library config (store name) is verified on startup to prevent
+    accidental cross-store operations.
+
+    Examples:
+      objlib sync --dry-run                        # Preview changes
+      objlib sync --library "/path/to/lib"         # Full sync
+      objlib sync --force                          # Re-process all files
+      objlib sync --skip-enrichment                # Simple metadata only
+      objlib sync --prune-missing                  # Clean up old missing files
+    """
+    import asyncio
+
+    from objlib.sync.disk import check_disk_availability, disk_error_message
+
+    # Resolve library path
+    lib_root = str(library_path) if library_path else "/Volumes/U32 Shadow/Objectivism Library"
+
+    # Check disk availability
+    availability = check_disk_availability(lib_root)
+    err_msg = disk_error_message(availability, lib_root, "objlib sync")
+    if err_msg:
+        console.print(f"[red]{err_msg}[/red]")
+        raise typer.Exit(code=1)
+
+    # Validate database exists
+    if not db_path.exists():
+        console.print(
+            f"[red]Error:[/red] Database not found: {db_path}\n"
+            "Run [bold]objlib scan --library /path/to/library[/bold] first."
+        )
+        raise typer.Exit(code=1)
+
+    # Get API key from system keyring (skip for dry-run)
+    api_key = ""
+    if not dry_run:
+        try:
+            from objlib.config import get_api_key_from_keyring
+
+            api_key = get_api_key_from_keyring()
+        except RuntimeError as e:
+            console.print(f"[red]{e}[/red]")
+            raise typer.Exit(code=1)
+
+    # Import sync and upload modules (deferred for fast CLI startup)
+    from objlib.config import ScannerConfig
+    from objlib.sync.orchestrator import SyncOrchestrator
+    from objlib.upload.circuit_breaker import RollingWindowCircuitBreaker
+    from objlib.upload.client import GeminiFileSearchClient
+    from objlib.upload.rate_limiter import AdaptiveRateLimiter, RateLimiterConfig
+
+    # Build scanner config
+    config = ScannerConfig(library_path=Path(lib_root), db_path=db_path)
+
+    # Initialize database
+    db = Database(str(db_path))
+
+    # Create Gemini client only when needed (dry-run doesn't call API)
+    client = None
+    if not dry_run:
+        circuit_breaker = RollingWindowCircuitBreaker()
+        rate_limiter_config = RateLimiterConfig(tier="tier1")
+        rate_limiter = AdaptiveRateLimiter(rate_limiter_config, circuit_breaker)
+        client = GeminiFileSearchClient(
+            api_key=api_key,
+            circuit_breaker=circuit_breaker,
+            rate_limiter=rate_limiter,
+        )
+
+    async def _run_sync() -> dict[str, int]:
+        # Ensure store exists (needed for uploads and document management)
+        if client is not None and not dry_run:
+            await client.get_or_create_store(store_name)
+
+        orchestrator = SyncOrchestrator(
+            db=db,
+            client=client,
+            config=config,
+            api_key=api_key,
+            console=console,
+            store_name=store_name,
+        )
+        return await orchestrator.run(
+            force=force,
+            skip_enrichment=skip_enrichment,
+            dry_run=dry_run,
+            prune_missing=prune_missing,
+            cleanup_orphans=cleanup_orphans,
+        )
+
+    try:
+        result = asyncio.run(_run_sync())
+    finally:
+        db.close()
+
+    if not dry_run:
+        console.print(
+            Panel(
+                f"[green]Sync complete.[/green] "
+                f"New: {result['new_uploaded']}, "
+                f"Modified: {result['modified_replaced']}, "
+                f"Missing: {result['marked_missing']}, "
+                f"Errors: {result['errors']}",
+                title="Sync Results",
+            )
+        )
+
+
+@app.command()
 def search(
     ctx: typer.Context,
     query: Annotated[str, typer.Argument(help="Semantic search query")],
