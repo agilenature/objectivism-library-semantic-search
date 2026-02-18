@@ -25,6 +25,7 @@ dev = [
     "pytest>=8.0",
     "pytest-cov>=5.0",
     "pytest-asyncio>=0.24",
+    "pyfakefs>=5.7",
 ]
 
 [project.scripts]
@@ -37,3 +38,9 @@ packages = ["src/objlib"]
 testpaths = ["tests"]
 pythonpath = ["src"]
 asyncio_mode = "auto"
+
+[tool.coverage.run]
+omit = ["src/objlib/cli.py", "src/objlib/__pycache__/*"]
+
+[tool.coverage.report]
+fail_under = 80

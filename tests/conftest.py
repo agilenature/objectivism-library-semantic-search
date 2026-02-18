@@ -1,18 +1,22 @@
 """Shared pytest fixtures for Objectivism Library scanner tests.
 
 Provides temporary database, library directory tree, scanner config,
-and metadata extractor instances for all test modules.
+metadata extractor instances, and in-memory database fixtures for all
+test modules.
 """
 
 from __future__ import annotations
 
+import sqlite3
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
 from objlib.config import ScannerConfig
 from objlib.database import Database
 from objlib.metadata import MetadataExtractor
+from objlib.models import FileRecord, FileStatus, MetadataQuality
 
 
 @pytest.fixture
@@ -87,3 +91,60 @@ def scanner_config(tmp_library: Path, tmp_db: Database) -> ScannerConfig:
 def metadata_extractor() -> MetadataExtractor:
     """Create a fresh MetadataExtractor instance."""
     return MetadataExtractor()
+
+
+@pytest.fixture
+def in_memory_db():
+    """Fresh initialized in-memory SQLite database.
+
+    Uses Database.__new__() to bypass __init__ path validation.
+    Calls real Database._setup_schema() to test actual schema setup.
+    Sets row_factory and foreign_keys BEFORE schema setup.
+    """
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
+    db = Database.__new__(Database)  # Skip __init__ path validation
+    db.conn = conn
+    db.db_path = ":memory:"
+    db._setup_schema()
+    yield db
+    conn.close()
+
+
+@pytest.fixture
+def populated_db(in_memory_db):
+    """In-memory database pre-populated with 5 test files and known metadata.
+
+    Inserts files with different statuses and metadata for testing queries.
+    """
+    test_files = [
+        ("/library/Courses/OPAR/OPAR - Lesson 01 - Metaphysics.txt", "hash_a", 5000, "pending"),
+        ("/library/Courses/OPAR/OPAR - Lesson 02 - Epistemology.txt", "hash_b", 6000, "uploaded"),
+        ("/library/Courses/ITOE/ITOE - Lesson 01 - Concepts.txt", "hash_c", 4000, "uploaded"),
+        ("/library/Courses/HOP/HOP - Lesson 01 - Ancient Greece.txt", "hash_d", 7000, "pending"),
+        ("/library/Courses/Ethics/Ethics - Lesson 01 - Virtue.txt", "hash_e", 3000, "failed"),
+    ]
+    for file_path, content_hash, size, status in test_files:
+        record = FileRecord(
+            file_path=file_path,
+            content_hash=content_hash,
+            filename=file_path.split("/")[-1],
+            file_size=size,
+        )
+        in_memory_db.upsert_file(record)
+        if status != "pending":
+            in_memory_db.update_file_status(file_path, FileStatus(status))
+    yield in_memory_db
+
+
+@pytest.fixture
+def mock_gemini_client():
+    """Mock Google GenAI client with deterministic responses.
+
+    Provides MagicMock with .models.generate_content() returning
+    a response with .parsed attribute for Pydantic structured output.
+    """
+    mock = MagicMock()
+    mock.models.generate_content.return_value = MagicMock(parsed=None)
+    return mock
