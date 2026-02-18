@@ -599,7 +599,7 @@ class Database:
         placeholders = ",".join("?" * len(normalized_ids))
         rows = self.conn.execute(
             f"SELECT gemini_file_id, filename, file_path, metadata_json FROM files "
-            f"WHERE gemini_file_id IN ({placeholders}) AND status != 'LOCAL_DELETE'",
+            f"WHERE gemini_file_id IN ({placeholders})",
             normalized_ids,
         ).fetchall()
 
