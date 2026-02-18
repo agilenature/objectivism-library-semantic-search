@@ -173,6 +173,9 @@ Recent decisions affecting current work:
 - [05-04]: Removed exists=True from scan --library to allow custom disk-disconnection error messages
 - [05-04]: Mount point derived from library path for accurate disk detection on any external drive
 - [05-04]: Upload/enriched-upload check DEFAULT_LIBRARY_ROOT; scan derives mount from user-provided path
+- [06.3-01]: Database.__new__(Database) + db.conn + _setup_schema() for in-memory test fixture (bypasses __init__ path validation)
+- [06.3-01]: Schema has 17 tables (not 16) -- V7 migration adds library_config table
+- [06.3-01]: Duck-typed entity results for save_transcript_entities tests (avoids import cycle)
 - [06.3-02]: pyfakefs + in-memory SQLite coexistence pattern: fs patches filesystem, :memory: SQLite avoids C-level open() conflicts
 - [06.3-02]: TestClass grouping by concern for readable test output (TestDiscovery, TestHashing, TestChangeDetection, etc.)
 
