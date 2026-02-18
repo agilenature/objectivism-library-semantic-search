@@ -11,16 +11,16 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 Phase: 4 of 7+ (Quality Enhancements)
-Plan: 2 of 5
+Plan: 3 of 5
 Status: In progress
-Last activity: 2026-02-18 - Completed 04-02-PLAN.md (reranking pipeline)
+Last activity: 2026-02-18 - Completed 04-03-PLAN.md (multi-document synthesis)
 
-Progress: [#################.] ~96% (21 plans of ~24 estimated total)
+Progress: [##################] ~96% (22 plans of ~24 estimated total)
 
 Phase 1 Progress: [##########] 3/3 plans -- COMPLETE
 Phase 2 Progress: [##########] 4/4 plans -- COMPLETE
 Phase 3 Progress: [##########] 3/3 plans -- COMPLETE
-Phase 4 Progress: [####......] 2/5 plans -- IN PROGRESS
+Phase 4 Progress: [######....] 3/5 plans -- IN PROGRESS
 Phase 6 Progress: [##########] 5/5 plans -- COMPLETE
 Phase 6.1 Progress: [##########] 2/2 plans -- COMPLETE
 Phase 6.2 Progress: [##########] 2/2 plans -- COMPLETE
@@ -28,9 +28,9 @@ Phase 6.2 Progress: [##########] 2/2 plans -- COMPLETE
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 21
-- Average duration: 4.1 min
-- Total execution time: 86 min
+- Total plans completed: 22
+- Average duration: 4.0 min
+- Total execution time: 88 min
 
 **By Phase:**
 
@@ -43,10 +43,10 @@ Phase 6.2 Progress: [##########] 2/2 plans -- COMPLETE
 | 06.1-entity-extraction | 2/2 | 9 min | 4.5 min |
 | 06.2-metadata-enriched-upload | 2/2 | 6 min | 3.0 min |
 
-| 04-quality-enhancements | 2/5 | 5 min | 2.5 min |
+| 04-quality-enhancements | 3/5 | 7 min | 2.3 min |
 
 **Recent Trend:**
-- Last 5 plans: 06.2-01 (3 min), 06.2-02 (3 min), 04-01 (3 min), 04-02 (2 min)
+- Last 5 plans: 06.2-02 (3 min), 04-01 (3 min), 04-02 (2 min), 04-03 (2 min)
 - Trend: Stable at 2-3 min per plan
 
 *Updated after each plan completion*
@@ -151,10 +151,15 @@ Recent decisions affecting current work:
 - [04-02]: Passage truncation at 500 chars to save tokens
 - [04-02]: Default difficulty bucket = intermediate (1) for missing/unknown metadata
 - [04-02]: Window size 20 for difficulty reordering (top results only)
+- [04-03]: MMR first pass prefers unseen files with unseen courses for maximum diversity
+- [04-03]: Re-prompt includes specific error messages to guide Gemini citation correction
+- [04-03]: Returns partial results (only validated claims) after second validation attempt
+- [04-03]: Returns None for <5 citations (graceful degradation threshold)
+- [04-03]: Passage truncation at 600 chars for synthesis context (vs 500 for reranking)
 
 ### Pending Todos
 
-Phase 4 Plans 3-5 remaining (synthesis, CLI integration, session tracking).
+Phase 4 Plans 4-5 remaining (CLI integration, session tracking).
 
 ### Blockers/Concerns
 
@@ -164,5 +169,5 @@ Phase 4 Plans 3-5 remaining (synthesis, CLI integration, session tracking).
 ## Session Continuity
 
 Last session: 2026-02-18
-Stopped at: Phase 4 Plan 2 COMPLETE (reranking pipeline). Gemini Flash LLM reranker with structured output scoring, difficulty-aware ordering for learn/research modes. Next: Phase 4 Plan 3 (synthesis) or remaining Phase 4 plans.
-Resume file: .planning/phases/04-quality-enhancements/04-02-SUMMARY.md
+Stopped at: Phase 4 Plan 3 COMPLETE (multi-document synthesis). MMR diversity filter, Gemini Flash structured synthesis with claim-level citations, exact-substring quote validation with single re-prompt. Next: Phase 4 Plan 4 (CLI integration) or remaining Phase 4 plans.
+Resume file: .planning/phases/04-quality-enhancements/04-03-SUMMARY.md
