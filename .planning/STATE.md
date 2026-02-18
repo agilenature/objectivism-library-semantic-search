@@ -11,9 +11,9 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 Phase: 6.3 of 7+ (Test Foundation & Canon Governance)
-Plan: 4 of 8
+Plan: 5 of 8
 Status: In progress
-Last activity: 2026-02-18 - Completed 06.3-04-PLAN.md (Sync & Session Tests)
+Last activity: 2026-02-18 - Completed 06.3-05-PLAN.md (Workflow Research)
 
 Progress: [#####################] ~100% (31 plans of ~36 estimated total)
 
@@ -25,7 +25,7 @@ Phase 5 Progress: [########  ] 3/4 plans -- IN PROGRESS
 Phase 6 Progress: [##########] 5/5 plans -- COMPLETE
 Phase 6.1 Progress: [##########] 2/2 plans -- COMPLETE
 Phase 6.2 Progress: [##########] 2/2 plans -- COMPLETE
-Phase 6.3 Progress: [####      ] 4/8 plans -- IN PROGRESS
+Phase 6.3 Progress: [#####     ] 5/8 plans -- IN PROGRESS
 
 ## Performance Metrics
 
@@ -184,10 +184,15 @@ Recent decisions affecting current work:
 - [06.3-04]: SyncDetector tests use min_file_size=100 for small pyfakefs test files
 - [06.3-04]: Safety guard tests need 100+ DB files to exceed max(50, ...) floor threshold
 - [06.3-04]: Session ambiguous prefix test creates 50 sessions to guarantee first-char UUID collision
+- [06.3-05]: Workflow files placed in ~/.claude/skills/ (global, not project-specific) for reuse across projects
+- [06.3-05]: Detection uses mutual exclusion: presence of one workflow's control files rules out others
+- [06.3-05]: Ralph detection: .ralph/ + .ralph/PROMPT.md + .ralph/fix_plan.md
+- [06.3-05]: BMAD detection: _bmad/ + _bmad/core/ directory
+- [06.3-05]: Generic fallback: pyproject.toml / package.json / Cargo.toml / go.mod / README.md
 
 ### Pending Todos
 
-Phase 6.3 plans 05-08 remaining (upload/CLI/Canon tests).
+Phase 6.3 plans 06-08 remaining (canon-init skill, canon-update skill, apply to project).
 
 ### Blockers/Concerns
 
@@ -197,5 +202,5 @@ Phase 6.3 plans 05-08 remaining (upload/CLI/Canon tests).
 ## Session Continuity
 
 Last session: 2026-02-18
-Stopped at: Completed 06.3-04. Sync & session tests (SyncDetector, disk utility, SessionManager).
-Resume file: .planning/phases/06.3-test-foundation-canon-governance/06.3-05-PLAN.md
+Stopped at: Completed 06.3-05. Workflow research for GSD, Ralph, BMAD, and Generic.
+Resume file: .planning/phases/06.3-test-foundation-canon-governance/06.3-06-PLAN.md
