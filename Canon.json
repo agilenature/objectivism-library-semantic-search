@@ -5,8 +5,7 @@
   "description": "Service library and CLI for semantic search over a curated Objectivism Library — 1,749 philosophical texts indexed via Google Gemini File Search with AI-enriched 4-tier metadata (category, difficulty, topics, aspects, descriptions) and entity extraction",
   "branch": "main",
   "folders": [
-    "docs/",
-    "src/objlib/services/"
+    "docs/"
   ],
   "excludeFolders": [
     "src/objlib/__pycache__",
@@ -16,8 +15,6 @@
     "src/objlib/sync",
     "src/objlib/search",
     "src/objlib/session",
-    "src/objlib/search/__pycache__",
-    "src/objlib/session/__pycache__",
     ".planning",
     "data",
     "tests",
