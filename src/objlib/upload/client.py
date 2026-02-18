@@ -285,7 +285,13 @@ class GeminiFileSearchClient:
         return operation
 
     async def delete_file(self, file_name: str) -> None:
-        """Delete a file from Gemini File API.
+        """Delete a raw file from the Gemini Files API (temporary, 48hr TTL).
+
+        .. warning::
+
+            This only removes the temporary uploaded File object, **not** the
+            indexed store document.  To remove an entry from the search index
+            use :meth:`delete_store_document` instead.
 
         Args:
             file_name: The Gemini file resource name (e.g., 'files/xyz123').
@@ -300,6 +306,137 @@ class GeminiFileSearchClient:
             name=file_name,
         )
         logger.info("Deleted file %s from Gemini", file_name)
+
+    # ------------------------------------------------------------------
+    # Store document management
+    # ------------------------------------------------------------------
+
+    async def delete_store_document(self, document_name: str) -> bool:
+        """Delete an indexed document from the File Search store.
+
+        Unlike :meth:`delete_file` which deletes the temporary raw File
+        (48hr TTL), this removes the **indexed** content that persists
+        indefinitely in the search store.  Per locked decision #6,
+        404 = success (document already gone).
+
+        Args:
+            document_name: Full resource name, e.g.
+                ``'fileSearchStores/abc123/documents/doc456'``
+
+        Returns:
+            ``True`` if deleted (or already gone), ``False`` on unexpected
+            error.
+        """
+        try:
+            await self._safe_call(
+                self._client.aio.file_search_stores.documents.delete,
+                name=document_name,
+            )
+            logger.info("Deleted store document: %s", document_name)
+            return True
+        except Exception as exc:
+            # 404 = document already gone (TTL expiry or prior cleanup)
+            exc_str = str(exc)
+            if (
+                "404" in exc_str
+                or "NOT_FOUND" in exc_str
+                or "not found" in exc_str.lower()
+            ):
+                logger.info(
+                    "Store document already deleted (404): %s", document_name
+                )
+                return True
+            logger.error(
+                "Failed to delete store document %s: %s", document_name, exc
+            )
+            return False
+
+    async def list_store_documents(
+        self, store_name: str | None = None
+    ) -> list[Any]:
+        """List all documents in a File Search store.
+
+        Used to discover document resource names for deletion, since
+        :meth:`import_to_store` does not return the document resource name.
+
+        Args:
+            store_name: Store resource name (e.g. ``'fileSearchStores/abc123'``).
+                Uses ``self.store_name`` if not provided.
+
+        Returns:
+            List of :class:`~google.genai.types.Document` objects.
+
+        Raises:
+            RuntimeError: If no ``store_name`` is available.
+        """
+        parent = store_name or self.store_name
+        if not parent:
+            raise RuntimeError(
+                "store_name not set -- call get_or_create_store() first"
+            )
+
+        documents: list[Any] = []
+        try:
+            pager = await self._safe_call(
+                self._client.aio.file_search_stores.documents.list,
+                parent=parent,
+            )
+            async for doc in pager:
+                documents.append(doc)
+        except Exception as exc:
+            logger.error(
+                "Failed to list store documents for %s: %s", parent, exc
+            )
+            raise
+        logger.info(
+            "Listed %d documents in store %s", len(documents), parent
+        )
+        return documents
+
+    async def find_store_document_name(
+        self, gemini_file_id: str, store_name: str | None = None
+    ) -> str | None:
+        """Find the store document resource name for a given file ID.
+
+        The Gemini API does not directly map file IDs to document names.
+        This method lists all documents and finds the one whose
+        ``display_name`` matches the file's display name.
+
+        Args:
+            gemini_file_id: Gemini file resource name (e.g. ``'files/xyz789'``).
+            store_name: Optional override for store resource name.
+
+        Returns:
+            Full document resource name
+            (e.g. ``'fileSearchStores/abc/documents/def'``)
+            or ``None`` if not found.
+        """
+        documents = await self.list_store_documents(store_name)
+
+        # Normalize the file ID for comparison
+        normalized_id = gemini_file_id
+        if not normalized_id.startswith("files/"):
+            normalized_id = f"files/{normalized_id}"
+
+        for doc in documents:
+            # Check display_name, name, and other attributes for the file reference
+            for attr in ("display_name", "name"):
+                val = getattr(doc, attr, None)
+                if val and normalized_id in str(val):
+                    return doc.name if hasattr(doc, "name") else str(doc)
+
+            # Also check if the document name contains the file ID suffix
+            doc_name = getattr(doc, "name", "")
+            file_id_suffix = normalized_id.replace("files/", "")
+            if file_id_suffix and file_id_suffix in doc_name:
+                return doc_name
+
+        logger.warning(
+            "Could not find store document for file %s in store %s",
+            gemini_file_id,
+            store_name or self.store_name,
+        )
+        return None
 
     # ------------------------------------------------------------------
     # Metadata helper
