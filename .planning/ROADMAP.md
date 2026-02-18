@@ -83,11 +83,14 @@ Plans:
   3. Searching for "egoism" also retrieves results about "rational self-interest" and related philosophical terminology, demonstrating query expansion without the user needing to know all synonyms
   4. Running `search "concept formation" --track-evolution` shows how the concept develops from introductory (ITOE basics) through intermediate to advanced treatments, ordered by curriculum progression
   5. The user can save a research session and resume it later, picking up where they left off with previous queries and results preserved
-**Plans**: TBD
+**Plans:** 5 plans
 
 Plans:
-- [ ] 04-01: TBD
-- [ ] 04-02: TBD
+- [ ] 04-01-PLAN.md — Foundation: schema V6 migration (passages/sessions tables), Pydantic structured output models, query expansion engine with curated glossary
+- [ ] 04-02-PLAN.md — Gemini Flash LLM-based reranker with difficulty-aware ordering (learn/research modes)
+- [ ] 04-03-PLAN.md — Multi-document synthesis pipeline with MMR diversity filtering and citation validation
+- [ ] 04-04-PLAN.md — Session manager: CRUD, append-only event logging, timeline display, Markdown export
+- [ ] 04-05-PLAN.md — CLI integration: enhanced search command with all flags, session/glossary commands, concept evolution display
 
 ### Phase 5: Incremental Updates & Offline Mode
 **Goal**: User can keep the search index current as the library grows AND query the library even when the source disk is disconnected -- detecting new or changed files and updating only what changed, while enabling full query functionality without filesystem access
@@ -134,7 +137,7 @@ Plans:
 - [x] 06.1-02-PLAN.md -- CLI commands (extract, stats, report) and database persistence methods
 
 **Details:**
-Extracts person name entities from transcripts, fuzzy matches against canonical list (Ayn Rand, Leonard Peikoff, Onkar Ghate, Robert Mayhew, Tara Smith, Ben Bayer, Mike Mazza, Aaron Smith, Tristan de Liège, Gregory Salmieri, Harry Binswanger, Jean Moroney, Yaron Brook, Don Watkins, Keith Lockitch), normalizes spelling variations, stores mention counts and normalized names as additional metadata for inclusion in Gemini upload.
+Extracts person name entities from transcripts, fuzzy matches against canonical list (Ayn Rand, Leonard Peikoff, Onkar Ghate, Robert Mayhew, Tara Smith, Ben Bayer, Mike Mazza, Aaron Smith, Tristan de Liege, Gregory Salmieri, Harry Binswanger, Jean Moroney, Yaron Brook, Don Watkins, Keith Lockitch), normalizes spelling variations, stores mention counts and normalized names as additional metadata for inclusion in Gemini upload.
 
 ### Phase 6.2: Metadata-Enriched Gemini Upload (INSERTED)
 
@@ -155,10 +158,10 @@ Extends Phase 2 upload pipeline to include 4-tier metadata from Phase 6 extracti
 **Requirements**: TUI-01, TUI-02, TUI-03, TUI-04, TUI-05, TUI-06, TUI-07, TUI-08
 **Success Criteria** (what must be TRUE):
   1. Running `objlib tui` launches an interactive terminal interface with live search input that updates results as you type -- no more typing `objlib search "query"` repeatedly
-  2. The browse mode displays a navigable tree view (categories → courses → files) with keyboard controls (↑↓ arrows to navigate, Enter to drill down, Esc to go back) and file count badges -- visual exploration replaces memorizing browse command syntax
+  2. The browse mode displays a navigable tree view (categories -> courses -> files) with keyboard controls and file count badges -- visual exploration replaces memorizing browse command syntax
   3. The interface uses split-pane layout with search/navigation on the left, results in the middle, and document preview on the right -- user can see context without switching views
   4. Interactive filters provide checkboxes and sliders for category, difficulty, year ranges instead of command-line filter syntax -- metadata filtering becomes visual and discoverable
-  5. The TUI preserves search history (accessible with ↑↓ arrows), allows bookmarking files and searches, and can save/load research sessions -- enabling iterative research workflows
+  5. The TUI preserves search history (accessible with arrows), allows bookmarking files and searches, and can save/load research sessions -- enabling iterative research workflows
   6. Document viewer supports scrolling, search term highlighting, and citation linking (click [1] to jump to source) -- seamless navigation between synthesis and sources
   7. The TUI supports both keyboard shortcuts (for power users) and mouse interaction (for discoverability) -- accessible to different user preferences
   8. All existing CLI functionality (search, browse, filter, view, metadata commands) is accessible through the TUI -- no regression in capabilities
@@ -194,6 +197,6 @@ Phases execute in strategic order (not strictly numeric):
 | 6.1. Entity Extraction | 2/2 | Complete | 2026-02-16 |
 | 6.2. Enriched Upload | 2/2 | Complete | 2026-02-17 |
 | **[FULL UPLOAD: 1,721 files]** | **-** | **Next** | **-** |
-| 4. Quality Enhancements | 0/TBD | Deferred | - |
+| 4. Quality Enhancements | 0/5 | Planning | - |
 | 5. Incremental Updates | 0/TBD | Deferred | - |
 | 7. Interactive TUI | 0/TBD | Deferred | - |
