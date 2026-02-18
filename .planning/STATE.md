@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** Three equally critical pillars -- semantic search quality, metadata preservation, incremental updates
-**Current focus:** Phase 5: Incremental Updates & Offline Mode -- Next
+**Current focus:** Phase 6.3: Test Foundation & Canon Governance -- In progress
 **Execution strategy:** Phase 6 before full upload (1,721 files) to enrich metadata first
 
 ## Current Position
 
-Phase: 5 of 7+ (Incremental Updates & Offline Mode)
-Plan: 3 of 4
+Phase: 6.3 of 7+ (Test Foundation & Canon Governance)
+Plan: 2 of 8
 Status: In progress
-Last activity: 2026-02-18 - Completed 05-03-PLAN.md
+Last activity: 2026-02-18 - Completed 06.3-02-PLAN.md (Scanner & Metadata Edge Tests)
 
-Progress: [#####################] ~100% (27 plans of ~28 estimated total)
+Progress: [#####################] ~100% (29 plans of ~36 estimated total)
 
 Phase 1 Progress: [##########] 3/3 plans -- COMPLETE
 Phase 2 Progress: [##########] 4/4 plans -- COMPLETE
@@ -25,6 +25,7 @@ Phase 5 Progress: [########  ] 3/4 plans -- IN PROGRESS
 Phase 6 Progress: [##########] 5/5 plans -- COMPLETE
 Phase 6.1 Progress: [##########] 2/2 plans -- COMPLETE
 Phase 6.2 Progress: [##########] 2/2 plans -- COMPLETE
+Phase 6.3 Progress: [##        ] 1/8 plans -- IN PROGRESS
 
 ## Performance Metrics
 
@@ -172,10 +173,12 @@ Recent decisions affecting current work:
 - [05-04]: Removed exists=True from scan --library to allow custom disk-disconnection error messages
 - [05-04]: Mount point derived from library path for accurate disk detection on any external drive
 - [05-04]: Upload/enriched-upload check DEFAULT_LIBRARY_ROOT; scan derives mount from user-provided path
+- [06.3-02]: pyfakefs + in-memory SQLite coexistence pattern: fs patches filesystem, :memory: SQLite avoids C-level open() conflicts
+- [06.3-02]: TestClass grouping by concern for readable test output (TestDiscovery, TestHashing, TestChangeDetection, etc.)
 
 ### Pending Todos
 
-Phase 5 plan 04 remaining (offline query mode / sync refinements).
+Phase 6.3 plans 03-08 remaining (upload/search/CLI/sync/Canon tests).
 
 ### Blockers/Concerns
 
@@ -185,5 +188,5 @@ Phase 5 plan 04 remaining (offline query mode / sync refinements).
 ## Session Continuity
 
 Last session: 2026-02-18
-Stopped at: Completed 05-03. Sync command core with SyncDetector and SyncOrchestrator.
-Resume file: .planning/phases/05-incremental-updates-offline-mode/05-04-PLAN.md
+Stopped at: Completed 06.3-02. Scanner & metadata edge tests (pyfakefs + in-memory SQLite).
+Resume file: .planning/phases/06.3-test-foundation-canon-governance/06.3-03-PLAN.md
