@@ -812,31 +812,77 @@ def search(
     model: Annotated[
         str, typer.Option("--model", "-m", help="Gemini model for search")
     ] = "gemini-2.5-flash",
+    synthesize: Annotated[
+        bool, typer.Option("--synthesize", help="Generate multi-document synthesis with citations")
+    ] = False,
+    rerank: Annotated[
+        bool, typer.Option("--rerank/--no-rerank", help="Rerank results with Gemini Flash (default: on)")
+    ] = True,
+    expand: Annotated[
+        bool, typer.Option("--expand/--no-expand", help="Expand query with philosophical synonyms (default: on)")
+    ] = True,
+    track_evolution: Annotated[
+        bool, typer.Option("--track-evolution", help="Group results by difficulty progression")
+    ] = False,
+    mode: Annotated[
+        str, typer.Option("--mode", help="Result ordering: 'learn' (intro-first) or 'research' (pure relevance)")
+    ] = "learn",
+    debug: Annotated[
+        bool, typer.Option("--debug", help="Write debug log to ~/.objlib/debug.log")
+    ] = False,
 ) -> None:
     """Search the library by meaning with optional metadata filters."""
+    import hashlib
+    import uuid
+
     from objlib.search.citations import (
         build_metadata_filter,
         enrich_citations,
         extract_citations,
     )
     from objlib.search.client import GeminiSearchClient
+    from objlib.search.expansion import expand_query as _expand_query
+    from objlib.search.formatter import display_search_results
 
     state = get_state(ctx)
 
+    # Validate mode
+    if mode not in ("learn", "research"):
+        console.print("[red]--mode must be 'learn' or 'research'[/red]")
+        raise typer.Exit(code=1)
+
+    # Debug logging setup
+    if debug:
+        import logging as _logging
+        debug_dir = Path.home() / ".objlib"
+        debug_dir.mkdir(exist_ok=True)
+        fh = _logging.FileHandler(debug_dir / "debug.log")
+        fh.setLevel(_logging.DEBUG)
+        _logging.getLogger("objlib").addHandler(fh)
+
+    # --- Stage 1: Query Expansion ---
+    display_query = query
+    search_query = query
+    if expand:
+        try:
+            search_query, expansions = _expand_query(query)
+            if expansions:
+                console.print(f"[dim]Expanded:[/dim] {' + '.join(expansions)}")
+        except Exception:
+            pass  # Expansion failure: use original query
+
+    console.print(f"[dim]Searching for:[/dim] [bold]{display_query}[/bold]")
+
     # Build AIP-160 filter
     metadata_filter = build_metadata_filter(filter) if filter else None
-
-    search_client = GeminiSearchClient(
-        state.gemini_client, state.store_resource_name
-    )
-
-    console.print(f"[dim]Searching for:[/dim] [bold]{query}[/bold]")
     if metadata_filter:
         console.print(f"[dim]Filter:[/dim] {metadata_filter}")
 
+    # --- Stage 2: Gemini File Search ---
+    search_client = GeminiSearchClient(state.gemini_client, state.store_resource_name)
     try:
         response = search_client.query_with_retry(
-            query, metadata_filter=metadata_filter, model=model
+            search_query, metadata_filter=metadata_filter, model=model
         )
     except Exception as e:
         console.print(f"[red]Search failed after retries:[/red] {e}")
@@ -849,15 +895,94 @@ def search(
 
     citations = extract_citations(grounding)
 
-    # Enrich with SQLite metadata
+    # --- Stage 3: Enrich and cache passages ---
     with Database(state.db_path) as db:
         enrich_citations(citations, db)
 
-    # Three-tier Rich display
-    from objlib.search.formatter import display_search_results
+        # Cache passages in SQLite for citation stability (passage_id = UUID5 of file+text)
+        for citation in citations:
+            if citation.text:
+                try:
+                    content_hash = hashlib.sha256(citation.text.encode()).hexdigest()
+                    file_id = citation.file_path or citation.title or ""
+                    namespace = uuid.UUID("6ba7b810-9dad-11d1-80b4-00c04fd430c8")
+                    passage_id = str(uuid.uuid5(namespace, f"{file_id}:{content_hash}"))
+                    db.upsert_passage(passage_id, file_id, content_hash, citation.text)
+                except Exception:
+                    pass  # Passage caching is best-effort
+
+    # --- Stage 4: Reranking ---
+    if rerank and len(citations) > 1:
+        try:
+            from objlib.search.reranker import rerank_passages
+            reranked = rerank_passages(state.gemini_client, display_query, citations)
+            if reranked is not None:
+                citations = reranked
+        except Exception:
+            console.print("[yellow]Reranking unavailable -- showing Gemini ranking[/yellow]")
+
+    # --- Stage 5: Difficulty ordering ---
+    try:
+        from objlib.search.reranker import apply_difficulty_ordering
+        citations = apply_difficulty_ordering(citations, mode=mode)
+    except Exception:
+        pass  # Ordering failure: use current order
+
+    # --- Stage 6: Session logging ---
+    try:
+        from objlib.session.manager import SessionManager
+        active_session_id = SessionManager.get_active_session_id()
+        if active_session_id:
+            with Database(state.db_path) as db:
+                mgr = SessionManager(db.conn)
+                mgr.add_event(active_session_id, "search", {
+                    "query": display_query,
+                    "expanded_query": search_query if expand else None,
+                    "result_count": len(citations),
+                    "doc_ids": [c.file_path or c.title for c in citations[:10]],
+                })
+    except Exception:
+        pass  # Session logging is best-effort
 
     response_text = response.text or "(No response text)"
-    display_search_results(response_text, citations, state.terminal_width, limit=limit)
+
+    # --- Stage 7: Display branch ---
+    if track_evolution:
+        try:
+            from objlib.search.formatter import display_concept_evolution
+            display_concept_evolution(citations, display_query, state.gemini_client, console)
+        except Exception:
+            console.print("[yellow]Evolution display failed -- showing standard results[/yellow]")
+            display_search_results(response_text, citations, state.terminal_width, limit=limit)
+    elif synthesize:
+        try:
+            from objlib.search.synthesizer import apply_mmr_diversity, synthesize_answer
+            from objlib.search.formatter import display_synthesis
+            diverse = apply_mmr_diversity(citations)
+            synthesis = synthesize_answer(state.gemini_client, display_query, diverse)
+            if synthesis is None:
+                console.print("[yellow]Synthesis unavailable -- showing source excerpts[/yellow]")
+                display_search_results(response_text, citations, state.terminal_width, limit=limit)
+            else:
+                display_synthesis(synthesis, diverse, console)
+                # Session: log synthesis event
+                try:
+                    from objlib.session.manager import SessionManager
+                    active_session_id = SessionManager.get_active_session_id()
+                    if active_session_id:
+                        with Database(state.db_path) as db:
+                            mgr = SessionManager(db.conn)
+                            mgr.add_event(active_session_id, "synthesize", {
+                                "query": display_query,
+                                "claim_count": len(synthesis.claims),
+                            })
+                except Exception:
+                    pass
+        except Exception:
+            console.print("[yellow]Synthesis pipeline error -- showing standard results[/yellow]")
+            display_search_results(response_text, citations, state.terminal_width, limit=limit)
+    else:
+        display_search_results(response_text, citations, state.terminal_width, limit=limit)
 
 
 @app.command()
