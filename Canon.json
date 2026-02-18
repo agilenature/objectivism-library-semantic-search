@@ -1,0 +1,42 @@
+{
+  "$schema": "https://canon.so/schema/canon.json",
+  "_canon_workflow": "gsd",
+  "projectTitle": "objlib",
+  "description": "Service library and CLI for semantic search over a curated Objectivism Library — 1,749 philosophical texts indexed via Google Gemini File Search with AI-enriched 4-tier metadata (category, difficulty, topics, aspects, descriptions) and entity extraction",
+  "branch": "main",
+  "folders": [
+    "docs/",
+    "src/objlib/services/"
+  ],
+  "excludeFolders": [
+    "src/objlib/__pycache__",
+    "src/objlib/upload",
+    "src/objlib/extraction",
+    "src/objlib/entities",
+    "src/objlib/sync",
+    "src/objlib/search",
+    "src/objlib/session",
+    "src/objlib/search/__pycache__",
+    "src/objlib/session/__pycache__",
+    ".planning",
+    "data",
+    "tests",
+    "scripts"
+  ],
+  "excludeFiles": [
+    "cli.py"
+  ],
+  "rules": [
+    "Import only from objlib.services — never from objlib.cli, objlib.upload, objlib.extraction, objlib.entities, or objlib.sync; those are internal pipeline modules, not part of the public API.",
+    "All Gemini search operations are async and carry 300ms–2s network latency — always await SearchService methods inside an async context or dispatch them to a background worker; never call them on the main thread of a TUI.",
+    "Use Database as a context manager ('with Database(db_path) as db:') — never hold a connection open across async await boundaries.",
+    "Search results are Citation objects — access enriched SQLite metadata via Citation.file_path and Citation.metadata; do not query the database directly for search result enrichment.",
+    "The active Gemini store name is read from AppState.store_resource_name — never hardcode a store name in client code.",
+    "Session events are append-only — use SessionService.add_event(); there are no update or delete methods for session records.",
+    "Numeric metadata fields (year, week, quality_score) require CAST in raw SQL — always use LibraryService filter methods instead of writing SQL directly.",
+    "The --store parameter for search must be passed before the subcommand when using the CLI ('python -m objlib --store NAME search QUERY'); for view --show-related it comes after the subcommand.",
+    "Disk-dependent commands (scan, upload, enriched-upload, sync) require the library volume at /Volumes/U32 Shadow to be mounted — query commands (search, browse, filter, view) work without it."
+  ],
+  "previousVersions": [],
+  "branchVersions": []
+}
