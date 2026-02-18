@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 Phase: 6.3 of 7+ (Test Foundation & Canon Governance)
-Plan: 5 of 8
+Plan: 6 of 8
 Status: In progress
-Last activity: 2026-02-18 - Completed 06.3-05-PLAN.md (Workflow Research)
+Last activity: 2026-02-18 - Completed 06.3-06-PLAN.md (canon-init Skill)
 
-Progress: [#####################] ~100% (31 plans of ~36 estimated total)
+Progress: [#####################] ~100% (32 plans of ~36 estimated total)
 
 Phase 1 Progress: [##########] 3/3 plans -- COMPLETE
 Phase 2 Progress: [##########] 4/4 plans -- COMPLETE
@@ -25,14 +25,14 @@ Phase 5 Progress: [########  ] 3/4 plans -- IN PROGRESS
 Phase 6 Progress: [##########] 5/5 plans -- COMPLETE
 Phase 6.1 Progress: [##########] 2/2 plans -- COMPLETE
 Phase 6.2 Progress: [##########] 2/2 plans -- COMPLETE
-Phase 6.3 Progress: [#####     ] 5/8 plans -- IN PROGRESS
+Phase 6.3 Progress: [######    ] 6/8 plans -- IN PROGRESS
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 27
+- Total plans completed: 28
 - Average duration: 3.8 min
-- Total execution time: 103 min
+- Total execution time: 106 min
 
 **By Phase:**
 
@@ -47,7 +47,7 @@ Phase 6.3 Progress: [#####     ] 5/8 plans -- IN PROGRESS
 | 04-quality-enhancements | 5/5 | 24 min | 4.8 min |
 
 **Recent Trend:**
-- Last 5 plans: 04-04 (2 min), 05-02 (2 min), 05-04 (3 min), 05-03 (8 min)
+- Last 5 plans: 05-02 (2 min), 05-04 (3 min), 05-03 (8 min), 06.3-05 (5 min), 06.3-06 (3 min)
 - Trend: Stable at 2-8 min per plan
 
 *Updated after each plan completion*
@@ -189,10 +189,16 @@ Recent decisions affecting current work:
 - [06.3-05]: Ralph detection: .ralph/ + .ralph/PROMPT.md + .ralph/fix_plan.md
 - [06.3-05]: BMAD detection: _bmad/ + _bmad/core/ directory
 - [06.3-05]: Generic fallback: pyproject.toml / package.json / Cargo.toml / go.mod / README.md
+- [06.3-06]: canon-init detection priority: existing _canon_workflow > BMAD > GSD > Ralph > Generic
+- [06.3-06]: Ambiguity outputs WARNING listing detected workflows and asks user -- does NOT silently pick one
+- [06.3-06]: Generic auto-defaults without asking when no workflow signals found
+- [06.3-06]: Canon.json template has 8 placeholders: PROJECT_TITLE, PROJECT_DESCRIPTION, BRANCH, PUBLIC_FOLDERS, EXCLUDE_FOLDERS, EXCLUDE_FILES, RULES, WORKFLOW
+- [06.3-06]: SKILL.md is 5-step executable prompt: Detect Workflow, Read Context, Analyze Codebase, Fill Templates, Report
+- [06.3-06]: Rules files: GSD 15 rules, Ralph 13 rules, BMAD 14 rules -- curated prose for JSON array insertion
 
 ### Pending Todos
 
-Phase 6.3 plans 06-08 remaining (canon-init skill, canon-update skill, apply to project).
+Phase 6.3 plans 07-08 remaining (canon-update skill, apply to project).
 
 ### Blockers/Concerns
 
@@ -202,5 +208,5 @@ Phase 6.3 plans 06-08 remaining (canon-init skill, canon-update skill, apply to 
 ## Session Continuity
 
 Last session: 2026-02-18
-Stopped at: Completed 06.3-05. Workflow research for GSD, Ralph, BMAD, and Generic.
-Resume file: .planning/phases/06.3-test-foundation-canon-governance/06.3-06-PLAN.md
+Stopped at: Completed 06.3-06. canon-init skill with SKILL.md, templates, and rules files.
+Resume file: .planning/phases/06.3-test-foundation-canon-governance/06.3-07-PLAN.md
