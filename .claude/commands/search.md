@@ -15,8 +15,13 @@ Given the user's query `$ARGUMENTS`, identify:
 
 ### Phase 2: Expand the Query (CRITICAL)
 
-Do NOT pass `$ARGUMENTS` directly. Apply the template in
-`.claude/commands/query-expansion-template.md` to craft a richer semantic query.
+Do NOT pass `$ARGUMENTS` directly. First, read the template file:
+
+```
+.claude/commands/query-expansion-template.md
+```
+
+Then apply it to craft a richer semantic query.
 
 ---
 
