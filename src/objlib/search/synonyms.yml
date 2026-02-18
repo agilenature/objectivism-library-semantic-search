@@ -1,0 +1,153 @@
+# Objectivist Philosophy Glossary for Query Expansion
+# Each entry: term -> list of synonyms (top 2 used per expansion)
+# Curated to prevent semantic drift in philosophical context
+
+# Metaphysics & Epistemology
+existence:
+  - being
+  - reality
+identity:
+  - "law of identity"
+  - "A is A"
+consciousness:
+  - awareness
+  - cognition
+causality:
+  - causation
+  - "cause and effect"
+epistemology:
+  - "theory of knowledge"
+  - cognition
+reason:
+  - rationality
+  - "rational faculty"
+concept formation:
+  - abstraction
+  - "unit economy"
+objectivity:
+  - "objective knowledge"
+  - "volitional adherence to reality"
+free will:
+  - volition
+  - "volitional consciousness"
+axioms:
+  - "axiomatic concepts"
+  - "self-evident truths"
+
+# Ethics
+rational self-interest:
+  - egoism
+  - "ethical egoism"
+egoism:
+  - "rational self-interest"
+  - selfishness
+altruism:
+  - self-sacrifice
+  - selflessness
+virtue:
+  - "moral virtue"
+  - "moral character"
+pride:
+  - "moral ambitiousness"
+  - "self-esteem"
+justice:
+  - "moral judgment"
+  - "judging character"
+honesty:
+  - "refusal to fake reality"
+  - integrity
+independence:
+  - "independent judgment"
+  - "intellectual independence"
+productiveness:
+  - "productive work"
+  - "productive achievement"
+integrity:
+  - "loyalty to values"
+  - "moral consistency"
+selfishness:
+  - "rational self-interest"
+  - egoism
+happiness:
+  - "moral purpose"
+  - flourishing
+rights:
+  - "individual rights"
+  - "natural rights"
+
+# Politics & Economics
+capitalism:
+  - "laissez-faire"
+  - "free market"
+individualism:
+  - "individual sovereignty"
+  - "individual rights"
+collectivism:
+  - statism
+  - socialism
+property rights:
+  - "right to property"
+  - "private property"
+government:
+  - "proper government"
+  - "limited government"
+force:
+  - coercion
+  - "initiation of force"
+trader principle:
+  - "voluntary exchange"
+  - "mutual benefit"
+
+# Aesthetics
+romantic realism:
+  - "Objectivist aesthetics"
+  - "art as sense of life"
+sense of life:
+  - "metaphysical value-judgments"
+  - "subconscious philosophy"
+
+# Errors & Fallacies
+mysticism:
+  - "faith-based belief"
+  - irrationalism
+determinism:
+  - "causal determinism"
+  - fatalism
+subjectivism:
+  - relativism
+  - "emotionalism"
+intrinsicism:
+  - "intrinsic value theory"
+  - "intrinsic theory"
+context dropping:
+  - evasion
+  - "stolen concept"
+stolen concept:
+  - "fallacy of the stolen concept"
+  - "concept stealing"
+package dealing:
+  - "false alternative"
+  - "false dichotomy"
+primacy of consciousness:
+  - "consciousness primacy"
+  - idealism
+primacy of existence:
+  - "existence primacy"
+  - "metaphysical realism"
+
+# Key Works & Concepts
+OPAR:
+  - "Objectivism: The Philosophy of Ayn Rand"
+  - Peikoff
+ITOE:
+  - "Introduction to Objectivist Epistemology"
+  - "concept formation"
+the virtue of selfishness:
+  - "Objectivist ethics"
+  - "rational selfishness"
+atlas shrugged:
+  - "Atlas Shrugged"
+  - "Who is John Galt"
+the fountainhead:
+  - "The Fountainhead"
+  - "Howard Roark"
