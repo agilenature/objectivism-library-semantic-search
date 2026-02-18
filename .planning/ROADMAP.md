@@ -16,8 +16,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Upload Pipeline** - Reliable batch upload to Gemini File Search with rate limiting and resume
 - [x] **Phase 3: Search & CLI** - Semantic search, filtering, and CLI interface for querying the indexed library
 - [x] **Phase 4: Quality Enhancements** - Reranking, synthesis, query expansion, and difficulty-aware ordering
-- [ ] **Phase 5: Incremental Updates & Offline Mode** - Change detection, selective re-upload, and disk-independent querying
-- [ ] **Phase 6: AI-Powered Metadata** - LLM-based category inference, difficulty detection, and topic extraction
+- [x] **Phase 5: Incremental Updates & Offline Mode** - Change detection, selective re-upload, and disk-independent querying
+- [x] **Phase 6: AI-Powered Metadata** - LLM-based category inference, difficulty detection, and topic extraction
+- [x] **Phase 6.3: Test Foundation & Canon Governance** - Retroactive test suite (186 tests), Canon governance skills, project Canon.json audit
 - [ ] **Phase 7: Interactive TUI** - Modern terminal UI with live search, visual browsing, and session management
 
 ## Phase Details
@@ -206,4 +207,5 @@ Phases execute in strategic order (not strictly numeric):
 | **[FULL UPLOAD: 1,721 files]** | **-** | **Next** | **-** |
 | 4. Quality Enhancements | 5/5 | Complete | 2026-02-18 |
 | 5. Incremental Updates | 4/4 | Complete | 2026-02-18 |
+| 6.3. Test Foundation & Canon Governance | 8/8 | Complete | 2026-02-18 |
 | 7. Interactive TUI | 0/TBD | Deferred | - |
