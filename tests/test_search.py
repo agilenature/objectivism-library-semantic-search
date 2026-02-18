@@ -207,6 +207,9 @@ class _FakeDB:
             }
         return result
 
+    def get_file_metadata_by_gemini_ids(self, gemini_ids):
+        return {}
+
 
 class TestEnrichCitations:
     def test_matches_filename(self):

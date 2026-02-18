@@ -191,13 +191,13 @@ class TestDisplaySearchResults:
         # Doc3 should NOT be in tier 2 or tier 3
         assert "Doc3.txt" not in output
 
-    def test_display_search_results_score_bars(self):
-        """Score bars appear in the output."""
+    def test_display_search_results_citation_table(self):
+        """Citation table appears in the output with source file name."""
         citations = [_make_citation(confidence=0.87)]
         con, buf = _make_test_console()
         display_search_results("Response", citations, terminal_width=100, console=con)
         output = buf.getvalue()
-        assert "87%" in output
+        assert "Test Document.txt" in output
 
 
 # ---------------------------------------------------------------------------
