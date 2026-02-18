@@ -102,6 +102,16 @@ class SyncDetector:
         missing_paths = db_paths - scan_paths
         common_paths = scan_paths & db_paths
 
+        # Safety guard: if >50% of tracked library files are "missing", the
+        # disk is almost certainly disconnected. Abort before marking anything.
+        if missing_paths and len(missing_paths) > max(50, len(db_paths) * 0.5):
+            raise RuntimeError(
+                f"SAFETY ABORT: {len(missing_paths)}/{len(db_paths)} files "
+                f"({len(missing_paths) * 100 // max(len(db_paths), 1)}%) "
+                "are missing from disk — library disk likely disconnected. "
+                "Mount the drive and retry."
+            )
+
         changeset = SyncChangeSet(missing_files=missing_paths)
 
         # Step 4: Process common files (mtime optimization)

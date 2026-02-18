@@ -1057,6 +1057,38 @@ def search(
         fh.setLevel(_logging.DEBUG)
         _logging.getLogger("objlib").addHandler(fh)
 
+    # --- Expiry check: warn if Gemini files are near/past expiration ---
+    with Database(state.db_path) as _db:
+        import datetime as _dt
+        _now = _dt.datetime.now(_dt.timezone.utc)
+        _warn_ts = (_now + _dt.timedelta(hours=6)).strftime("%Y-%m-%dT%H:%M:%S")
+        _now_ts = _now.strftime("%Y-%m-%dT%H:%M:%S")
+        _expired = _db.conn.execute(
+            "SELECT COUNT(*) FROM files WHERE status='uploaded' "
+            "AND remote_expiration_ts IS NOT NULL AND remote_expiration_ts < ?",
+            (_now_ts,),
+        ).fetchone()[0]
+        _expiring = _db.conn.execute(
+            "SELECT COUNT(*) FROM files WHERE status='uploaded' "
+            "AND remote_expiration_ts IS NOT NULL AND remote_expiration_ts < ? "
+            "AND remote_expiration_ts >= ?",
+            (_warn_ts, _now_ts),
+        ).fetchone()[0]
+        _total_uploaded = _db.conn.execute(
+            "SELECT COUNT(*) FROM files WHERE status='uploaded'"
+        ).fetchone()[0]
+        if _expired > _total_uploaded * 0.5:
+            console.print(
+                f"[bold red]⚠ Warning:[/bold red] {_expired}/{_total_uploaded} Gemini files "
+                "have expired (48h TTL). Search results may be empty. "
+                "Run [bold]objlib enriched-upload[/bold] to re-upload."
+            )
+        elif _expiring > 0:
+            console.print(
+                f"[yellow]⚠ {_expiring} Gemini files expire within 6 hours.[/yellow] "
+                "Consider running [bold]objlib enriched-upload[/bold] soon."
+            )
+
     # --- Stage 1: Query Expansion ---
     display_query = query
     search_query = query

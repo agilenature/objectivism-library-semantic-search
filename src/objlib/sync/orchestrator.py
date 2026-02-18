@@ -125,6 +125,13 @@ class SyncOrchestrator:
         changeset = detector.detect_changes(force=force)
         self.console.print(f"\n[bold]Change detection:[/bold] {changeset.summary}")
 
+        # Step 3b: Restore LOCAL_DELETE files that reappeared on disk.
+        # LOCAL_DELETE files are excluded from the active-files query, so they
+        # look "new" to the detector even though they're in the DB. If they're
+        # on disk with the same hash, just restore their status — no re-upload.
+        if not dry_run:
+            await self._restore_local_deletes(changeset.new_files)
+
         # Step 4: Dry-run mode
         if dry_run:
             self._print_dry_run(changeset)
@@ -407,6 +414,60 @@ class SyncOrchestrator:
         # If this becomes a concern, the caller should handle cleanup.
 
         return custom_metadata, upload_path, upload_hash
+
+    # ------------------------------------------------------------------
+    # LOCAL_DELETE restoration
+
+    async def _restore_local_deletes(self, new_files: list[dict]) -> None:
+        """Restore LOCAL_DELETE files that have reappeared on disk.
+
+        When the library disk was temporarily disconnected, the scanner marks
+        all DB files as LOCAL_DELETE. On reconnect, the sync detector sees them
+        as "new" (excluded from active-files query). If the file's hash matches
+        what's in the DB, it's a false new — just restore status to uploaded.
+
+        Modifies new_files in-place: removes entries that were restored so
+        the upload step skips them.
+        """
+        restored_count = 0
+        files_to_remove: list[dict] = []
+
+        for file_info in new_files:
+            file_path = file_info["file_path"]
+            # Check if this file exists in DB as LOCAL_DELETE
+            row = self.db.conn.execute(
+                "SELECT status, content_hash, gemini_file_id FROM files "
+                "WHERE file_path = ? AND status = 'LOCAL_DELETE'",
+                (file_path,),
+            ).fetchone()
+            if row is None:
+                continue  # genuinely new file, let upload proceed
+
+            db_hash = row["content_hash"]
+            disk_hash = file_info.get("content_hash")
+            gemini_id = row["gemini_file_id"]
+
+            if disk_hash == db_hash and gemini_id:
+                # Same content, still has a Gemini ID — just restore status
+                self.db.conn.execute(
+                    "UPDATE files SET status = 'uploaded', error_message = NULL, "
+                    "mtime = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%f', 'now') "
+                    "WHERE file_path = ?",
+                    (file_info.get("mtime"), file_path),
+                )
+                self.db.conn.commit()
+                files_to_remove.append(file_info)
+                restored_count += 1
+                logger.info("Restored reappeared file: %s", file_path)
+
+        for f in files_to_remove:
+            new_files.remove(f)
+
+        if restored_count:
+            self.console.print(
+                f"[green]Restored {restored_count} files[/green] that reappeared "
+                "on disk (same content, no re-upload needed)."
+            )
 
     # ------------------------------------------------------------------
     # Orphan cleanup

@@ -276,6 +276,16 @@ class FileScanner:
 
         # Mark deleted files
         if changes.deleted:
+            # Safety guard: if >50% of library appears deleted, the disk is
+            # likely disconnected. Abort rather than mass-corrupt the DB.
+            db_file_count = len(changes.deleted) + len(changes.unchanged) + len(changes.modified)
+            if len(changes.deleted) > max(50, db_file_count * 0.5):
+                raise RuntimeError(
+                    f"SAFETY ABORT: {len(changes.deleted)}/{db_file_count} files "
+                    f"({len(changes.deleted) * 100 // max(db_file_count, 1)}%) "
+                    "appear deleted — library disk likely disconnected. "
+                    "Mount the drive and retry."
+                )
             self.db.mark_deleted(changes.deleted)
             logger.info("Marked %d files as deleted", len(changes.deleted))
 
