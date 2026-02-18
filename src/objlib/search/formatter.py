@@ -114,12 +114,10 @@ def display_search_results(
         year = meta.get("year", "")
         difficulty = meta.get("difficulty", "")
 
-        bar = score_bar(cite.confidence)
-
-        # Title line with score
+        # Title line
         con.print(
             f"  [yellow]\\[{cite.index}][/yellow] "
-            f"[bold]\"{cite.title}\"[/bold]  {bar}"
+            f"[bold]\"{cite.title}\"[/bold]"
         )
 
         # Metadata line
@@ -143,24 +141,22 @@ def display_search_results(
     # --- Tier 3: Source listing table ---
     table = Table(title="Sources", show_header=True, expand=False)
     table.add_column("Ref", style="yellow", justify="center", width=5)
-    table.add_column("File", style="cyan", no_wrap=True, max_width=max(30, terminal_width - 60))
+    table.add_column("File", style="cyan", no_wrap=True, max_width=max(30, terminal_width - 50))
     table.add_column("Course", style="green")
     table.add_column("Year", justify="right")
-    table.add_column("Relevance")
 
     for cite in display_citations:
         meta = cite.metadata or {}
         file_display = cite.title or "(unknown)"
         # Truncate file column for very long names
-        if len(file_display) > terminal_width - 60:
-            file_display = truncate_text(file_display, terminal_width - 60)
+        if len(file_display) > terminal_width - 50:
+            file_display = truncate_text(file_display, terminal_width - 50)
 
         table.add_row(
             f"[{cite.index}]",
             file_display,
             str(meta.get("course", "")),
             str(meta.get("year", "")),
-            score_bar(cite.confidence),
         )
 
     con.print(table)
