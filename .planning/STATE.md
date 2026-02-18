@@ -13,9 +13,9 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 Phase: 5 of 7+ (Incremental Updates & Offline Mode)
 Plan: 3 of 4
 Status: In progress
-Last activity: 2026-02-18 - Completed 05-04-PLAN.md
+Last activity: 2026-02-18 - Completed 05-03-PLAN.md
 
-Progress: [#####################] ~100% (26 plans of ~28 estimated total)
+Progress: [#####################] ~100% (27 plans of ~28 estimated total)
 
 Phase 1 Progress: [##########] 3/3 plans -- COMPLETE
 Phase 2 Progress: [##########] 4/4 plans -- COMPLETE
@@ -29,9 +29,9 @@ Phase 6.2 Progress: [##########] 2/2 plans -- COMPLETE
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 26
-- Average duration: 3.7 min
-- Total execution time: 95 min
+- Total plans completed: 27
+- Average duration: 3.8 min
+- Total execution time: 103 min
 
 **By Phase:**
 
@@ -43,12 +43,11 @@ Phase 6.2 Progress: [##########] 2/2 plans -- COMPLETE
 | 06-ai-powered-metadata | 5/5 | 24 min | 4.8 min |
 | 06.1-entity-extraction | 2/2 | 9 min | 4.5 min |
 | 06.2-metadata-enriched-upload | 2/2 | 6 min | 3.0 min |
-
 | 04-quality-enhancements | 5/5 | 24 min | 4.8 min |
 
 **Recent Trend:**
-- Last 5 plans: 04-03 (2 min), 04-04 (2 min), 05-02 (2 min), 05-04 (3 min)
-- Trend: Stable at 2-3 min per plan
+- Last 5 plans: 04-04 (2 min), 05-02 (2 min), 05-04 (3 min), 05-03 (8 min)
+- Trend: Stable at 2-8 min per plan
 
 *Updated after each plan completion*
 
@@ -165,13 +164,18 @@ Recent decisions affecting current work:
 - [05-02]: list_store_documents wraps initial list() in _safe_call; pagination fetches bypass circuit breaker
 - [05-02]: find_store_document_name checks display_name and name attributes (actual SDK Document schema)
 - [05-02]: delete_store_document catches exceptions broadly then inspects string for 404/NOT_FOUND patterns
+- [05-03]: Store display name (not Gemini resource name) in library_config for store verification
+- [05-03]: Gemini client set to None in dry-run mode to avoid API key requirement
+- [05-03]: SyncOrchestrator accepts optional client (None for dry-run)
+- [05-03]: Enrichment version computed from sha256 of version string at import time
+- [05-03]: mtime epsilon of 1e-6 for float comparison per research pitfall guidance
 - [05-04]: Removed exists=True from scan --library to allow custom disk-disconnection error messages
 - [05-04]: Mount point derived from library path for accurate disk detection on any external drive
 - [05-04]: Upload/enriched-upload check DEFAULT_LIBRARY_ROOT; scan derives mount from user-provided path
 
 ### Pending Todos
 
-Phase 5 plan 03 (sync orchestrator) remaining.
+Phase 5 plan 04 remaining (offline query mode / sync refinements).
 
 ### Blockers/Concerns
 
@@ -181,5 +185,5 @@ Phase 5 plan 03 (sync orchestrator) remaining.
 ## Session Continuity
 
 Last session: 2026-02-18
-Stopped at: Completed 05-04. Offline mode guards added to scan/upload/enriched-upload/view CLI commands.
-Resume file: .planning/phases/05-incremental-updates-offline-mode/05-03-PLAN.md
+Stopped at: Completed 05-03. Sync command core with SyncDetector and SyncOrchestrator.
+Resume file: .planning/phases/05-incremental-updates-offline-mode/05-04-PLAN.md
