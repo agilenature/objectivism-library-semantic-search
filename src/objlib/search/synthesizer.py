@@ -30,9 +30,24 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from objlib.models import Citation
 
+from google.genai import types
+
 from objlib.search.models import Claim, CitationRef, SynthesisOutput
 
 logger = logging.getLogger(__name__)
+
+MIN_CITATIONS_FOR_SYNTHESIS = 5
+MAX_PASSAGE_CHARS = 600
+
+SYNTHESIS_SYSTEM_INSTRUCTION = (
+    "You are a scholarly synthesizer specializing in Objectivist philosophy. "
+    "Given a query and numbered source passages, produce a synthesis structured "
+    "as factual claims. Each claim must be a single sentence making one factual "
+    "assertion, supported by a verbatim quote (20-60 words) copied EXACTLY from "
+    "one of the passages. Use the passage index number as the passage_id. "
+    "You may include optional bridging_intro and bridging_conclusion sentences "
+    "(uncited, no factual assertions). When sources disagree, attribute explicitly."
+)
 
 
 def apply_mmr_diversity(
@@ -92,6 +107,138 @@ def apply_mmr_diversity(
             file_counts[fk] = file_counts.get(fk, 0) + 1
 
     return result[:max_results]
+
+
+def synthesize_answer(
+    client,  # genai.Client (untyped to avoid import dependency)
+    query: str,
+    citations: list[Citation],
+    model: str = "gemini-2.0-flash",
+) -> SynthesisOutput | None:
+    """Synthesize a structured answer from diverse source passages.
+
+    Builds a passage context from citations, sends to Gemini Flash for
+    structured synthesis, validates all quotes against source text, and
+    re-prompts once on validation failure.
+
+    Args:
+        client: Authenticated genai.Client instance.
+        query: The user's search query.
+        citations: List of Citation objects (already diversified).
+        model: Gemini model to use for synthesis.
+
+    Returns:
+        SynthesisOutput with validated claims, or None on failure
+        (fewer than 5 citations, API error, or validation failure
+        after re-prompt).
+    """
+    if len(citations) < MIN_CITATIONS_FOR_SYNTHESIS:
+        logger.info(
+            "Skipping synthesis: %d citations (minimum %d)",
+            len(citations),
+            MIN_CITATIONS_FOR_SYNTHESIS,
+        )
+        return None
+
+    passage_map = _build_passage_map(citations)
+    passage_context = _build_passage_context(citations)
+    prompt = f"Query: {query}\n\nSources:\n{passage_context}"
+
+    config = types.GenerateContentConfig(
+        system_instruction=SYNTHESIS_SYSTEM_INSTRUCTION,
+        response_mime_type="application/json",
+        response_schema=SynthesisOutput,
+        temperature=0.0,
+    )
+
+    # First attempt
+    try:
+        response = client.models.generate_content(
+            model=model,
+            contents=prompt,
+            config=config,
+        )
+        output = SynthesisOutput.model_validate_json(response.text)
+    except Exception:
+        logger.warning("Synthesis API call failed", exc_info=True)
+        return None
+
+    valid_claims, errors = validate_citations(output.claims, passage_map)
+
+    if not errors:
+        return output
+
+    # Re-prompt once with error feedback
+    logger.info(
+        "Synthesis validation failed (%d errors), re-prompting",
+        len(errors),
+    )
+
+    error_feedback = "\n".join(f"- {e}" for e in errors)
+    retry_prompt = (
+        f"{prompt}\n\n"
+        f"IMPORTANT: Your previous response had citation errors:\n"
+        f"{error_feedback}\n\n"
+        f"Please fix: ensure every quote is copied EXACTLY (verbatim) "
+        f"from the passage text. Use the passage index as passage_id."
+    )
+
+    try:
+        response = client.models.generate_content(
+            model=model,
+            contents=retry_prompt,
+            config=config,
+        )
+        output = SynthesisOutput.model_validate_json(response.text)
+    except Exception:
+        logger.warning("Synthesis re-prompt failed", exc_info=True)
+        return None
+
+    valid_claims, errors = validate_citations(output.claims, passage_map)
+
+    if errors:
+        logger.warning(
+            "Synthesis still has %d validation errors after re-prompt, "
+            "returning partial results",
+            len(errors),
+        )
+
+    if not valid_claims:
+        return None
+
+    # Return output with only validated claims
+    return SynthesisOutput(
+        claims=valid_claims,
+        bridging_intro=output.bridging_intro,
+        bridging_conclusion=output.bridging_conclusion,
+    )
+
+
+def _build_passage_context(citations: list[Citation]) -> str:
+    """Build formatted passage context for the synthesis prompt.
+
+    Each passage includes its index, file metadata, and truncated text.
+    """
+    lines: list[str] = []
+
+    for i, citation in enumerate(citations):
+        text = citation.text[:MAX_PASSAGE_CHARS]
+        if len(citation.text) > MAX_PASSAGE_CHARS:
+            text += "..."
+
+        metadata_parts: list[str] = [f'file: "{citation.title}"']
+        if citation.metadata:
+            course = citation.metadata.get("course", "")
+            if course:
+                metadata_parts.append(f'course: "{course}"')
+            difficulty = citation.metadata.get("difficulty", "")
+            if difficulty:
+                metadata_parts.append(f'difficulty: "{difficulty}"')
+
+        metadata_str = ", ".join(metadata_parts)
+        lines.append(f'Passage {i} [{metadata_str}]:\n"{text}"')
+
+    return "\n\n".join(lines)
 
 
 def validate_citations(
