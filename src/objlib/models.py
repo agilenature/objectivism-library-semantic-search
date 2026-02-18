@@ -16,6 +16,8 @@ class FileStatus(str, Enum):
     FAILED = "failed"
     SKIPPED = "skipped"
     LOCAL_DELETE = "LOCAL_DELETE"
+    MISSING = "missing"
+    ERROR = "error"
 
 
 class MetadataQuality(str, Enum):

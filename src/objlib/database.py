@@ -336,6 +336,119 @@ CREATE TABLE IF NOT EXISTS session_events (
 CREATE INDEX IF NOT EXISTS idx_session_events_session ON session_events(session_id);
 """
 
+MIGRATION_V7_SQL = """
+-- V7: Table rebuild to expand CHECK constraint for 'missing' and 'error' statuses
+-- plus 5 new sync columns (mtime, orphaned_gemini_file_id, missing_since, upload_hash, enrichment_version)
+
+-- Safety: drop partial migration artifact if previous attempt failed
+DROP TABLE IF EXISTS files_v7;
+
+-- Step 1: Create new table with expanded schema
+CREATE TABLE files_v7 (
+    file_path TEXT PRIMARY KEY,
+    content_hash TEXT NOT NULL,
+    filename TEXT NOT NULL,
+    file_size INTEGER NOT NULL,
+
+    -- Metadata (JSON blob for flexibility)
+    metadata_json TEXT,
+    metadata_quality TEXT DEFAULT 'unknown'
+        CHECK(metadata_quality IN ('complete', 'partial', 'minimal', 'none', 'unknown')),
+
+    -- State management (expanded for sync)
+    status TEXT NOT NULL DEFAULT 'pending'
+        CHECK(status IN ('pending', 'uploading', 'uploaded', 'failed', 'skipped', 'LOCAL_DELETE', 'missing', 'error')),
+    error_message TEXT,
+
+    -- API integration
+    gemini_file_uri TEXT,
+    gemini_file_id TEXT,
+    upload_timestamp TEXT,
+    remote_expiration_ts TEXT,
+    embedding_model_version TEXT,
+
+    -- Timestamps (ISO 8601 with milliseconds)
+    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')),
+    updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')),
+
+    -- AI metadata (V3)
+    ai_metadata_status TEXT DEFAULT 'pending',
+    ai_confidence_score REAL,
+
+    -- Entity extraction (V4)
+    entity_extraction_version TEXT,
+    entity_extraction_status TEXT DEFAULT 'pending',
+
+    -- Enriched upload (V5)
+    upload_attempt_count INTEGER DEFAULT 0,
+    last_upload_hash TEXT,
+
+    -- Sync columns (V7)
+    mtime REAL,
+    orphaned_gemini_file_id TEXT,
+    missing_since TEXT,
+    upload_hash TEXT,
+    enrichment_version TEXT
+);
+
+-- Step 2: Copy all existing data (21 existing columns + 5 NULLs for new V7 columns)
+INSERT INTO files_v7 (
+    file_path, content_hash, filename, file_size,
+    metadata_json, metadata_quality, status, error_message,
+    gemini_file_uri, gemini_file_id, upload_timestamp, remote_expiration_ts, embedding_model_version,
+    created_at, updated_at,
+    ai_metadata_status, ai_confidence_score,
+    entity_extraction_version, entity_extraction_status,
+    upload_attempt_count, last_upload_hash,
+    mtime, orphaned_gemini_file_id, missing_since, upload_hash, enrichment_version
+)
+SELECT
+    file_path, content_hash, filename, file_size,
+    metadata_json, metadata_quality, status, error_message,
+    gemini_file_uri, gemini_file_id, upload_timestamp, remote_expiration_ts, embedding_model_version,
+    created_at, updated_at,
+    ai_metadata_status, ai_confidence_score,
+    entity_extraction_version, entity_extraction_status,
+    upload_attempt_count, last_upload_hash,
+    NULL, NULL, NULL, NULL, NULL
+FROM files;
+
+-- Step 3: Drop old table, rename new
+DROP TABLE files;
+ALTER TABLE files_v7 RENAME TO files;
+
+-- Step 4: Recreate indexes
+CREATE INDEX idx_content_hash ON files(content_hash);
+CREATE INDEX idx_status ON files(status);
+CREATE INDEX idx_metadata_quality ON files(metadata_quality);
+
+-- Step 5: Recreate triggers
+CREATE TRIGGER update_files_timestamp
+    AFTER UPDATE ON files
+    FOR EACH ROW
+    BEGIN
+        UPDATE files SET updated_at = strftime('%Y-%m-%dT%H:%M:%f', 'now')
+        WHERE file_path = NEW.file_path;
+    END;
+
+CREATE TRIGGER log_status_change
+    AFTER UPDATE OF status ON files
+    FOR EACH ROW
+    WHEN OLD.status != NEW.status
+    BEGIN
+        INSERT INTO _processing_log(file_path, old_status, new_status)
+        VALUES (NEW.file_path, OLD.status, NEW.status);
+    END;
+
+-- Step 6: Library config table for sync key-value pairs
+CREATE TABLE IF NOT EXISTS library_config (
+    key TEXT PRIMARY KEY,
+    value TEXT,
+    updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now'))
+);
+
+"""
+
 UPSERT_SQL = """
 INSERT INTO files(file_path, content_hash, filename, file_size,
                   metadata_json, metadata_quality, status)
@@ -397,6 +510,8 @@ class Database:
         - v4: Person registry, aliases, transcript entities
         - v5: upload_attempt_count, last_upload_hash columns
         - v6: passages cache, sessions, session_events tables
+        - v7: Table rebuild for expanded CHECK constraint (missing/error),
+              5 new sync columns, library_config table
         """
         self.conn.executescript(SCHEMA_SQL)
 
@@ -442,7 +557,14 @@ class Database:
         if version < 6:
             self.conn.executescript(MIGRATION_V6_SQL)
 
-        self.conn.execute("PRAGMA user_version = 6")
+        if version < 7:
+            # Temporarily disable FK checks for table rebuild
+            # (other tables have FK references to files)
+            self.conn.execute("PRAGMA foreign_keys = OFF")
+            self.conn.executescript(MIGRATION_V7_SQL)
+            self.conn.execute("PRAGMA foreign_keys = ON")
+
+        self.conn.execute("PRAGMA user_version = 7")
 
     def upsert_file(self, record: FileRecord) -> None:
         """Insert or update a single file record.
@@ -1346,6 +1468,216 @@ class Database:
             return row["person_id"]
 
         return None
+
+    # ---- Sync methods (Phase 5) ----
+
+    def mark_missing(self, file_paths: set[str]) -> None:
+        """Set status='missing' and missing_since=now() for the given paths.
+
+        Only marks files that aren't already 'missing' to avoid resetting
+        the missing_since timestamp.
+
+        Args:
+            file_paths: Set of file paths to mark as missing.
+        """
+        if not file_paths:
+            return
+        now = self.conn.execute(
+            "SELECT strftime('%Y-%m-%dT%H:%M:%f', 'now')"
+        ).fetchone()[0]
+        with self.conn:
+            for path in file_paths:
+                self.conn.execute(
+                    "UPDATE files SET status = 'missing', missing_since = ? "
+                    "WHERE file_path = ? AND status != 'missing'",
+                    (now, path),
+                )
+
+    def get_missing_files(self, min_age_days: int | None = None) -> list[dict]:
+        """Return files with status='missing'.
+
+        Args:
+            min_age_days: If provided, filter to files where missing_since
+                is older than N days.
+
+        Returns:
+            List of dicts with file_path, filename, gemini_file_id,
+            missing_since keys.
+        """
+        if min_age_days is not None:
+            rows = self.conn.execute(
+                """SELECT file_path, filename, gemini_file_id, missing_since
+                   FROM files
+                   WHERE status = 'missing'
+                     AND missing_since <= strftime('%Y-%m-%dT%H:%M:%f', 'now', ?)
+                   ORDER BY missing_since""",
+                (f"-{min_age_days} days",),
+            ).fetchall()
+        else:
+            rows = self.conn.execute(
+                """SELECT file_path, filename, gemini_file_id, missing_since
+                   FROM files
+                   WHERE status = 'missing'
+                   ORDER BY missing_since"""
+            ).fetchall()
+        return [
+            {
+                "file_path": row["file_path"],
+                "filename": row["filename"],
+                "gemini_file_id": row["gemini_file_id"],
+                "missing_since": row["missing_since"],
+            }
+            for row in rows
+        ]
+
+    def get_orphaned_files(self) -> list[dict]:
+        """Return files where orphaned_gemini_file_id IS NOT NULL.
+
+        These are files with old Gemini IDs pending cleanup after
+        an upload-first replace operation.
+
+        Returns:
+            List of dicts with file_path, orphaned_gemini_file_id keys.
+        """
+        rows = self.conn.execute(
+            """SELECT file_path, orphaned_gemini_file_id
+               FROM files
+               WHERE orphaned_gemini_file_id IS NOT NULL
+               ORDER BY file_path"""
+        ).fetchall()
+        return [
+            {
+                "file_path": row["file_path"],
+                "orphaned_gemini_file_id": row["orphaned_gemini_file_id"],
+            }
+            for row in rows
+        ]
+
+    def clear_orphan(self, file_path: str) -> None:
+        """Set orphaned_gemini_file_id = NULL for the given file.
+
+        Called after successfully cleaning up an orphaned Gemini file.
+
+        Args:
+            file_path: Primary key of the file to clear.
+        """
+        with self.conn:
+            self.conn.execute(
+                "UPDATE files SET orphaned_gemini_file_id = NULL WHERE file_path = ?",
+                (file_path,),
+            )
+
+    def set_library_config(self, key: str, value: str) -> None:
+        """Store a key-value pair in the library_config table.
+
+        Uses INSERT OR REPLACE for upsert semantics.
+
+        Args:
+            key: Configuration key.
+            value: Configuration value.
+        """
+        with self.conn:
+            self.conn.execute(
+                "INSERT OR REPLACE INTO library_config (key, value, updated_at) "
+                "VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%f', 'now'))",
+                (key, value),
+            )
+
+    def get_library_config(self, key: str) -> str | None:
+        """Retrieve a configuration value by key.
+
+        Args:
+            key: Configuration key to look up.
+
+        Returns:
+            The value string, or None if the key doesn't exist.
+        """
+        row = self.conn.execute(
+            "SELECT value FROM library_config WHERE key = ?",
+            (key,),
+        ).fetchone()
+        return row["value"] if row else None
+
+    def update_file_sync_columns(self, file_path: str, **kwargs: object) -> None:
+        """Update arbitrary sync columns on a file record.
+
+        Uses the same pattern as update_file_status but without changing
+        the status field. Valid columns: mtime, upload_hash,
+        enrichment_version, orphaned_gemini_file_id, missing_since.
+
+        Args:
+            file_path: Primary key of the file to update.
+            **kwargs: Column=value pairs to set.
+        """
+        VALID_COLS = {"mtime", "upload_hash", "enrichment_version",
+                      "orphaned_gemini_file_id", "missing_since"}
+        if not kwargs:
+            return
+        invalid = set(kwargs.keys()) - VALID_COLS
+        if invalid:
+            raise ValueError(f"Invalid sync columns: {invalid}. Valid: {VALID_COLS}")
+
+        set_parts = []
+        params: list[object] = []
+        for col, val in kwargs.items():
+            set_parts.append(f"{col} = ?")
+            params.append(val)
+
+        params.append(file_path)
+        sql = f"UPDATE files SET {', '.join(set_parts)} WHERE file_path = ?"
+
+        with self.conn:
+            self.conn.execute(sql, params)
+
+    def get_file_with_sync_data(self, file_path: str) -> dict | None:
+        """Return a single file record including sync-relevant columns.
+
+        Used by the sync detector to check current state before deciding
+        what action to take.
+
+        Args:
+            file_path: Primary key of the file to look up.
+
+        Returns:
+            Dict with mtime, content_hash, upload_hash, enrichment_version,
+            gemini_file_id, status keys, or None if not found.
+        """
+        row = self.conn.execute(
+            """SELECT mtime, content_hash, upload_hash, enrichment_version,
+                      gemini_file_id, status
+               FROM files
+               WHERE file_path = ?""",
+            (file_path,),
+        ).fetchone()
+        if row is None:
+            return None
+        return {
+            "mtime": row["mtime"],
+            "content_hash": row["content_hash"],
+            "upload_hash": row["upload_hash"],
+            "enrichment_version": row["enrichment_version"],
+            "gemini_file_id": row["gemini_file_id"],
+            "status": row["status"],
+        }
+
+    def get_all_active_files_with_mtime(self) -> dict[str, tuple[str, int, float | None]]:
+        """Return all non-deleted files with mtime data.
+
+        Like get_all_active_files but includes mtime for sync change
+        detection optimization.
+
+        Returns:
+            Dict mapping file_path -> (content_hash, file_size, mtime).
+        """
+        rows = self.conn.execute(
+            "SELECT file_path, content_hash, file_size, mtime FROM files "
+            "WHERE status NOT IN (?, ?)",
+            (FileStatus.LOCAL_DELETE.value, FileStatus.MISSING.value),
+        ).fetchall()
+        return {
+            row["file_path"]: (row["content_hash"], row["file_size"], row["mtime"])
+            for row in rows
+        }
 
     def close(self) -> None:
         """Close the database connection."""
