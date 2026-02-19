@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** Three equally critical pillars -- semantic search quality, metadata preservation, incremental updates
-**Current focus:** Phase 7: Interactive TUI -- Wave 2 pane widgets executing
+**Current focus:** Phase 7: Interactive TUI -- Wave 3 integration complete, Wave 4 polish next
 **Execution strategy:** Phase 6 before full upload (1,721 files) to enrich metadata first
 
 ## Current Position
 
 Phase: 7 of 7+ (Interactive TUI)
-Plan: 4 of 7
-Status: In progress -- Wave 2 (pane widgets) executing
-Last activity: 2026-02-19 - Completed 07-04-PLAN.md (Results List & Document Preview Widgets)
+Plan: 5 of 7
+Status: In progress -- Wave 3 (integration) complete
+Last activity: 2026-02-19 - Completed 07-05-PLAN.md (FilterPanel, Full Widget Wiring, CLI Entry Point)
 
-Progress: [##########################░░] ~90% (38 plans of ~41 estimated total)
+Progress: [###########################░░] ~93% (39 plans of ~41 estimated total)
 
 Phase 1 Progress: [##########] 3/3 plans -- COMPLETE
 Phase 2 Progress: [##########] 4/4 plans -- COMPLETE
@@ -26,14 +26,14 @@ Phase 6 Progress: [##########] 5/5 plans -- COMPLETE
 Phase 6.1 Progress: [##########] 2/2 plans -- COMPLETE
 Phase 6.2 Progress: [##########] 2/2 plans -- COMPLETE
 Phase 6.3 Progress: [##########] 8/8 plans -- COMPLETE
-Phase 7 Progress:  [####░░░░░░] 4/7 plans -- IN PROGRESS
+Phase 7 Progress:  [#######░░░] 5/7 plans -- IN PROGRESS
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 38
+- Total plans completed: 39
 - Average duration: 3.2 min
-- Total execution time: 120 min
+- Total execution time: 124 min
 
 **By Phase:**
 
@@ -49,11 +49,11 @@ Phase 7 Progress:  [####░░░░░░] 4/7 plans -- IN PROGRESS
 | 05-incremental-updates | 4/4 | ~12 min | ~3.0 min |
 | 06.3-test-foundation | 8/8 | ~20 min | ~2.5 min |
 
-| 07-interactive-tui | 4/7 | ~10 min | ~2.5 min |
+| 07-interactive-tui | 5/7 | ~14 min | ~2.8 min |
 
 **Recent Trend:**
-- Last 5 plans: 07-01 (3 min), 07-02 (3 min), 07-03 (2 min), 07-04 (2 min)
-- Trend: Stable at 2-3 min per plan
+- Last 5 plans: 07-01 (3 min), 07-02 (3 min), 07-03 (2 min), 07-04 (2 min), 07-05 (4 min)
+- Trend: Stable at 2-4 min per plan
 
 *Updated after each plan completion*
 
@@ -226,10 +226,13 @@ Recent decisions affecting current work:
 - [07-04]: Text-search fallback using first 100 chars lowercase match for citation jump
 - [07-04]: RichLog with highlight=True, markup=True, wrap=True for document preview
 - [07-04]: can_focus=True on ResultItem for keyboard navigation support
+- [07-05]: Select.NULL (not Select.BLANK) is the Textual 8.0.0 sentinel for no selection
+- [07-05]: Navigation results shown as status message (dicts not Citations)
+- [07-05]: run_tui() services created unconditionally (no try/except fallback to None)
 
 ### Pending Todos
 
-Phase 7 Wave 2 in progress. Plans 07-01 through 07-04 complete. Wave 3 integration next.
+Phase 7 Wave 3 complete. Plans 07-01 through 07-05 complete. Wave 4 (keyboard navigation, testing, polish) next.
 
 ### Blockers/Concerns
 
@@ -239,5 +242,5 @@ Phase 7 Wave 2 in progress. Plans 07-01 through 07-04 complete. Wave 3 integrati
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 07-04. ResultsList and PreviewPane widgets for search results and document preview.
-Resume file: .planning/phases/07-interactive-tui/07-05-PLAN.md (Wave 3: Integration and wiring)
+Stopped at: Completed 07-05. FilterPanel, full widget wiring, CLI entry point. TUI has end-to-end flow.
+Resume file: .planning/phases/07-interactive-tui/07-06-PLAN.md (Wave 4: Keyboard navigation & accessibility)
