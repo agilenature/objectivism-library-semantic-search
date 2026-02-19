@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** Three equally critical pillars -- semantic search quality, metadata preservation, incremental updates
-**Current focus:** Phase 6.3 complete. Ready for Phase 7: Interactive TUI
+**Current focus:** Phase 7: Interactive TUI -- Wave 1 in progress
 **Execution strategy:** Phase 6 before full upload (1,721 files) to enrich metadata first
 
 ## Current Position
 
-Phase: 6.3 of 7+ (Test Foundation & Canon Governance) -- COMPLETE
-Plan: 8 of 8 (ALL COMPLETE)
-Status: Phase 6.3 complete. Ready for Phase 7.
-Last activity: 2026-02-18 - Completed 06.3-08-PLAN.md (Canon audit + full test suite)
+Phase: 7 of 7+ (Interactive TUI)
+Plan: 2 of 7
+Status: In progress -- Wave 1 (foundation) executing
+Last activity: 2026-02-19 - Completed 07-02-PLAN.md (App Skeleton & State)
 
-Progress: [#####################] ~100% (34 plans of ~36 estimated total)
+Progress: [########################░░░] ~87% (36 plans of ~41 estimated total)
 
 Phase 1 Progress: [##########] 3/3 plans -- COMPLETE
 Phase 2 Progress: [##########] 4/4 plans -- COMPLETE
@@ -26,13 +26,14 @@ Phase 6 Progress: [##########] 5/5 plans -- COMPLETE
 Phase 6.1 Progress: [##########] 2/2 plans -- COMPLETE
 Phase 6.2 Progress: [##########] 2/2 plans -- COMPLETE
 Phase 6.3 Progress: [##########] 8/8 plans -- COMPLETE
+Phase 7 Progress:  [##░░░░░░░░] 2/7 plans -- IN PROGRESS
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 34
-- Average duration: 3.5 min
-- Total execution time: 110 min
+- Total plans completed: 36
+- Average duration: 3.4 min
+- Total execution time: 116 min
 
 **By Phase:**
 
@@ -48,9 +49,11 @@ Phase 6.3 Progress: [##########] 8/8 plans -- COMPLETE
 | 05-incremental-updates | 4/4 | ~12 min | ~3.0 min |
 | 06.3-test-foundation | 8/8 | ~20 min | ~2.5 min |
 
+| 07-interactive-tui | 2/7 | ~6 min | ~3.0 min |
+
 **Recent Trend:**
-- Last 5 plans: 06.3-05 (5 min), 06.3-06 (3 min), 06.3-07 (2 min), 06.3-08 (2 min)
-- Trend: Stable at 2-5 min per plan
+- Last 5 plans: 06.3-07 (2 min), 06.3-08 (2 min), 07-01 (3 min), 07-02 (3 min)
+- Trend: Stable at 2-3 min per plan
 
 *Updated after each plan completion*
 
@@ -204,18 +207,24 @@ Recent decisions affecting current work:
 - [06.3-08]: src/objlib/services/ kept in folders despite not existing (aspirational Phase 7 target)
 - [06.3-08]: 2 pre-existing test failures confirmed: test_formatter score bars, test_search _FakeDB (not regressions)
 - [06.3-08]: Coverage 38% overall; core modules 78-95%; extraction/upload untested (API-dependent)
+- [07-02]: Textual 8.0.0 installed (latest stable, compatible with plan requirements)
+- [07-02]: reactive() used with callable factories for mutable defaults (list, FilterSet)
+- [07-02]: Services stored as opaque constructor args -- no service imports in app.py
+- [07-02]: Message subclasses use __init__ pattern (not dataclass-style) for Textual 8.x compatibility
+- [07-02]: Three responsive breakpoints via CSS class toggling in on_resize()
+- [07-02]: 300ms debounce + @work(exclusive=True) for search auto-cancel
 
 ### Pending Todos
 
-Phase 6.3 complete. Ready for Phase 7 planning.
+Phase 7 Wave 1 in progress. Plans 07-01 and 07-02 complete. Wave 2 (pane widgets) next.
 
 ### Blockers/Concerns
 
-- 2 pre-existing test failures to fix early in Phase 7 (low priority)
+- Pre-existing test failures resolved (schema v8 test fixed by 07-01)
 - Coverage at 38% overall (extraction/ and upload/ modules need API mocking for meaningful coverage)
 
 ## Session Continuity
 
-Last session: 2026-02-18
-Stopped at: Completed 06.3-08. Phase 6.3 fully complete. Canon.json audited. Full test suite verified.
-Resume file: Phase 7 planning (Interactive TUI)
+Last session: 2026-02-19
+Stopped at: Completed 07-02. TUI App skeleton with reactive state, messages, and three-pane layout.
+Resume file: .planning/phases/07-interactive-tui/07-03-PLAN.md (Wave 2: Navigation pane)
