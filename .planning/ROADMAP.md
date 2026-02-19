@@ -1,215 +1,269 @@
 # Roadmap: Objectivism Library Semantic Search
 
-## Overview
+## Milestones
 
-This roadmap transforms a 1,749-file Objectivism Library into a semantic search system using Google Gemini's File Search API. The journey follows the natural three-phase pipeline (scan, upload, query) dictated by the architecture, extended with quality enhancements, incremental updates, offline query mode, AI-powered metadata enrichment, and an interactive terminal interface. Each phase delivers a complete, independently verifiable capability: Phase 1 builds the foundation offline with zero API dependencies, Phase 2 gets files into Gemini reliably, Phase 3 delivers working search, Phase 4 sharpens result quality with reranking and synthesis, Phase 5 makes the system maintainable long-term with incremental updates and enables querying without source disk access, Phase 6 uses LLMs to automatically infer rich metadata from content, and Phase 7 wraps everything in a modern TUI for immersive research workflows.
+- [x] **v1.0 Foundation to Interactive TUI** - Phases 1-7 (shipped 2026-02-18, 07-07 pending)
+- [ ] **v2.0 Gemini File Lifecycle FSM** - Phases 8-16 (in progress)
 
 ## Phases
 
-**Phase Numbering:**
-- Integer phases (1, 2, 3): Planned milestone work
-- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
-
-Decimal phases appear between their surrounding integers in numeric order.
-
-- [x] **Phase 1: Foundation** - SQLite state tracking and library scanning with metadata extraction
-- [x] **Phase 2: Upload Pipeline** - Reliable batch upload to Gemini File Search with rate limiting and resume
-- [x] **Phase 3: Search & CLI** - Semantic search, filtering, and CLI interface for querying the indexed library
-- [x] **Phase 4: Quality Enhancements** - Reranking, synthesis, query expansion, and difficulty-aware ordering
-- [x] **Phase 5: Incremental Updates & Offline Mode** - Change detection, selective re-upload, and disk-independent querying
-- [x] **Phase 6: AI-Powered Metadata** - LLM-based category inference, difficulty detection, and topic extraction
-- [x] **Phase 6.3: Test Foundation & Canon Governance** - Retroactive test suite (186 tests), Canon governance skills, project Canon.json audit
-- [ ] **Phase 7: Interactive TUI** - Modern terminal UI with live search, visual browsing, and session management
-
-## Phase Details
+<details>
+<summary>v1.0 Foundation to Interactive TUI (Phases 1-7) - SHIPPED 2026-02-18</summary>
 
 ### Phase 1: Foundation
-**Goal**: User can scan the entire 1,749-file library offline, extracting rich metadata from every file, with all state persisted to SQLite -- ready for upload
-**Depends on**: Nothing (first phase)
-**Requirements**: FOUN-01, FOUN-02, FOUN-03, FOUN-04, FOUN-05, FOUN-06, FOUN-07, FOUN-08, FOUN-09
-**Success Criteria** (what must be TRUE):
-  1. Running the scanner against `/Volumes/U32 Shadow/Objectivism Library` discovers all 1,749 .txt files and records each in the SQLite database with its content hash, file path, and size
-  2. Each scanned file has extracted metadata (course, year, quarter, week, topic, instructor, difficulty) derived from its folder hierarchy and filename -- viewable by querying the database
-  3. Re-running the scanner on an unchanged library produces zero new inserts and zero hash changes (idempotent)
-  4. Running the scanner after adding, modifying, or deleting files correctly detects each change type (new, modified, deleted) and updates the database accordingly
-  5. The SQLite database schema includes upload status tracking (pending/uploading/uploaded/failed), Gemini file IDs, upload timestamps, and embedding model version -- ready for Phase 2 to consume
-**Plans:** 3 plans
-
-Plans:
-- [ ] 01-01-PLAN.md — Project scaffolding, data models, config, and SQLite database layer
-- [ ] 01-02-PLAN.md — Metadata extraction engine and file scanner with change detection
-- [ ] 01-03-PLAN.md — Typer CLI interface and comprehensive test suite
+**Goal**: User can scan the entire 1,749-file library offline, extracting rich metadata from every file, with all state persisted to SQLite
+**Plans**: 3/3 complete
 
 ### Phase 2: Upload Pipeline
-**Goal**: User can upload the entire library to Gemini File Search reliably -- with rate limiting, resume from interruption, and progress visibility -- resulting in a fully indexed and queryable store
-**Depends on**: Phase 1
-**Requirements**: UPLD-01, UPLD-02, UPLD-03, UPLD-04, UPLD-05, UPLD-06, UPLD-07, UPLD-08, UPLD-09, UPLD-10
-**Success Criteria** (what must be TRUE):
-  1. Running the upload command processes all pending files in batches of 100-200, with Rich progress bars showing per-file and per-batch status, completing within the 36-hour safety window per batch
-  2. Interrupting the upload mid-batch (Ctrl+C or crash) and restarting skips already-uploaded files and resumes from the exact point of interruption -- no duplicate uploads, no lost progress
-  3. When Gemini returns 429 rate-limit errors, the system backs off automatically (exponential with jitter) and reduces concurrency, without user intervention, eventually completing the batch
-  4. After upload completes, every file in the SQLite database shows status "uploaded" with a valid Gemini file ID, and the Gemini File Search store reports the correct file count
-  5. Each uploaded file carries its full metadata (20-30 fields) attached to the Gemini file record, preserving the pedagogical structure for downstream filtering
-**Plans:** 3 plans
-
-Plans:
-- [ ] 02-01-PLAN.md — Dependencies, schema extensions, Gemini client wrapper, circuit breaker, and rate limiter
-- [ ] 02-02-PLAN.md — Async state manager, upload orchestrator, Rich progress tracking, and CLI upload command
-- [ ] 02-03-PLAN.md — Crash recovery protocol, unit test suite, and real-API verification
+**Goal**: User can upload the entire library to Gemini File Search reliably with rate limiting, resume, and progress visibility
+**Plans**: 4/4 complete
 
 ### Phase 3: Search & CLI
-**Goal**: User can search the indexed library by meaning, filter by metadata, browse by structure, and see results with source citations -- all from a polished CLI interface
-**Depends on**: Phase 2
-**Requirements**: SRCH-01, SRCH-02, SRCH-03, SRCH-04, SRCH-05, SRCH-06, SRCH-07, SRCH-08, INTF-01, INTF-02, INTF-03, INTF-04, INTF-05, INTF-06, INTF-07
-**Success Criteria** (what must be TRUE):
-  1. Running `search "What is the Objectivist view of rights?"` returns semantically relevant results from across the library, ranked by relevance, with each result showing the source file name, course context, and a text excerpt -- not just file paths
-  2. Running `search "causality" --course "OPAR" --difficulty introductory` returns only results matching the metadata filters, demonstrating that semantic search and metadata filtering work together
-  3. Running `browse --course "History of Philosophy"` displays the structural hierarchy (years, quarters, weeks) and lets the user navigate without a search query
-  4. Every search result includes passage-level citation (specific text excerpt with source attribution) that traces back to the exact file and section in the library
-  5. The CLI uses Rich formatting (tables for results, panels for detail views, color-coded relevance scores) and provides `search`, `filter`, and `browse` commands via Typer with `--help` documentation
-**Plans:** 3 plans
-
-Plans:
-- [ ] 03-01-PLAN.md -- Query layer: Gemini search client, citation extraction, AppState, search command
-- [ ] 03-02-PLAN.md -- Display layer: Three-tier Rich formatting, score bars, view command
-- [ ] 03-03-PLAN.md -- Navigation layer: Browse and filter commands with SQLite metadata queries
-
-### Phase 4: Quality Enhancements
-**Goal**: Search results are sharper (reranked for precision), answers synthesize across sources (with inline citations), and queries understand philosophical terminology -- transforming raw search into a research tool
-**Depends on**: Phase 3
-**Requirements**: ADVN-01, ADVN-02, ADVN-03, ADVN-04, ADVN-05, ADVN-06, ADVN-07
-**Success Criteria** (what must be TRUE):
-  1. Searching for a concept like "free will" returns results ordered with introductory explanations first and advanced treatments later -- the user sees a natural learning progression without manually filtering by difficulty
-  2. Running `search "What is the relationship between reason and emotion?" --synthesize` produces a multi-paragraph answer citing 5-10 specific passages with inline citations (e.g., "[OPAR Ch.4, p.12]"), where every claim traces to a quoted source
-  3. Searching for "egoism" also retrieves results about "rational self-interest" and related philosophical terminology, demonstrating query expansion without the user needing to know all synonyms
-  4. Running `search "concept formation" --track-evolution` shows how the concept develops from introductory (ITOE basics) through intermediate to advanced treatments, ordered by curriculum progression
-  5. The user can save a research session and resume it later, picking up where they left off with previous queries and results preserved
-**Plans:** 5 plans
-
-Plans:
-- [ ] 04-01-PLAN.md — Foundation: schema V6 migration (passages/sessions tables), Pydantic structured output models, query expansion engine with curated glossary
-- [ ] 04-02-PLAN.md — Gemini Flash LLM-based reranker with difficulty-aware ordering (learn/research modes)
-- [ ] 04-03-PLAN.md — Multi-document synthesis pipeline with MMR diversity filtering and citation validation
-- [ ] 04-04-PLAN.md — Session manager: CRUD, append-only event logging, timeline display, Markdown export
-- [ ] 04-05-PLAN.md — CLI integration: enhanced search command with all flags, session/glossary commands, concept evolution display
-
-### Phase 5: Incremental Updates & Offline Mode
-**Goal**: User can keep the search index current as the library grows AND query the library even when the source disk is disconnected -- detecting new or changed files and updating only what changed, while enabling full query functionality without filesystem access
-**Depends on**: Phase 2 (pipeline), Phase 3 (CLI for sync command)
-**Requirements**: INCR-01, INCR-02, INCR-03, INCR-04, INCR-05, OFFL-01, OFFL-02, OFFL-03
-**Success Criteria** (what must be TRUE):
-  1. After adding new files to the library directory, running `sync` detects the additions, uploads only the new files, and makes them searchable -- existing indexed files are untouched
-  2. After modifying a file's content, running `sync` detects the content hash change, removes the old version from the Gemini store, uploads the updated version, and the new content appears in search results
-  3. After deleting files from the library, running `sync` detects the removals and cleans up the corresponding Gemini store entries -- orphaned index entries do not pollute search results
-  4. Running `sync --force` re-processes all files regardless of change detection, providing a manual override for cases where the user wants a full re-index
-  5. With the source disk disconnected (library path unavailable), running `search`, `browse`, `filter`, and `view` (metadata only) commands work correctly using Gemini and SQLite -- query operations remain fully functional
-  6. When source disk is disconnected, running `view --full` gracefully degrades to metadata-only view with clear messaging ("Source disk required for full document view") -- no crashes or confusing errors
-  7. When source disk is disconnected, running `scan` or `upload` commands fail with clear, actionable error messages ("Library disk not connected at /Volumes/U32 Shadow/Objectivism Library") -- maintenance operations are explicitly disk-dependent
-  8. The system automatically detects disk availability and adjusts operation modes accordingly -- user doesn't need to manually specify offline mode
-**Plans:** 4 plans
-
-Plans:
-- [ ] 05-01-PLAN.md — Schema V7 migration (table rebuild for CHECK constraint), new sync columns, library_config table, disk availability utility
-- [ ] 05-02-PLAN.md — Gemini store document API: delete_store_document, list_store_documents, find_store_document_name
-- [ ] 05-03-PLAN.md — SyncDetector (mtime-optimized change detection), SyncOrchestrator (full pipeline), CLI sync command with all flags
-- [ ] 05-04-PLAN.md — Offline mode guards: disk availability checks on scan/upload, improved view --full messaging
+**Goal**: User can search the indexed library by meaning, filter by metadata, browse by structure, and see results with citations
+**Plans**: 3/3 complete
 
 ### Phase 6: AI-Powered Metadata Enhancement
-**Goal**: User can automatically infer and enhance metadata (categories, difficulty, topics) using LLM analysis of file content -- transforming generic "unknown" categories into rich, searchable metadata without manual effort
-**Depends on**: Phase 1 (database schema), Phase 3 (metadata commands)
-**Requirements**: META-01, META-02, META-03, META-04, META-05
-**Success Criteria** (what must be TRUE):
-  1. Running `metadata infer-categories` analyzes file content with a cost-effective LLM (Gemini Flash, Mixtral, or Haiku) and assigns appropriate categories (course, book, qa_session, philosophy_comparison, cultural_commentary, etc.) -- files with category="unknown" get meaningful classifications
-  2. Running `metadata infer-difficulty` analyzes philosophical content complexity and assigns difficulty levels (introductory, intermediate, advanced) based on vocabulary, concept density, and prerequisite knowledge -- enabling difficulty-based search filtering
-  3. The inference process provides a review/approval workflow showing proposed changes before applying them, with batch accept/reject options -- user maintains control over automated categorization
-  4. Running `metadata infer --batch --auto-approve` processes the entire library unattended, with a summary report showing categorization statistics and low-confidence items flagged for manual review
-  5. All inferred metadata is saved to SQLite and can optionally trigger re-upload to Gemini with `--set-pending` flag -- metadata improvements flow through to search results
-**Plans:** 5 plans
-
-Plans:
-- [ ] 06-01-PLAN.md — Foundation: schema migration v3, Pydantic 4-tier models, Mistral client, response parser, API key management
-- [ ] 06-02-PLAN.md — Wave 1 infrastructure: prompt strategies, test file sampler, competitive orchestrator, checkpoint/resume
-- [ ] 06-03-PLAN.md — Wave 1 execution: CLI commands (extract-wave1, wave1-report, wave1-select), quality gates, human review checkpoint
-- [ ] 06-04-PLAN.md — Wave 2 production pipeline: validation engine, confidence scoring, adaptive chunking, production orchestrator
-- [ ] 06-05-PLAN.md — Wave 2 CLI & review: production extract/review/approve/stats commands, Rich 4-tier panels, human review checkpoint
+**Goal**: User can automatically infer and enhance metadata using LLM analysis of file content
+**Plans**: 5/5 complete
 
 ### Phase 6.1: Entity Extraction & Name Normalization (INSERTED)
-
-**Goal**: User can automatically extract and normalize person names mentioned in transcripts against a canonical list of Objectivist philosophers and ARI instructors -- transforming raw text mentions into structured, searchable entity metadata
-**Depends on**: Phase 6 (AI metadata extraction)
-**Status**: Complete (2026-02-16)
-**Plans:** 2 plans
-
-Plans:
-- [x] 06.1-01-PLAN.md -- Schema v4 migration, person registry, entity extraction engine with TDD
-- [x] 06.1-02-PLAN.md -- CLI commands (extract, stats, report) and database persistence methods
-
-**Details:**
-Extracts person name entities from transcripts, fuzzy matches against canonical list (Ayn Rand, Leonard Peikoff, Onkar Ghate, Robert Mayhew, Tara Smith, Ben Bayer, Mike Mazza, Aaron Smith, Tristan de Liege, Gregory Salmieri, Harry Binswanger, Jean Moroney, Yaron Brook, Don Watkins, Keith Lockitch), normalizes spelling variations, stores mention counts and normalized names as additional metadata for inclusion in Gemini upload.
+**Goal**: User can automatically extract and normalize person names mentioned in transcripts
+**Plans**: 2/2 complete
 
 ### Phase 6.2: Metadata-Enriched Gemini Upload (INSERTED)
+**Goal**: User can upload all files to Gemini with enriched 4-tier metadata plus entity mentions
+**Plans**: 2/2 complete
 
-**Goal**: User can upload all files to Gemini File Search with enriched 4-tier metadata (category, difficulty, topics, aspects, descriptions) plus entity mentions -- enabling powerful metadata-based filtering and semantic search with full philosophical context
-**Depends on**: Phase 6.1 (entity extraction), Phase 2 (upload pipeline)
-**Plans:** 2 plans
+### Phase 4: Quality Enhancements
+**Goal**: Search results are reranked for precision, answers synthesize across sources, and queries understand philosophical terminology
+**Plans**: 5/5 complete
 
-Plans:
-- [x] 06.2-01-PLAN.md -- Schema v5 migration, enriched metadata builder, content preparer, enriched pipeline query
-- [x] 06.2-02-PLAN.md -- EnrichedUploadOrchestrator, CLI enriched-upload command, three-stage testing checkpoint
+### Phase 5: Incremental Updates & Offline Mode
+**Goal**: User can keep the search index current and query the library even when the source disk is disconnected
+**Plans**: 4/4 complete
 
-**Details:**
-Extends Phase 2 upload pipeline to include 4-tier metadata from Phase 6 extraction and entity mentions from Phase 6.1. Flattens nested structures (semantic_description) into Gemini custom_metadata format (7-9 searchable fields using string_list_value). Implements conservative concurrent upload (Semaphore(2)), tracks per-file upload status with idempotency hashing. Three-stage testing (20 -> 100 -> 250 docs) validates metadata schema and search quality before full deployment.
+### Phase 6.3: Test Foundation & Canon Governance (INSERTED)
+**Goal**: Retroactive test suite (186 tests), Canon governance skills, project Canon.json audit
+**Plans**: 8/8 complete
 
 ### Phase 7: Interactive TUI
-**Goal**: User can interact with the library through a modern terminal UI with keyboard/mouse navigation, live search, visual browsing, split-pane views, and session management -- transforming the CLI into an immersive research environment
-**Depends on**: Phase 3 (search & CLI), Phase 4 (synthesis), Phase 6 (metadata)
-**Requirements**: TUI-01, TUI-02, TUI-03, TUI-04, TUI-05, TUI-06, TUI-07, TUI-08
+**Goal**: User can interact with the library through a modern terminal UI with live search, visual browsing, split-pane views, and session management
+**Plans**: 6/7 complete (07-07 pending -- prerequisite for Phase 8)
+
+</details>
+
+## v2.0 Gemini File Lifecycle FSM (Phases 8-16)
+
+**Milestone Goal:** Implement a formal finite state machine governing every file's Gemini lifecycle so that `[Unresolved file #N]` never appears in search results -- permanently, not just after a manual store-sync.
+
+**Pre-mortem source:** `governance/pre-mortem-gemini-fsm.md`
+
+**Architecture:** 9 phases structured as a Precondition phase followed by 8 validation waves. Each wave validates specific pre-mortem assumptions before the next can begin. HOSTILE-distrust waves (9, 10, 11) require affirmative evidence of correct behavior -- "no errors thrown" does not pass the gate. Every wave's gate is BLOCKING: if it fails, the next phase cannot start.
+
+**Hard Constraint:** AI-enriched metadata (categories, difficulty, topics, aspects, descriptions, entity extractions) in SQLite is sacred. No operation in any phase may delete, reset, or re-derive this metadata. Store migration touches ONLY Gemini-related state columns.
+
+---
+
+### Phase 8: Store Migration Precondition
+**Goal**: The system starts from a clean, known baseline -- old store deleted, permanent store created, DB schema extended, stability instrument operational
+**Depends on**: Phase 7 complete (specifically 07-07 TUI integration smoke test)
+**Requirements**: MIGR-01, MIGR-02, MIGR-03, MIGR-04, STAB-01, STAB-02, STAB-03, STAB-04
+**Distrust**: N/A (precondition, not a spike)
 **Success Criteria** (what must be TRUE):
-  1. Running `objlib tui` launches an interactive terminal interface with live search input that updates results as you type -- no more typing `objlib search "query"` repeatedly
-  2. The browse mode displays a navigable tree view (categories -> courses -> files) with keyboard controls and file count badges -- visual exploration replaces memorizing browse command syntax
-  3. The interface uses split-pane layout with search/navigation on the left, results in the middle, and document preview on the right -- user can see context without switching views
-  4. Interactive filters provide checkboxes and sliders for category, difficulty, year ranges instead of command-line filter syntax -- metadata filtering becomes visual and discoverable
-  5. The TUI preserves search history (accessible with arrows), allows bookmarking files and searches, and can save/load research sessions -- enabling iterative research workflows
-  6. Document viewer supports scrolling, search term highlighting, and citation linking (click [1] to jump to source) -- seamless navigation between synthesis and sources
-  7. The TUI supports both keyboard shortcuts (for power users) and mouse interaction (for discoverability) -- accessible to different user preferences
-  8. All existing CLI functionality (search, browse, filter, view, metadata commands) is accessible through the TUI -- no regression in capabilities
-**Plans:** 7 plans
+  1. User runs a pre-flight check that shows the current store document count and number of files losing Gemini state, confirms explicitly, then the migration deletes `objectivism-library-test` and creates `objectivism-library` as a single confirmed operation -- search is offline from this point until Phase 12
+  2. The `files` table has three new columns (`gemini_store_doc_id TEXT`, `gemini_state TEXT DEFAULT 'untracked'`, `gemini_state_updated_at TEXT`) and all previously-uploaded files are reset to `gemini_state = 'untracked'` with `gemini_store_doc_id = NULL` -- while all AI metadata columns (`metadata_json`, entity tables) are verified untouched
+  3. `scripts/check_stability.py --store objectivism-library` reports exit code 2 (ERROR/store not found or empty store) because the new store has no documents yet; passing `--store objectivism-library-test` also returns exit code 2 (store deleted) -- misconfiguration is distinguishable from instability
+  4. `check_stability.py` validates all 6 assertions independently (count invariant, DB-to-Store ghosts, Store-to-DB orphans, stuck transitions, search returns results, citation resolution) and exits 0/1/2 as specified -- the instrument is operational and ready to serve as the mandatory gate for all subsequent waves
+**Plans**: TBD
 
 Plans:
-- [ ] 07-01-PLAN.md -- Services facade (SearchService, LibraryService, SessionService) + textual dependency
-- [ ] 07-02-PLAN.md -- App skeleton with AppState, messages, three-pane CSS layout, reactive properties
-- [ ] 07-03-PLAN.md -- Navigation tree widget and search bar with debounce + history
-- [ ] 07-04-PLAN.md -- Results list widget and document preview pane with citation jump
-- [ ] 07-05-PLAN.md -- Filter panel, full widget wiring, message handlers, CLI entry point
-- [ ] 07-06-PLAN.md -- Responsive layout, command palette, bookmarks, session save/load
-- [ ] 07-07-PLAN.md -- Integration smoke test, bug fixes, human verification checkpoint
+- [ ] 08-01: DB schema migration (3 new columns, state reset, metadata preservation verification)
+- [ ] 08-02: Store migration (pre-flight check, delete old store, create permanent store)
+- [ ] 08-03: `check_stability.py` implementation and exit code verification
+
+---
+
+### Phase 9: Wave 1 -- Async FSM Library Spike
+**Goal**: A specific FSM approach (library or hand-rolled) is selected with affirmative evidence of correct async behavior under concurrent load
+**Depends on**: Phase 8 (DB schema must exist for state column writes)
+**Requirements**: FSM-01, VLID-01
+**Distrust**: HOSTILE -- requires positive evidence, not absence of failure
+**Gate**: BLOCKING for Phase 10
+**Success Criteria** (what must be TRUE):
+  1. The chosen FSM approach (library or hand-rolled) runs concurrent async transitions (multiple files transitioning simultaneously) inside `asyncio.run()` from a Typer command, with `aiosqlite` DB writes in each transition callback, producing no event loop conflicts, no thread leakage, and no connection-sharing violations -- demonstrated by a reproducible test harness, not just "it ran without errors"
+  2. The test harness includes adversarial conditions: concurrent transitions on the same file (guard rejection), error injection during transitions (recovery to known state), and at least 10 simultaneous transition attempts -- each producing the correct, verified outcome
+  3. The approach selection is documented with a comparison of candidates tested, the evidence for and against each, and the rationale for the final choice -- committed to the repository before Phase 10 begins
+**Plans**: TBD
+
+Plans:
+- [ ] 09-01: Candidate evaluation spike (library vs. hand-rolled, async harness, concurrent transition tests)
+- [ ] 09-02: Approach selection, documentation, and integration scaffolding
+
+---
+
+### Phase 10: Wave 2 -- Transition Atomicity Spike
+**Goal**: Every identified crash point in multi-API-call FSM transitions has a tested automatic recovery path -- no stuck state requires manual SQL to escape
+**Depends on**: Phase 9 gate passed (FSM approach selected)
+**Requirements**: FSM-02, VLID-02
+**Distrust**: HOSTILE -- requires tested recovery, not designed recovery
+**Gate**: BLOCKING for Phase 11
+**Success Criteria** (what must be TRUE):
+  1. The write-ahead intent pattern covers the two-API-call reset transition (`delete_store_document()` + `delete_file()` + DB update): for every crash point (after API call 1 but before DB write, after both API calls but before DB write, during DB write itself), a test simulates the crash and the recovery path automatically resolves the file to a consistent, non-stuck state
+  2. No file can enter a state that requires manual SQL to escape -- every path into `FAILED` state has a designed and tested automatic recovery mechanism (recovery crawler on startup, idempotent retry, or explicit `FAILED -> UNTRACKED` transition)
+  3. The compensation logic (recovery paths) is demonstrably simpler than the problem it solves -- measured by: fewer lines of recovery code than the transition code itself, and each recovery path tested with a single focused test case
+**Plans**: TBD
+
+Plans:
+- [ ] 10-01: Write-ahead intent pattern for two-API-call transitions with crash simulation tests
+- [ ] 10-02: FAILED state recovery paths and startup recovery crawler
+
+---
+
+### Phase 11: Wave 3 -- display_name Stability and Import Reliability
+**Goal**: `display_name` is confirmed caller-controlled (not API-inferred), import-to-visible lag is measured and bounded, and the PROCESSING-to-INDEXED trigger strategy is decided
+**Depends on**: Phase 10 gate passed (atomicity proven)
+**Requirements**: VLID-03
+**Distrust**: HOSTILE -- requires SDK source evidence, not empirical assumption
+**Gate**: BLOCKING for Phase 12
+**Success Criteria** (what must be TRUE):
+  1. `display_name` is confirmed to be set by our code (the `display_name=` parameter in the import call) via inspection of the google-genai SDK source -- not inferred or modified by the API -- with the specific SDK source file and line number documented
+  2. Import-to-visible lag is measured empirically across at least 10 test files: the time between `documents.import_()` returning success and the document appearing in `list_store_documents()` is characterized with P50, P95, and P99 latencies -- and the FSM's PROCESSING-to-INDEXED transition strategy accounts for this lag
+  3. The PROCESSING-to-INDEXED trigger strategy is decided and documented: either (a) polling `list_store_documents()` until visible, (b) trusting API success with store-sync as eventual consistency check, or (c) a VERIFYING intermediate state -- with the decision justified by the measured lag data
+**Plans**: TBD
+
+Plans:
+- [ ] 11-01: SDK source inspection for display_name contract + import lag measurement spike
+- [ ] 11-02: PROCESSING-to-INDEXED trigger strategy decision and documentation
+
+---
+
+### Phase 12: Wave 4 -- 50-File Fresh FSM-Managed Upload
+**Goal**: 50 test files complete the full FSM lifecycle (UNTRACKED through INDEXED) with correct, verifiable `gemini_store_doc_id` for every file -- the first real end-to-end proof
+**Depends on**: Phase 11 gate passed (display_name and import behavior characterized)
+**Requirements**: FSM-04, FSM-05, VLID-04
+**Distrust**: SKEPTICAL -- empirical verification against real Gemini API
+**Gate**: BLOCKING for Phase 13
+**Success Criteria** (what must be TRUE):
+  1. All 50 test files have `gemini_state = 'indexed'` AND `gemini_store_doc_id IS NOT NULL` in the database after the FSM-managed upload pipeline completes -- zero gaps
+  2. All 50 `gemini_store_doc_id` values are cross-verified against `list_store_documents()`: every store document returned by the API matches a DB record, and every DB record's `gemini_store_doc_id` points to an existing store document -- bidirectional consistency
+  3. `_reset_existing_files()` deletes the store document (via `delete_store_document()`) before deleting the raw file during any reset operation -- confirmed by running a reset on at least 5 files and verifying the store document count decreases accordingly (no orphan accumulation)
+  4. `AsyncUploadStateManager` write methods are FSM transition triggers: no gemini-related state mutation (`gemini_state`, `gemini_store_doc_id`, `gemini_file_id`) occurs outside an FSM transition -- verified by grep/audit of all DB write sites
+  5. `check_stability.py --store objectivism-library` reports STABLE (exit 0) at T=0 after the 50-file upload
+**Plans**: TBD
+
+Plans:
+- [ ] 12-01: FSM integration into upload pipeline (AsyncUploadStateManager as FSM trigger, _reset_existing_files fix)
+- [ ] 12-02: 50-file upload execution, cross-verification, and stability check
+
+---
+
+### Phase 13: Wave 5 -- State Column Retirement and Serialization
+**Goal**: All query sites using legacy `status` column are mapped to `gemini_state` equivalents with no TUI/CLI/test breakage, and FSM state persists as plain string enum independent of any library
+**Depends on**: Phase 12 gate passed (FSM-managed upload proven)
+**Requirements**: FSM-03, VLID-05
+**Distrust**: CAUTIOUS
+**Gate**: BLOCKING for Phase 14
+**Success Criteria** (what must be TRUE):
+  1. Every query site in the codebase that reads the legacy `status` column is inventoried and mapped to an equivalent `gemini_state` query -- with a complete list committed to the repository showing the old query, the new query, and which module/function it lives in
+  2. `gemini_state` persists as a plain string enum (`'untracked'`, `'uploading'`, `'processing'`, `'indexed'`, `'failed'`) stored directly in the DB column -- never serialized through a library's internal format -- confirmed by reading raw DB values with `sqlite3` CLI
+  3. The migration window (period where both `status` and `gemini_state` are active) has an explicit defined scope: which operations write to which column, and when `status` will be dropped or made derived -- no open-ended dual-write period
+  4. All TUI commands, CLI commands, and tests pass after the `gemini_state` migration with no behavioral change visible to the user
+**Plans**: TBD
+
+Plans:
+- [ ] 13-01: Legacy status column audit and gemini_state migration mapping
+- [ ] 13-02: Migration execution, dual-write elimination, and full test pass verification
+
+---
+
+### Phase 14: Wave 6 -- Batch Performance Benchmark
+**Goal**: FSM transition overhead is measured (not estimated) under realistic batch conditions, the bottleneck is identified, and an acceptable throughput is defined with a tested mitigation
+**Depends on**: Phase 13 gate passed (state column migration complete)
+**Requirements**: VLID-06
+**Distrust**: CAUTIOUS
+**Gate**: BLOCKING for Phase 15
+**Success Criteria** (what must be TRUE):
+  1. FSM transition throughput is measured under a simulated 818-file batch (the full `UNTRACKED -> UPLOADING -> PROCESSING -> INDEXED` cycle for each file): transitions per second, total elapsed time, and P95 per-transition latency are recorded
+  2. The bottleneck is identified (guard check read, state write, API call mock latency, or WAL serialization) and at least one mitigation is tested (batch DB writes, async state writes, or reduced guard checks) -- with before/after measurements
+  3. An acceptable throughput threshold is defined explicitly (e.g., "full upload completes within X hours") and the current measured throughput either meets it or the tested mitigation brings it within range
+**Plans**: TBD
+
+Plans:
+- [ ] 14-01: Batch performance benchmark harness and bottleneck analysis
+- [ ] 14-02: Mitigation implementation and re-measurement
+
+---
+
+### Phase 15: Wave 7 -- FSM Consistency and store-sync Contract
+**Goal**: Import-to-searchable lag is empirically characterized, and store-sync's ongoing role relative to the FSM is explicitly defined and documented
+**Depends on**: Phase 14 gate passed (performance acceptable)
+**Requirements**: VLID-07
+**Distrust**: SKEPTICAL
+**Gate**: BLOCKING for Phase 16
+**Success Criteria** (what must be TRUE):
+  1. Import-to-searchable lag is measured empirically: after a successful import, the time until the document appears in search results (not just `list_store_documents()`) is characterized with P50, P95, and P99 -- using at least 20 test imports
+  2. `store-sync`'s ongoing role is explicitly defined as one of: (a) routine automatic step after every upload, (b) scheduled periodic reconciliation, or (c) emergency-only tool -- with the decision justified by the measured lag data and any observed Gemini-side silent failures
+  3. The contract between FSM and store-sync is documented: FSM owns state writes, store-sync owns read-verification -- and any case where they could disagree (FSM says INDEXED, store-sync says orphaned) has a defined resolution policy
+  4. `check_stability.py --store objectivism-library` reports STABLE at T=0, T+4h, and T+24h after the 50-file corpus has been indexed -- temporal stability confirmed before full upload
+**Plans**: TBD
+
+Plans:
+- [ ] 15-01: Import-to-searchable lag measurement and Gemini-side failure characterization
+- [ ] 15-02: store-sync contract definition, FSM/store-sync reconciliation policy, temporal stability verification
+
+---
+
+### Phase 16: Wave 8 -- Full Library Upload
+**Goal**: All ~1,748 files are uploaded through the FSM-managed pipeline and `[Unresolved file #N]` never appears in any TUI search result -- the definition of done for v2.0
+**Depends on**: Phase 15 gate passed (consistency and store-sync contract established), STAB-04 temporal stability protocol (T+24h STABLE from Phase 15)
+**Requirements**: PIPE-01, PIPE-02
+**Distrust**: SKEPTICAL
+**Gate**: DEFINITION OF DONE for milestone v2.0
+**Success Criteria** (what must be TRUE):
+  1. The full FSM-managed upload of ~1,748 files completes with zero files in `FAILED` or `PROCESSING` state -- every file reaches `gemini_state = 'indexed'` with a valid `gemini_store_doc_id`
+  2. `check_stability.py --store objectivism-library` reports STABLE (exit 0) at T=0, T+4h, T+24h, and T+36h after the full library upload -- temporal stability confirmed at production scale
+  3. `store-sync --dry-run --store objectivism-library` confirms ~1,748 canonical documents and 0 orphaned documents
+  4. `[Unresolved file #N]` does not appear in any TUI search result -- verified by running at least 5 diverse search queries in the TUI and confirming every citation displays a real file name
+  5. The 50-file proxy assumption (A11) is validated: no failure modes appeared at full scale that were absent at 50-file scale -- or if they did, they are documented and resolved
+**Plans**: TBD
+
+Plans:
+- [ ] 16-01: Full library upload execution and monitoring
+- [ ] 16-02: Temporal stability protocol (T+4h, T+24h, T+36h checks) and TUI acceptance testing
+
+---
 
 ## Progress
 
 **Execution Order:**
-Phases execute in strategic order (not strictly numeric):
+Phases execute sequentially: 8 -> 9 -> 10 -> 11 -> 12 -> 13 -> 14 -> 15 -> 16
+Each wave's gate is BLOCKING for the next. If a gate fails, the failing phase must be repeated before proceeding.
 
-**Standard order:** 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
+**Prerequisite:** Phase 07-07 (TUI integration smoke test from v1.0) must pass before Phase 8 begins.
 
-**Actual execution (Metadata-First Strategy):**
-1 -> 2 -> 3 -> **6** -> [FULL UPLOAD] -> 4 -> 5 -> 7
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 1. Foundation | v1.0 | 3/3 | Complete | 2026-02-15 |
+| 2. Upload Pipeline | v1.0 | 4/4 | Complete | 2026-02-16 |
+| 3. Search & CLI | v1.0 | 3/3 | Complete | 2026-02-16 |
+| 6. AI-Powered Metadata | v1.0 | 5/5 | Complete | 2026-02-16 |
+| 6.1. Entity Extraction | v1.0 | 2/2 | Complete | 2026-02-16 |
+| 6.2. Enriched Upload | v1.0 | 2/2 | Complete | 2026-02-17 |
+| 4. Quality Enhancements | v1.0 | 5/5 | Complete | 2026-02-18 |
+| 5. Incremental Updates | v1.0 | 4/4 | Complete | 2026-02-18 |
+| 6.3. Test Foundation | v1.0 | 8/8 | Complete | 2026-02-18 |
+| 7. Interactive TUI | v1.0 | 6/7 | In progress | - |
+| 8. Store Migration | v2.0 | 0/3 | Not started | - |
+| 9. Async FSM Spike | v2.0 | 0/2 | Not started | - |
+| 10. Transition Atomicity | v2.0 | 0/2 | Not started | - |
+| 11. display_name + Import | v2.0 | 0/2 | Not started | - |
+| 12. 50-File FSM Upload | v2.0 | 0/2 | Not started | - |
+| 13. State Column Retirement | v2.0 | 0/2 | Not started | - |
+| 14. Batch Performance | v2.0 | 0/2 | Not started | - |
+| 15. Consistency + store-sync | v2.0 | 0/2 | Not started | - |
+| 16. Full Library Upload | v2.0 | 0/2 | Not started | - |
 
-**Rationale:** Phase 6 (metadata enhancement) done BEFORE full library upload to:
-- Infer categories for 496 "unknown" files (~28% of library)
-- Upload with enriched metadata from day one
-- Avoid re-uploading 1,721 files just to update metadata
-- Better search filtering quality from the start
-
-| Phase | Plans Complete | Status | Completed |
-|-------|---------------|--------|-----------|
-| 1. Foundation | 3/3 | Complete | 2026-02-15 |
-| 2. Upload Pipeline | 4/4 | Complete | 2026-02-16 |
-| 3. Search & CLI | 3/3 | Complete | 2026-02-16 |
-| 6. AI-Powered Metadata | 5/5 | Complete | 2026-02-16 |
-| 6.1. Entity Extraction | 2/2 | Complete | 2026-02-16 |
-| 6.2. Enriched Upload | 2/2 | Complete | 2026-02-17 |
-| **[FULL UPLOAD: 1,721 files]** | **-** | **Next** | **-** |
-| 4. Quality Enhancements | 5/5 | Complete | 2026-02-18 |
-| 5. Incremental Updates | 4/4 | Complete | 2026-02-18 |
-| 6.3. Test Foundation & Canon Governance | 8/8 | Complete | 2026-02-18 |
-| 7. Interactive TUI | 0/7 | Planning Complete | - |
+---
+*Roadmap created: 2026-02-19*
+*Pre-mortem: governance/pre-mortem-gemini-fsm.md*
+*Last updated: 2026-02-19*
