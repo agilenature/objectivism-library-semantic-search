@@ -72,14 +72,14 @@
 **Success Criteria** (what must be TRUE):
   1. User runs a pre-flight check that shows the current store document count and number of files losing Gemini state, confirms explicitly, then the migration deletes `objectivism-library-test` and creates `objectivism-library` as a single confirmed operation -- search is offline from this point until Phase 12
   2. The `files` table has three new columns (`gemini_store_doc_id TEXT`, `gemini_state TEXT DEFAULT 'untracked'`, `gemini_state_updated_at TEXT`) and all previously-uploaded files are reset to `gemini_state = 'untracked'` with `gemini_store_doc_id = NULL` -- while all AI metadata columns (`metadata_json`, entity tables) are verified untouched
-  3. `scripts/check_stability.py --store objectivism-library` reports exit code 2 (ERROR/store not found or empty store) because the new store has no documents yet; passing `--store objectivism-library-test` also returns exit code 2 (store deleted) -- misconfiguration is distinguishable from instability
+  3. `scripts/check_stability.py --store objectivism-library` reports exit code 0 (STABLE with all assertions vacuously passing on empty store); passing `--store objectivism-library-test` returns exit code 2 (store deleted) -- misconfiguration is distinguishable from instability
   4. `check_stability.py` validates all 6 assertions independently (count invariant, DB-to-Store ghosts, Store-to-DB orphans, stuck transitions, search returns results, citation resolution) and exits 0/1/2 as specified -- the instrument is operational and ready to serve as the mandatory gate for all subsequent waves
-**Plans**: TBD
+**Plans**: 3 plans in 2 waves
 
 Plans:
-- [ ] 08-01: DB schema migration (3 new columns, state reset, metadata preservation verification)
-- [ ] 08-02: Store migration (pre-flight check, delete old store, create permanent store)
-- [ ] 08-03: `check_stability.py` implementation and exit code verification
+- [ ] 08-01-PLAN.md -- DB schema migration (V9 columns, state reset, metadata preservation verification)
+- [ ] 08-02-PLAN.md -- Store migration (pre-flight check, create permanent store, delete old store)
+- [ ] 08-03-PLAN.md -- check_stability.py v2 rewrite (FSM-aware assertions, exit code verification)
 
 ---
 
@@ -255,7 +255,7 @@ Each wave's gate is BLOCKING for the next. If a gate fails, the failing phase mu
 | 5. Incremental Updates | v1.0 | 4/4 | Complete | 2026-02-18 |
 | 6.3. Test Foundation | v1.0 | 8/8 | Complete | 2026-02-18 |
 | 7. Interactive TUI | v1.0 | 6/7 | In progress | - |
-| 8. Store Migration | v2.0 | 0/3 | Not started | - |
+| 8. Store Migration | v2.0 | 0/3 | Planned | - |
 | 9. Async FSM Spike | v2.0 | 0/2 | Not started | - |
 | 10. Transition Atomicity | v2.0 | 0/2 | Not started | - |
 | 11. display_name + Import | v2.0 | 0/2 | Not started | - |
