@@ -328,7 +328,7 @@ CREATE TABLE IF NOT EXISTS sessions (
 CREATE TABLE IF NOT EXISTS session_events (
     id TEXT PRIMARY KEY,
     session_id TEXT NOT NULL,
-    event_type TEXT NOT NULL CHECK(event_type IN ('search', 'view', 'synthesize', 'note', 'error')),
+    event_type TEXT NOT NULL CHECK(event_type IN ('search', 'view', 'synthesize', 'note', 'error', 'bookmark')),
     payload_json TEXT NOT NULL,
     created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')),
     FOREIGN KEY (session_id) REFERENCES sessions(id)
@@ -449,6 +449,35 @@ CREATE TABLE IF NOT EXISTS library_config (
 
 """
 
+MIGRATION_V8_SQL = """
+-- V8: Rebuild session_events to expand CHECK constraint for 'bookmark' event type
+
+-- Safety: drop partial migration artifact if previous attempt failed
+DROP TABLE IF EXISTS session_events_v8;
+
+-- Step 1: Create new table with expanded CHECK
+CREATE TABLE session_events_v8 (
+    id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL,
+    event_type TEXT NOT NULL CHECK(event_type IN ('search', 'view', 'synthesize', 'note', 'error', 'bookmark')),
+    payload_json TEXT NOT NULL,
+    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')),
+    FOREIGN KEY (session_id) REFERENCES sessions(id)
+);
+
+-- Step 2: Copy existing data
+INSERT INTO session_events_v8 (id, session_id, event_type, payload_json, created_at)
+SELECT id, session_id, event_type, payload_json, created_at
+FROM session_events;
+
+-- Step 3: Drop old table, rename new
+DROP TABLE session_events;
+ALTER TABLE session_events_v8 RENAME TO session_events;
+
+-- Step 4: Recreate index
+CREATE INDEX idx_session_events_session ON session_events(session_id);
+"""
+
 UPSERT_SQL = """
 INSERT INTO files(file_path, content_hash, filename, file_size,
                   metadata_json, metadata_quality, status)
@@ -512,6 +541,7 @@ class Database:
         - v6: passages cache, sessions, session_events tables
         - v7: Table rebuild for expanded CHECK constraint (missing/error),
               5 new sync columns, library_config table
+        - v8: session_events table rebuild for 'bookmark' event type
         """
         self.conn.executescript(SCHEMA_SQL)
 
@@ -564,7 +594,10 @@ class Database:
             self.conn.executescript(MIGRATION_V7_SQL)
             self.conn.execute("PRAGMA foreign_keys = ON")
 
-        self.conn.execute("PRAGMA user_version = 7")
+        if version < 8:
+            self.conn.executescript(MIGRATION_V8_SQL)
+
+        self.conn.execute("PRAGMA user_version = 8")
 
     def upsert_file(self, record: FileRecord) -> None:
         """Insert or update a single file record.

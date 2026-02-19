@@ -21,7 +21,7 @@ from rich.text import Text
 
 logger = logging.getLogger(__name__)
 
-VALID_EVENT_TYPES = frozenset({"search", "view", "synthesize", "note", "error"})
+VALID_EVENT_TYPES = frozenset({"search", "view", "synthesize", "note", "error", "bookmark"})
 
 # Icons for timeline display
 EVENT_ICONS = {
@@ -30,6 +30,7 @@ EVENT_ICONS = {
     "synthesize": "[bold magenta]synthesize[/bold magenta]",
     "note": "[bold yellow]note[/bold yellow]",
     "error": "[bold red]error[/bold red]",
+    "bookmark": "[bold blue]bookmark[/bold blue]",
 }
 
 
