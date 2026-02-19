@@ -15,9 +15,10 @@ Plan: 0 of 3 in current phase
 Status: Ready to plan
 Last activity: 2026-02-19 -- Roadmap created for v2.0 (9 phases, 22 requirements mapped)
 
-Progress: [░░░░░░░░░░] 0/19 v2.0 plans complete
+Progress: [░░░░░░░░░░] 0/20 v2.0 plans complete
 
-PREREQUISITE: Phase 07-07 (TUI integration smoke test) must pass before Phase 8 begins.
+Note: Phase 07-07 (TUI integration smoke test from v1.0) deferred to Phase 16, plan 16-03.
+  Runs against full live corpus after upload -- more meaningful than running on empty store.
   Plan file: .planning/phases/07-interactive-tui/07-07-PLAN.md
 
 v2.0 Phase Progress:
@@ -29,7 +30,7 @@ Phase 12: [░░░░░░░░░░] 0/2 plans -- BLOCKED by Phase 11 gate
 Phase 13: [░░░░░░░░░░] 0/2 plans -- BLOCKED by Phase 12 gate (Wave 5: State Column Retirement)
 Phase 14: [░░░░░░░░░░] 0/2 plans -- BLOCKED by Phase 13 gate (Wave 6: Batch Performance)
 Phase 15: [░░░░░░░░░░] 0/2 plans -- BLOCKED by Phase 14 gate (Wave 7: Consistency + store-sync)
-Phase 16: [░░░░░░░░░░] 0/2 plans -- BLOCKED by Phase 15 gate (Wave 8: Full Library Upload)
+Phase 16: [░░░░░░░░░░] 0/3 plans -- BLOCKED by Phase 15 gate (Wave 8: Full Library Upload + 07-07)
 
 ## Performance Metrics
 

@@ -66,7 +66,7 @@
 
 ### Phase 8: Store Migration Precondition
 **Goal**: The system starts from a clean, known baseline -- old store deleted, permanent store created, DB schema extended, stability instrument operational
-**Depends on**: Phase 7 complete (specifically 07-07 TUI integration smoke test)
+**Depends on**: Nothing (first phase of v2.0)
 **Requirements**: MIGR-01, MIGR-02, MIGR-03, MIGR-04, STAB-01, STAB-02, STAB-03, STAB-04
 **Distrust**: N/A (precondition, not a spike)
 **Success Criteria** (what must be TRUE):
@@ -225,11 +225,13 @@ Plans:
   3. `store-sync --dry-run --store objectivism-library` confirms ~1,748 canonical documents and 0 orphaned documents
   4. `[Unresolved file #N]` does not appear in any TUI search result -- verified by running at least 5 diverse search queries in the TUI and confirming every citation displays a real file name
   5. The 50-file proxy assumption (A11) is validated: no failure modes appeared at full scale that were absent at 50-file scale -- or if they did, they are documented and resolved
+  6. Phase 07-07 (TUI integration smoke test, deferred from v1.0) executes successfully against the live `objectivism-library` store with the full ~1,748-file corpus -- Canon.json updated to reflect TUI module
 **Plans**: TBD
 
 Plans:
 - [ ] 16-01: Full library upload execution and monitoring
 - [ ] 16-02: Temporal stability protocol (T+4h, T+24h, T+36h checks) and TUI acceptance testing
+- [ ] 16-03: Phase 07-07 execution (TUI integration smoke test against full corpus)
 
 ---
 
@@ -239,7 +241,7 @@ Plans:
 Phases execute sequentially: 8 -> 9 -> 10 -> 11 -> 12 -> 13 -> 14 -> 15 -> 16
 Each wave's gate is BLOCKING for the next. If a gate fails, the failing phase must be repeated before proceeding.
 
-**Prerequisite:** Phase 07-07 (TUI integration smoke test from v1.0) must pass before Phase 8 begins.
+**Note:** Phase 07-07 (TUI integration smoke test, deferred from v1.0) is incorporated into Phase 16 as plan 16-03. It runs against the full live corpus after the library upload completes -- a more meaningful test than running it against an empty store.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -261,7 +263,7 @@ Each wave's gate is BLOCKING for the next. If a gate fails, the failing phase mu
 | 13. State Column Retirement | v2.0 | 0/2 | Not started | - |
 | 14. Batch Performance | v2.0 | 0/2 | Not started | - |
 | 15. Consistency + store-sync | v2.0 | 0/2 | Not started | - |
-| 16. Full Library Upload | v2.0 | 0/2 | Not started | - |
+| 16. Full Library Upload | v2.0 | 0/3 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-19*

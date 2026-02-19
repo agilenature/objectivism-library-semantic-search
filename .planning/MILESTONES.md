@@ -38,7 +38,7 @@
 
 ### Pending from v1.0
 
-- Phase 07-07: TUI integration smoke test + Canon.json update (execute independently before Phase 8)
+- Phase 07-07: TUI integration smoke test + Canon.json update — deferred to Phase 16, plan 16-03 (runs against full live corpus after v2.0 library upload, more meaningful than running on empty store)
 
 ---
 *Last updated: 2026-02-19 after v2.0 milestone initialization*
