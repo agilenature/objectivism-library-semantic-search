@@ -67,6 +67,26 @@ ALTER TABLE files ADD COLUMN gemini_state       TEXT DEFAULT 'untracked';  -- FS
 ALTER TABLE files ADD COLUMN gemini_state_updated_at TEXT; -- last confirmed timestamp
 ```
 
+### Operational Precondition: Store Migration
+
+Before any wave execution begins, two irreversible actions must be taken:
+
+1. **Delete "objectivism-library-test"**: The existing store has accumulated orphaned documents from multiple upload runs and has an unknown, untrusted state. The FSM must be validated against a clean baseline, not against inherited debt.
+
+2. **Create "objectivism-library"**: The permanent production store name. The "test" suffix was always temporary; the FSM implementation is the right moment to establish the final name.
+
+**Consequences for DB state:**
+- All files currently in the DB with `status = 'uploaded'` will be reset to UNTRACKED. Their `gemini_file_id` values no longer point to any active raw file (expired after 48hr) and their store documents will have been deleted.
+- The DB migration (add `gemini_store_doc_id`, `gemini_state`, `gemini_state_updated_at`) must run before the first FSM-managed upload.
+- All ~1,748 files begin from UNTRACKED. No historical state to backfill.
+
+**Consequence for Assumption A5 (migration coverage):**
+The original formulation of A5 — "populate `gemini_store_doc_id` for 873 existing uploaded files by matching against the old store" — no longer applies. Starting fresh means `gemini_store_doc_id` is populated correctly from the first FSM-managed upload forward. Wave 4's scope shifts from historical backfill to confirming that fresh FSM-managed uploads populate `gemini_store_doc_id` correctly for all 50 test files.
+
+**This precondition is irreversible.** Once "objectivism-library-test" is deleted, all search capability is offline until the new store is populated. Plan accordingly.
+
+---
+
 ### Dependency Relationship
 
 The FSM is not advisory. It is the **only authorized path** for mutating Gemini-related state. `AsyncUploadStateManager`'s write methods become FSM transition triggers. You cannot call `record_upload_success()` without the FSM first verifying the transition `UPLOADING → PROCESSING` is valid and recording the new state.
@@ -169,6 +189,7 @@ From the failure stories, the following assumptions are being treated as true bu
 | A8 | The FSM's transition overhead is acceptable under batch upload conditions | Technical Integration | G |
 | A9 | The FSM eliminates (or drastically reduces) the need for `store-sync` | Scope | D |
 | A10 | The Gemini API's import operation is reliable enough that "API returned success" = "document is indexed" | Technical Integration | D |
+| A11 | Uploading files incrementally — 50 today to validate, then ~1,700 more days later — does not introduce problems: search quality is consistent with a partial corpus, the time gap between batches doesn't cause orphaning or indexing inconsistencies, and the store handles incremental population without side effects | Technical Integration | (staged upload strategy itself, Wave 8) |
 
 ---
 
@@ -186,12 +207,21 @@ From the failure stories, the following assumptions are being treated as true bu
 | A7 | FSM library state serialization is stable across versions | 3 | 4 | **12** | CAUTIOUS |
 | A8 | Transition overhead is acceptable under batch load | 3 | 4 | **12** | CAUTIOUS |
 | A9 | `store-sync` becomes unnecessary | 4 | 2 | **8** | WATCHFUL |
+| A11 | Incremental upload is safe (50 files now, ~1,700 files later) | 4 | 4 | **16** | SKEPTICAL |
 
 ---
 
 ## Step 2: Planning (Driven by the Pre-Mortem)
 
 **The shift**: We are not planning "how to build the FSM." We are planning "which assumptions must be validated before we commit to any architecture."
+
+### Test Corpus Constraint: 50 Files
+
+Waves 1 through 7 validate assumptions against a **50-file test corpus**, not the full library of ~1,748 files. This bounds the cost and duration of each spike while being sufficient to expose structural failures in the FSM, the API integration, and the DB schema.
+
+**The 50-file threshold is itself Assumption A11**: we are asserting that failures which appear at 1,748 files will also appear at 50 files. If that assertion is wrong — if the store only misbehaves at scale, or if the time gap between the 50-file validation batch and the full upload causes problems — Wave 8 will surface it. Wave 8 is the full upload and is the empirical validation of A11.
+
+**Spikes in Waves 3–7 that involve real Gemini API calls must use at most 50 files.** If a spike produces no failures at 50 files and the council is satisfied, the wave passes. Wave 8 then provides production-scale confidence.
 
 ### Wave Sequence
 
@@ -204,6 +234,7 @@ From the failure stories, the following assumptions are being treated as true bu
 | 5 | A6 + A7: State column retirement + library serialization | 12 | CAUTIOUS | Verify the legacy `status` column can be deprecated without breaking queries, and that state persists across library upgrades |
 | 6 | A8: Batch performance | 12 | CAUTIOUS | Benchmark FSM overhead under simulated 818-file batch |
 | 7 | A4 + A9: Consistency maintenance + store-sync necessity | 16+8 | SKEPTICAL | Determine whether `store-sync` is still needed and what the reconciliation contract looks like |
+| 8 | A11: Incremental upload is safe | 16 | SKEPTICAL | Upload remaining ~1,700 files after 50-file validation; confirm no orphans, no search regressions, no FSM state corruption across sessions |
 
 ---
 
@@ -417,56 +448,61 @@ NEXT-STEP AGENT scorecard:
 
 ---
 
-### WAVE 4 — Assumption A5: Migration Coverage for Existing Files
+### WAVE 4 — Assumption A5: Migration Coverage for Fresh Uploads
 
-**Assumption Statement:**
-> We assume that all 873 currently-uploaded files in the DB can have their `gemini_store_doc_id` column populated by matching against `list_store_documents()` results, and that no files will be left with an unmatchable state.
+**Assumption Statement (revised after store migration precondition):**
+> ~~We assume that 873 existing uploaded files can be backfilled via `list_store_documents()` matching.~~ **Scope changed**: Since "objectivism-library-test" will be deleted and all files reset to UNTRACKED before this wave runs, there is no historical store to match against. A5 is now: **we assume that the FSM correctly populates `gemini_store_doc_id` for all 50 fresh-upload test files**, and that after the full `UNTRACKED → UPLOADING → PROCESSING → INDEXED` cycle, every file has a valid, correct store document resource name in the DB.
 
 **Distrust Level: SKEPTICAL** (Risk Score: 15)
 
+**Background:**
+The original concern — "what if some uploaded files can't be matched to a store document?" — was driven by the historical orphan problem. Starting fresh eliminates that history. The residual concern is: does the FSM reliably capture `gemini_store_doc_id` for all 50 test files, or are there any cases where the FSM reaches INDEXED state but `gemini_store_doc_id` is NULL or incorrect?
+
 **The Spike:**
 
-Run the actual migration against the real DB and real Gemini store:
-1. Call `list_store_documents()` and collect all documents with their `display_name` and `name`
-2. For each of the 873 files with `status = 'uploaded'`, attempt to match via `display_name` → `gemini_file_id`
-3. Measure: how many match? How many don't?
-4. For non-matching files: investigate why (format differences, historical upload runs, etc.)
-5. For non-matching files: what is the correct FSM state to assign?
+Upload all 50 test files via the FSM-managed pipeline and verify population:
+1. Start from all 50 test files in UNTRACKED state (clean DB + clean store)
+2. Run the FSM-managed upload pipeline to completion
+3. For all 50 files: verify `gemini_state = 'indexed'` AND `gemini_store_doc_id IS NOT NULL`
+4. For each `gemini_store_doc_id`: call `list_store_documents()` and verify the document actually exists at that resource name
+5. Measure: how many of 50 have a correct, verifiable `gemini_store_doc_id`? Any gaps?
 
 **Council Gate:**
 
 ```
 RESULTS AGENT must answer:
-  - Match rate: N/873 files matched
-  - For unmatched files: what are the characteristics? (upload date,
-    file type, which pipeline run?)
-  - Can unmatched files be manually recovered, or must they be re-uploaded?
-  - DISTRUST CHALLENGE: the match rate in dev may differ from
-    production if we have orphans we haven't discovered yet.
+  - Coverage rate: N/50 files have correct gemini_store_doc_id after upload
+  - For any gaps: at what transition step did gemini_store_doc_id fail
+    to be set? (UPLOADING? PROCESSING? INDEXED?)
+  - Cross-reference: do all 50 store documents verified via
+    list_store_documents() also appear in DB with gemini_state = 'indexed'?
+  - DISTRUST CHALLENGE: a 50-file clean run may not surface
+    edge cases that appear at scale or after partial failures.
 
 RISK AGENT must answer:
-  - What is the acceptable match rate? Is 95% good enough, or must
-    it be 100% before we can retire the legacy status column?
-  - What is the blast radius if we misassign gemini_state to a file
-    during migration? (e.g., mark as UNTRACKED when it's actually INDEXED)
-  - Does the migration need to be run in a dry-run mode first?
+  - Is there any code path where the FSM transitions to INDEXED but
+    gemini_store_doc_id is not written (timing, exception, partial write)?
+  - What happens to gemini_store_doc_id if the PROCESSING → INDEXED
+    transition fails and the file enters FAILED state?
+  - Does the migration (adding the gemini_state columns) need to run
+    as a DB transaction to prevent the dual-state window from being visible?
 
 STRATEGY AGENT must offer:
-  - Option A: Require 100% match before proceeding; handle
-    unmatched files by forcing re-upload
-  - Option B: Proceed with partial match; unmatched files get
-    gemini_state = 'untracked' and are queued for re-upload
-  - Option C: Run migration as a two-pass operation: first populate
-    what we can, then schedule a reconciliation pass for the rest
-  - NOTE: Any option must address what happens to the legacy
-    status column during the migration window.
+  - Option A: Accept 50/50 as sufficient; proceed to Wave 5
+  - Option B: If any gaps: treat as FAILED state and prescribe recovery
+    path before proceeding
+  - Option C: Add a post-upload verification step to the pipeline that
+    asserts gemini_store_doc_id is non-null for every INDEXED file
+    (defense-in-depth assertion)
+  - NOTE: The DB migration schema change (new columns) must also be
+    verified as reversible in case Wave 5+ reveals a blocker.
 
 NEXT-STEP AGENT scorecard:
-  ✓/✗ Match rate measured on real data (not estimated)
-  ✓/✗ Unmatched files have a defined, safe state assignment
-  ✓/✗ Migration is reversible (can roll back gemini_state column)
-  ✓/✗ Migration does not break existing queries during the transition
-  ✓/✗ Confidence that the migration covers all historical upload patterns
+  ✓/✗ 50/50 files have correct, non-null gemini_store_doc_id after upload
+  ✓/✗ All 50 store documents verified to exist via list_store_documents()
+  ✓/✗ No FSM code path leads to INDEXED without setting gemini_store_doc_id
+  ✓/✗ DB migration is reversible
+  ✓/✗ Confidence that the 50-file result predicts full-corpus behavior
 ```
 
 ---
@@ -638,6 +674,94 @@ NEXT-STEP AGENT scorecard:
 
 ---
 
+### WAVE 8 — Assumption A11: Incremental Upload Is Safe
+
+**Assumption Statement:**
+> We assume that uploading files to "objectivism-library" in two batches — 50 files during validation (Waves 1–7) and ~1,700 files later — does not introduce problems. Specifically: (1) search quality is consistent and correct after both the partial and full corpus, (2) the time gap between batch uploads does not cause any file to become orphaned, unindexed, or enter an inconsistent FSM state, and (3) the store handles incremental population without side effects.
+
+**Distrust Level: SKEPTICAL** (Risk Score: 16)
+
+**Background:**
+Every upload run in this project's history has been incremental — multiple pipeline runs, different days, different file counts. What has never been explicitly tested is whether the *combination of time gap + partial state* introduces its own failure mode. Hypothetical failure scenarios:
+
+- The FSM transitions for the 50-file batch look correct in isolation but create DB state that conflicts with the full upload's transitions (e.g., a STALE trigger fires incorrectly on files that haven't changed)
+- Gemini's store exhibits different ranking or retrieval behavior with a 50-file sparse corpus vs. a 1,748-file full corpus in a way that masks search failures during validation
+- After the 24-hour+ gap, some 50-file store documents have been silently evicted or their index entries degraded — contradicting the assumption that store documents are permanent
+- The full upload batch creates orphans from the 50-file batch (e.g., if any file was reset and re-uploaded during validation, the old store doc from Wave 3 may still exist)
+
+**This is also the empirical test of whether the 50-file proxy was a valid strategy for validating the preceding waves.**
+
+**The Spike:**
+
+1. After Waves 1–7 are complete and the 50-file corpus is in "objectivism-library" with all files confirmed INDEXED:
+   - Run 3–5 search queries and record results (citations, file names, ordering)
+   - Note FSM state: all 50 files should be INDEXED, `gemini_store_doc_id` non-null
+   - Run `store-sync --dry-run`: confirm exactly 50 canonical, 0 orphaned
+
+2. Wait at least 24 hours. Then:
+   - Re-run the same search queries: do results match step 1?
+   - Re-run `store-sync --dry-run`: is the count still 50 canonical, 0 orphaned?
+   - Verify no FSM state regression: no files have moved to STALE, ORPHANED, or FAILED
+
+3. Upload the remaining ~1,700 files via the FSM-managed pipeline:
+   - Monitor FSM transitions throughout
+   - After completion: run `store-sync --dry-run` — confirm canonical count ≈ 1,748, orphaned = 0
+   - Confirm no files in PROCESSING or FAILED state
+
+4. Run the Definition of Done acceptance test:
+   - Execute multiple search queries in the TUI
+   - Confirm `[Unresolved file #N]` does not appear in any result — this is the ultimate criterion
+
+**Council Gate:**
+
+```
+RESULTS AGENT must answer:
+  - Did the 24-hour gap introduce any state changes in the 50-file corpus?
+  - Did the same search queries (step 1 vs. step 2) return consistent results?
+  - Did the full upload complete with 0 FAILED, 0 ORPHANED files?
+  - Final canonical count after full upload: matches expected (~1,748)?
+  - Orphan count after full upload: exactly 0?
+  - Did [Unresolved file #N] appear in any search result at any point?
+  - DISTRUST CHALLENGE: the gap test was only 24 hours. The real-world
+    gap between validation and full upload may be days. Can we claim
+    confidence beyond our test window?
+
+RISK AGENT must answer:
+  - Did the multi-session upload introduce any FSM state inconsistencies
+    that weren't present in the 50-file batch?
+  - Is there evidence that the 50-file proxy failed to predict any
+    full-corpus behavior (search quality, orphan patterns, state corruption)?
+  - Are there conditions under which the full upload could create orphans
+    from the 50-file validation batch? (e.g., any file re-uploaded in Wave 3)
+  - What is the betrayal probability that the 24-hour test window was
+    insufficient to surface time-dependent failures?
+
+STRATEGY AGENT must offer:
+  - Option A: Full upload succeeded, [Unresolved file #N] never appeared
+    → declare FSM implementation complete, close the pre-mortem
+  - Option B: Full upload introduced failures → diagnose whether FSM
+    transition logic, Gemini API, or the incremental gap is the cause;
+    do not close the pre-mortem until root cause is identified
+  - Option C: [Unresolved file #N] still appears → the Definition of Done
+    is not met; escalate to root cause analysis before any further work
+  - Option D: The 50-file proxy failed to predict full-corpus behavior
+    → re-evaluate the test corpus strategy; document what proxy size
+    or validation approach would have caught the failure
+
+NEXT-STEP AGENT scorecard:
+  ✓/✗ 24-hour gap did not cause state regression in 50-file corpus
+  ✓/✗ Same search queries returned consistent results before and after gap
+  ✓/✗ Full upload completed with 0 FAILED, 0 ORPHANED files
+  ✓/✗ store-sync confirms 0 orphans after full upload
+  ✓/✗ [Unresolved file #N] never appeared in any search result
+  ✓/✗ The 50-file proxy results correctly predicted full-corpus behavior
+```
+
+**Gate Passage Criteria (this is the Definition of Done):**
+`[Unresolved file #N]` must not appear in any TUI search result after the full upload. The FSM implementation is complete when this criterion is met for the full ~1,748-file corpus. If it appears, the council must not close the pre-mortem until the root cause is identified and resolved.
+
+---
+
 ## Open Questions for Planning
 
 These questions cannot be resolved by pre-mortem analysis alone — they require spike evidence from the waves above:
@@ -651,6 +775,10 @@ These questions cannot be resolved by pre-mortem analysis alone — they require
 4. **`store-sync` contract**: This must be answered before implementation begins. Is `store-sync` (a) a routine automatic step after every upload run, (b) a scheduled job that runs regardless of uploads, or (c) an emergency tool only? Wave 7 determines this.
 
 5. **The `FAILED` state recovery path**: Story C revealed that stuck states can be impossible to escape via FSM transition rules alone. The recovery path for every path into `FAILED` must be designed as part of Wave 2, not discovered post-implementation.
+
+6. **Store migration timing**: The deletion of "objectivism-library-test" is irreversible and takes all search capability offline. The right moment is immediately before Wave 3 (the first wave that touches real Gemini API calls against the new store). Waves 1–2 are pure code/local tests and do not require the new store to exist yet.
+
+7. **The minimum viable proxy size**: We assert 50 files is sufficient. This has not been justified beyond intuition. Wave 8 must record whether 50 files was adequate — so that future pre-mortems in this project can reference an empirical precedent rather than a guess.
 
 ---
 
@@ -667,6 +795,10 @@ These questions cannot be resolved by pre-mortem analysis alone — they require
 **"We can deprecate status later"** — "Later" is never. The dual-column window must have a defined end date before the migration begins. Wave 5 enforces this.
 
 **"store-sync will go away"** — The highest-risk assumption is that the FSM is a complete replacement. Wave 7 must honestly assess whether this is true before we commit the architecture.
+
+**"50 files is enough to validate"** — This is a convenience assumption, not a proven one. It may be true (most structural failures appear at any corpus size), or it may fail (some failures are scale-dependent or gap-dependent). Wave 8 exists to test the assumption, not skip it. Do not proceed to the full upload as if the proxy result were definitive.
+
+**"Incremental upload is obviously fine"** — We know the store has accepted multiple upload rounds (that's how we accumulated 2,038 orphans). But "accepts multiple rounds" is not the same as "produces consistent search results after each round." The gap between batches is a distinct failure surface. Wave 8 tests it; don't skip Wave 8 because the logic seems sound.
 
 ---
 
