@@ -173,12 +173,16 @@ Extends Phase 2 upload pipeline to include 4-tier metadata from Phase 6 extracti
   6. Document viewer supports scrolling, search term highlighting, and citation linking (click [1] to jump to source) -- seamless navigation between synthesis and sources
   7. The TUI supports both keyboard shortcuts (for power users) and mouse interaction (for discoverability) -- accessible to different user preferences
   8. All existing CLI functionality (search, browse, filter, view, metadata commands) is accessible through the TUI -- no regression in capabilities
-**Plans**: TBD
+**Plans:** 7 plans
 
 Plans:
-- [ ] 07-01: TBD
-- [ ] 07-02: TBD
-- [ ] 07-03: TBD
+- [ ] 07-01-PLAN.md -- Services facade (SearchService, LibraryService, SessionService) + textual dependency
+- [ ] 07-02-PLAN.md -- App skeleton with AppState, messages, three-pane CSS layout, reactive properties
+- [ ] 07-03-PLAN.md -- Navigation tree widget and search bar with debounce + history
+- [ ] 07-04-PLAN.md -- Results list widget and document preview pane with citation jump
+- [ ] 07-05-PLAN.md -- Filter panel, full widget wiring, message handlers, CLI entry point
+- [ ] 07-06-PLAN.md -- Responsive layout, command palette, bookmarks, session save/load
+- [ ] 07-07-PLAN.md -- Integration smoke test, bug fixes, human verification checkpoint
 
 ## Progress
 
@@ -208,4 +212,4 @@ Phases execute in strategic order (not strictly numeric):
 | 4. Quality Enhancements | 5/5 | Complete | 2026-02-18 |
 | 5. Incremental Updates | 4/4 | Complete | 2026-02-18 |
 | 6.3. Test Foundation & Canon Governance | 8/8 | Complete | 2026-02-18 |
-| 7. Interactive TUI | 0/TBD | Deferred | - |
+| 7. Interactive TUI | 0/7 | Planning Complete | - |
