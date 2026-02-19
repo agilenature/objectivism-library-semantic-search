@@ -2,33 +2,37 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-15)
+See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** Three equally critical pillars -- semantic search quality, metadata preservation, incremental updates
-**Current focus:** Phase 7: Interactive TUI -- Wave 4 polish in progress (command palette, bookmarks, sessions done)
-**Execution strategy:** Phase 6 before full upload (1,721 files) to enrich metadata first
+**Current focus:** Milestone v2.0 — Gemini File Lifecycle FSM
+**Definition of done:** `[Unresolved file #N]` never appears in TUI search results
 
 ## Current Position
 
-Phase: 7 of 7+ (Interactive TUI)
-Plan: 6 of 7
-Status: In progress -- Wave 4 (polish) in progress
-Last activity: 2026-02-19 - Completed 07-06-PLAN.md (Command Palette, Responsive Layout, Bookmarks, Session Save/Load)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements for v2.0
+Last activity: 2026-02-19 — Milestone v2.0 started (Gemini File Lifecycle FSM)
 
-Progress: [############################░] ~95% (40 plans of ~41 estimated total)
+Progress: [░░░░░░░░░░] 0/9 phases complete
 
-Phase 1 Progress: [##########] 3/3 plans -- COMPLETE
-Phase 2 Progress: [##########] 4/4 plans -- COMPLETE
-Phase 3 Progress: [##########] 3/3 plans -- COMPLETE
-Phase 4 Progress: [##########] 5/5 plans -- COMPLETE
-Phase 5 Progress: [##########] 4/4 plans -- COMPLETE
-Phase 6 Progress: [##########] 5/5 plans -- COMPLETE
-Phase 6.1 Progress: [##########] 2/2 plans -- COMPLETE
-Phase 6.2 Progress: [##########] 2/2 plans -- COMPLETE
-Phase 6.3 Progress: [##########] 8/8 plans -- COMPLETE
-Phase 7 Progress:  [########░░] 6/7 plans -- IN PROGRESS
+⚠ PREREQUISITE: Phase 07-07 (TUI integration smoke test) is unexecuted from v1.0.
+  Plan file exists at: .planning/phases/07-interactive-tui/07-07-PLAN.md
+  Execute this BEFORE starting Phase 8. It takes ~5 min and has no FSM dependencies.
 
-## Performance Metrics
+v2.0 Phase Progress:
+Phase 8 Progress:  [░░░░░░░░░░] 0/? plans -- PENDING (Store Migration Precondition)
+Phase 9 Progress:  [░░░░░░░░░░] 0/? plans -- PENDING (Wave 1: Async FSM Library)
+Phase 10 Progress: [░░░░░░░░░░] 0/? plans -- PENDING (Wave 2: Transition Atomicity)
+Phase 11 Progress: [░░░░░░░░░░] 0/? plans -- PENDING (Wave 3: display_name + Import)
+Phase 12 Progress: [░░░░░░░░░░] 0/? plans -- PENDING (Wave 4: 50-file FSM Upload)
+Phase 13 Progress: [░░░░░░░░░░] 0/? plans -- PENDING (Wave 5: State Column Retirement)
+Phase 14 Progress: [░░░░░░░░░░] 0/? plans -- PENDING (Wave 6: Batch Performance)
+Phase 15 Progress: [░░░░░░░░░░] 0/? plans -- PENDING (Wave 7: Consistency + store-sync)
+Phase 16 Progress: [░░░░░░░░░░] 0/? plans -- PENDING (Wave 8: Full Library Upload)
+
+## Performance Metrics (v1.0 archive)
 
 **Velocity:**
 - Total plans completed: 40
@@ -247,5 +251,5 @@ Phase 7 Wave 4 in progress. Plans 07-01 through 07-06 complete. Plan 07-07 (test
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 07-06. Command palette, responsive layout, bookmarks, session save/load. TUI feature-complete.
-Resume file: .planning/phases/07-interactive-tui/07-07-PLAN.md (Wave 4: Testing & final integration)
+Stopped at: v2.0 milestone initialization. v1.0 complete (07-07 pending as prerequisite to Phase 8).
+Resume: Run 07-07 first, then /gsd:plan-phase 8

@@ -4,6 +4,24 @@
 
 A semantic search system for a 1,749-file Objectivism Library (112 MB) that enables deep conceptual research and learning through meaning-based queries, preserved pedagogical metadata, and automated synthesis generation. The system uses Google's Gemini File Search API to make philosophical wisdom accessible through natural language.
 
+## Current Milestone: v2.0 — Gemini File Lifecycle FSM
+
+**Goal:** Implement a formal finite state machine governing every file's Gemini lifecycle so that `[Unresolved file #N]` never appears in search results — permanently, not just after a manual store-sync.
+
+**Target features:**
+- Store migration: delete `objectivism-library-test`, create permanent `objectivism-library`
+- DB schema: `gemini_store_doc_id`, `gemini_state`, `gemini_state_updated_at` columns
+- `scripts/check_stability.py` — 6-assertion stability instrument (exit 0/1/2)
+- Hand-rolled or library FSM (async-compatible, validated by Wave 1)
+- Write-ahead intent pattern extended for two-API-call transitions (Wave 2)
+- `_reset_existing_files()` fixed to delete store documents, not just raw files
+- FSM as the sole authorized path for all gemini-related state mutations
+- Full library upload of ~1,748 files through FSM-managed pipeline (Wave 8)
+
+**Definition of done:** Run a search in the TUI. Every citation shows a real file name. No `[Unresolved file #N]`. Ever.
+
+---
+
 ## Core Value
 
 Three equally critical pillars that cannot be compromised:
@@ -120,4 +138,4 @@ Personal research, study, and learning tool. Primary activities include:
 | Batch upload strategy (all files → chunk to store) | Respects API design and rate limits | — Pending |
 
 ---
-*Last updated: 2025-02-15 after initialization*
+*Last updated: 2026-02-19 after v2.0 milestone initialization*
