@@ -256,6 +256,138 @@ class TestEnrichCitations:
         conn.close()
 
 
+class TestEnrichCitationsDeduplication:
+    """Tests for the passage-text deduplication added to enrich_citations().
+
+    When Gemini returns the same file twice (once with a resolved filename, once
+    with an orphaned raw ID), deduplication keeps the resolved citation and drops
+    the raw-ID duplicate.
+    """
+
+    def test_keeps_resolved_when_resolved_comes_first(self):
+        """Resolved citation (has '.') is kept when it precedes the raw-ID duplicate."""
+        conn = _make_test_db()
+        db = _FakeDB(conn)
+        shared_text = "Reason is man's basic means of survival. " * 4  # >100 chars
+
+        resolved = Citation(
+            index=1, title="OPAR-Lecture-1.txt", uri=None,
+            text=shared_text, document_name=None, confidence=0.9,
+        )
+        raw_id = Citation(
+            index=2, title="l38iajfzqsjq", uri=None,  # No "." — raw Gemini ID
+            text=shared_text, document_name=None, confidence=0.8,
+        )
+
+        result = enrich_citations([resolved, raw_id], db)
+
+        assert len(result) == 1
+        assert "." in result[0].title  # The resolved one was kept
+        conn.close()
+
+    def test_keeps_resolved_when_raw_id_comes_first(self):
+        """Resolved citation is kept even when the raw-ID duplicate arrives first in the list."""
+        conn = _make_test_db()
+        db = _FakeDB(conn)
+        shared_text = "Concepts are mental integrations of two or more units. " * 3  # >100 chars
+
+        raw_id = Citation(
+            index=1, title="p0e9lyp0n9mz", uri=None,  # Raw ID first
+            text=shared_text, document_name=None, confidence=0.9,
+        )
+        resolved = Citation(
+            index=2, title="OPAR-Lecture-1.txt", uri=None,
+            text=shared_text, document_name=None, confidence=0.8,
+        )
+
+        result = enrich_citations([raw_id, resolved], db)
+
+        assert len(result) == 1
+        assert "." in result[0].title  # Resolved replaces the raw-ID entry
+        conn.close()
+
+    def test_keeps_both_when_passages_differ(self):
+        """Citations with distinct passage text are both preserved after deduplication."""
+        conn = _make_test_db()
+        db = _FakeDB(conn)
+
+        c1 = Citation(
+            index=1, title="OPAR-Lecture-1.txt", uri=None,
+            text="A passage about existence and identity.",
+            document_name=None, confidence=0.9,
+        )
+        c2 = Citation(
+            index=2, title="5696txrhqdue", uri=None,
+            text="A completely different passage about consciousness.",
+            document_name=None, confidence=0.8,
+        )
+
+        result = enrich_citations([c1, c2], db)
+
+        assert len(result) == 2
+        conn.close()
+
+    def test_keeps_first_when_both_unresolved(self):
+        """When two raw-ID citations share the same passage, the first encountered is kept."""
+        conn = _make_test_db()
+        db = _FakeDB(conn)
+        shared_text = "Existence exists — and only existence exists. " * 3  # >100 chars
+
+        first_raw = Citation(
+            index=1, title="aabbccddeeff", uri=None,
+            text=shared_text, document_name=None, confidence=0.9,
+        )
+        second_raw = Citation(
+            index=2, title="gghhiijjkkll", uri=None,
+            text=shared_text, document_name=None, confidence=0.8,
+        )
+
+        result = enrich_citations([first_raw, second_raw], db)
+
+        assert len(result) == 1
+        assert result[0].title == "aabbccddeeff"  # First one wins
+        conn.close()
+
+    def test_dedup_key_is_case_and_whitespace_normalized(self):
+        """Deduplication key is strip().lower() — whitespace/case variation still matches."""
+        conn = _make_test_db()
+        db = _FakeDB(conn)
+
+        c1 = Citation(
+            index=1, title="file-A.txt", uri=None,
+            text="  Hello World Passage  ",  # Leading/trailing whitespace, mixed case
+            document_name=None, confidence=0.9,
+        )
+        c2 = Citation(
+            index=2, title="rawgeminiid", uri=None,
+            text="hello world passage",  # Matches after strip().lower()
+            document_name=None, confidence=0.8,
+        )
+
+        result = enrich_citations([c1, c2], db)
+
+        # Both have short passages (<100 chars); after normalization they match
+        assert len(result) == 1
+        assert "." in result[0].title  # Resolved one kept
+        conn.close()
+
+    def test_preserves_order_of_surviving_citations(self):
+        """Deduplication preserves the original relative order of the kept citations."""
+        conn = _make_test_db()
+        db = _FakeDB(conn)
+
+        c1 = Citation(index=1, title="alpha.txt", uri=None, text="Alpha passage.", document_name=None, confidence=0.9)
+        c2 = Citation(index=2, title="rawid1", uri=None, text="Alpha passage.", document_name=None, confidence=0.7)
+        c3 = Citation(index=3, title="beta.txt", uri=None, text="Beta passage.", document_name=None, confidence=0.8)
+
+        result = enrich_citations([c1, c2, c3], db)
+
+        assert len(result) == 2
+        assert result[0].title == "alpha.txt"
+        assert result[1].title == "beta.txt"
+        conn.close()
+
+
 # ---------------------------------------------------------------------------
 # get_api_key tests
 # ---------------------------------------------------------------------------

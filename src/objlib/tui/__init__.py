@@ -28,6 +28,10 @@ def run_tui(
     import keyring
 
     from objlib.tui.app import ObjlibApp
+    from objlib.tui.telemetry import configure_file_logging
+
+    # Write structured logs to logs/tui-YYYYMMDD.log
+    configure_file_logging()
 
     # Get API key from system keyring
     api_key = keyring.get_password("objlib-gemini", "api_key")

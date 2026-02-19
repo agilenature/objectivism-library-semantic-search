@@ -530,4 +530,65 @@ Uses Gemini Flash to suggest synonyms (requires Gemini API key).
 
 ---
 
-_Last updated: Phase 5 — sync command (incremental updates, offline mode guards)_
+## `tui`
+
+Launch the interactive Textual terminal UI for live search, browsing, and session management.
+
+```bash
+objlib tui
+```
+
+No options — uses the default store (`objectivism-library-test`) and database (`data/library.db`). Requires the Gemini API key to be set in the system keyring (`objlib config set-api-key`).
+
+**Keyboard shortcuts inside the TUI:**
+
+| Key | Action |
+|-----|--------|
+| `/` | Focus search bar |
+| `Escape` | Clear search / close modal |
+| `Enter` | Select result / confirm |
+| `↑` / `↓` | Navigate results / history |
+| `Ctrl+P` | Open command palette |
+| `Ctrl+B` | Toggle bookmark on selected result |
+| `Ctrl+N` | New session |
+| `Ctrl+S` | Save session |
+| `Ctrl+L` | Load last session |
+| `Ctrl+Y` | Synthesize results (multi-doc answer) |
+| `q` / `Ctrl+Q` | Quit |
+
+---
+
+## `logs`
+
+Browse TUI session logs from the `logs/` directory.
+
+```bash
+objlib logs [OPTIONS]
+```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--trace, -t TEXT` | _(none)_ | Filter to a specific trace ID (prefix match) |
+| `--level, -l TEXT` | _(none)_ | Minimum log level (DEBUG, INFO, WARNING, ERROR) |
+| `--since, -s DATE` | _(none)_ | Show logs from this date onward (YYYY-MM-DD) |
+| `--tail, -n N` | `0` (all) | Show only the last N entries |
+
+Reads all JSON-lines log files matching `logs/tui-*.log`. Renders a Rich table with columns: **Timestamp**, **Level**, **Trace** (first 8 chars), **Message**.
+
+**Examples:**
+```bash
+objlib logs                          # All log entries
+objlib logs --level ERROR            # Errors only
+objlib logs --trace abcd1234         # One trace
+objlib logs --since 2026-02-18       # Today's entries
+objlib logs --tail 50                # Last 50 entries
+```
+
+**Log format:** Each line in `logs/tui-YYYYMMDD.log` is a JSON object:
+```json
+{"ts": "2026-02-18T12:34:56", "level": "INFO", "logger": "objlib.tui", "trace": "...", "span": "...", "msg": "search requested query='virtue'"}
+```
+
+---
+
+_Last updated: Phase 7 — tui (interactive terminal UI) and logs (JSON-lines log viewer) commands_

@@ -22,6 +22,7 @@ from objlib.tui.messages import (
 )
 from objlib.tui.providers import ObjlibCommands
 from objlib.tui.state import Bookmark, FilterSet
+from objlib.tui.telemetry import Telemetry, set_telemetry
 from objlib.tui.widgets import FilterPanel, NavTree, PreviewPane, ResultsList, SearchBar
 
 
@@ -144,6 +145,7 @@ class ObjlibApp(App):
         search_service: object | None = None,
         library_service: object | None = None,
         session_service: object | None = None,
+        telemetry: Telemetry | None = None,
     ) -> None:
         """Initialize the app with service dependencies.
 
@@ -154,11 +156,14 @@ class ObjlibApp(App):
             search_service: Search facade (may be None in tests).
             library_service: Library data facade (may be None in tests).
             session_service: Session management facade (may be None in tests).
+            telemetry: OTel tracing facade. Defaults to no-op if not provided.
         """
         super().__init__()
         self.search_service = search_service
         self.library_service = library_service
         self.session_service = session_service
+        self.telemetry = telemetry if telemetry is not None else Telemetry.noop()
+        set_telemetry(self.telemetry)
 
     def compose(self) -> ComposeResult:
         """Compose the three-pane layout with real widgets."""
@@ -180,12 +185,21 @@ class ObjlibApp(App):
 
     async def on_mount(self) -> None:
         """Populate nav tree and show preview placeholder on startup."""
-        if self.library_service is not None:
-            try:
-                await self.query_one(NavTree).populate(self.library_service)
-            except Exception as e:
-                self.log.error(f"Failed to populate nav tree: {e}")
-        self.query_one(PreviewPane).show_placeholder()
+        with self.telemetry.span("app.mount") as span:
+            span.set_attribute("mount.has_library_service", self.library_service is not None)
+            span.set_attribute("mount.has_search_service", self.search_service is not None)
+            if self.library_service is not None:
+                try:
+                    await self.query_one(NavTree).populate(self.library_service)
+                    span.set_attribute("mount.nav_populated", True)
+                except Exception as e:
+                    self.log.error(f"Failed to populate nav tree: {e}")
+                    span.set_attribute("mount.nav_populated", False)
+                    span.record_exception(e)
+            else:
+                span.set_attribute("mount.nav_populated", False)
+            self.query_one(PreviewPane).show_placeholder()
+            self.telemetry.log.info("app mounted")
 
     # ------------------------------------------------------------------
     # Message handlers
@@ -195,6 +209,7 @@ class ObjlibApp(App):
         """Handle search requests from the SearchBar widget."""
         self.query = event.query
         if not event.query:
+            self.telemetry.log.info("search cleared")
             self.results = []
             self.selected_index = None
             self.query_one(ResultsList).update_status("Enter a search query")
@@ -203,6 +218,7 @@ class ObjlibApp(App):
                 "Ready | 0 results | Ctrl+P: Commands"
             )
             return
+        self.telemetry.log.info(f"search requested query={event.query!r}")
         self._run_search(event.query)
 
     @work(exclusive=True)
@@ -225,9 +241,17 @@ class ObjlibApp(App):
             if not self.active_filters.is_empty():
                 filters = self.active_filters.to_filter_strings()
 
-            result = await self.search_service.search(query, filters=filters)
-            self.results = result.citations if hasattr(result, "citations") else []
+            with self.telemetry.span("tui.search") as span:
+                span.set_attribute("search.query", query)
+                span.set_attribute("search.has_filters", filters is not None)
+                result = await self.search_service.search(query, filters=filters)
+                self.results = result.citations if hasattr(result, "citations") else []
+                span.set_attribute("search.result_count", len(self.results))
+
             results_widget.update_results(self.results)
+
+            # Return focus to search bar so user can immediately refine the query
+            self.query_one(SearchBar).focus()
 
             # Update status bar
             count = len(self.results)
@@ -235,6 +259,7 @@ class ObjlibApp(App):
             self.query_one("#status-bar", Static).update(
                 f"{count} results | {truncated_query} | Ctrl+P: Commands"
             )
+            self.telemetry.log.info(f"search completed query={query!r} result_count={count}")
 
             # Log to session if active
             if self.active_session_id and self.session_service:
@@ -265,18 +290,31 @@ class ObjlibApp(App):
         if event.citation is None:
             return
 
-        # Try to load full document content
-        file_path = getattr(event.citation, "file_path", None)
-        if file_path and self.library_service is not None:
-            content = await self.library_service.get_file_content(file_path)
-            if content:
-                highlight = [self.query] if self.query else None
-                preview.show_document(content, file_path, highlight_terms=highlight)
+        with self.telemetry.span("tui.result_selected") as span:
+            span.set_attribute("result.index", event.index)
+            file_path = getattr(event.citation, "file_path", None)
+            span.set_attribute("result.has_file_path", file_path is not None)
+
+            if file_path and self.library_service is not None:
+                try:
+                    content = await self.library_service.get_file_content(file_path)
+                    span.set_attribute("result.content_loaded", content is not None)
+                    if content:
+                        highlight = [self.query] if self.query else None
+                        preview.show_document(content, file_path, highlight_terms=highlight)
+                    else:
+                        preview.show_unavailable()
+                except Exception as e:
+                    span.record_exception(e)
+                    span.set_attribute("result.content_loaded", False)
+                    self.telemetry.log.error(
+                        f"failed to load document file={file_path!r} error={e!r}"
+                    )
+                    preview.show_unavailable()
             else:
-                preview.show_unavailable()
-        else:
-            # No file path -- show citation detail panel instead
-            preview.show_citation_detail(event.citation)
+                span.set_attribute("result.content_loaded", False)
+                # No file path -- show citation detail panel instead
+                preview.show_citation_detail(event.citation)
 
     async def on_file_selected(self, event: FileSelected) -> None:
         """Handle file selection from nav tree -- show document preview."""
@@ -285,11 +323,14 @@ class ObjlibApp(App):
             preview.show_unavailable()
             return
 
-        content = await self.library_service.get_file_content(event.file_path)
-        if content:
-            preview.show_document(content, event.file_path)
-        else:
-            preview.show_unavailable()
+        with self.telemetry.span("tui.file_selected") as span:
+            span.set_attribute("file.path", event.file_path)
+            content = await self.library_service.get_file_content(event.file_path)
+            span.set_attribute("file.content_loaded", content is not None)
+            if content:
+                preview.show_document(content, event.file_path)
+            else:
+                preview.show_unavailable()
 
     async def on_navigation_requested(self, event: NavigationRequested) -> None:
         """Handle nav tree category/course selection -- show file listing."""
@@ -299,28 +340,39 @@ class ObjlibApp(App):
         results_widget = self.query_one(ResultsList)
         try:
             if event.course:
-                files = await self.library_service.get_files_by_course(event.course)
-                label = f"Course: {event.course}"
+                nav_type, nav_value = "course", event.course
             elif event.category:
-                files = await self.library_service.get_items_by_category(event.category)
-                label = f"Category: {event.category}"
+                nav_type, nav_value = "category", event.category
             else:
                 return
 
-            count = len(files)
-            self.query_one("#status-bar", Static).update(
-                f"{count} files | {label} | Ctrl+P: Commands"
-            )
-            # Show a status message since navigation results are not Citation objects
-            results_widget.update_status(
-                f"{count} files in {label}\n\nSelect files from the navigation tree to preview."
-            )
+            with self.telemetry.span("tui.navigation_requested") as span:
+                span.set_attribute("nav.type", nav_type)
+                span.set_attribute("nav.value", nav_value)
+
+                if event.course:
+                    files = await self.library_service.get_files_by_course(event.course)
+                    label = f"Course: {event.course}"
+                else:
+                    files = await self.library_service.get_items_by_category(event.category)
+                    label = f"Category: {event.category}"
+
+                count = len(files)
+                span.set_attribute("nav.result_count", count)
+                self.query_one("#status-bar", Static).update(
+                    f"{count} files | {label} | Ctrl+P: Commands"
+                )
+                # Show a status message since navigation results are not Citation objects
+                results_widget.update_status(
+                    f"{count} files in {label}\n\nSelect files from the navigation tree to preview."
+                )
         except Exception as e:
             results_widget.update_status(f"Navigation error: {e}")
 
     def on_filter_changed(self, event: FilterChanged) -> None:
         """Handle filter changes -- re-run search with new filters."""
         self.active_filters = event.filters
+        self.telemetry.log.info(f"filter changed filters={event.filters}")
         if self.query:
             self._run_search(self.query)
 
@@ -382,18 +434,23 @@ class ObjlibApp(App):
 
         filename = os.path.basename(file_path)
 
-        # Check if already bookmarked
-        existing = next(
-            (b for b in self.bookmarks if b.file_path == file_path), None
-        )
-        if existing:
-            self.bookmarks = [b for b in self.bookmarks if b.file_path != file_path]
-            self.notify("Bookmark removed")
-        else:
-            self.bookmarks = list(self.bookmarks) + [
-                Bookmark(file_path=file_path, filename=filename)
-            ]
-            self.notify(f"Bookmarked: {filename}")
+        with self.telemetry.span("tui.bookmark_toggled") as span:
+            span.set_attribute("bookmark.file_path", file_path)
+
+            # Check if already bookmarked
+            existing = next(
+                (b for b in self.bookmarks if b.file_path == file_path), None
+            )
+            if existing:
+                self.bookmarks = [b for b in self.bookmarks if b.file_path != file_path]
+                span.set_attribute("bookmark.action", "removed")
+                self.notify("Bookmark removed")
+            else:
+                self.bookmarks = list(self.bookmarks) + [
+                    Bookmark(file_path=file_path, filename=filename)
+                ]
+                span.set_attribute("bookmark.action", "added")
+                self.notify(f"Bookmarked: {filename}")
 
     def action_show_bookmarks(self) -> None:
         """Display bookmarked files in the results list."""
@@ -439,9 +496,11 @@ class ObjlibApp(App):
         if self.session_service is None:
             self.notify("Session service not available", severity="warning")
             return
-        session_id = await self.session_service.create_session()
-        self.active_session_id = session_id
-        self.notify(f"New session: {session_id[:8]}")
+        with self.telemetry.span("tui.session_new") as span:
+            session_id = await self.session_service.create_session()
+            self.active_session_id = session_id
+            span.set_attribute("session.id", session_id)
+            self.notify(f"New session: {session_id[:8]}")
 
     async def action_save_session(self) -> None:
         """Save current state (filters, bookmarks) to the active session."""
@@ -455,29 +514,33 @@ class ObjlibApp(App):
         try:
             from dataclasses import asdict
 
-            # Save filter state
-            await self.session_service.add_event(
-                self.active_session_id,
-                "note",
-                {
-                    "type": "filter_state",
-                    "filters": {
-                        "category": self.active_filters.category,
-                        "course": self.active_filters.course,
-                        "difficulty": self.active_filters.difficulty,
+            with self.telemetry.span("tui.session_save") as span:
+                span.set_attribute("session.id", self.active_session_id)
+                span.set_attribute("session.bookmark_count", len(self.bookmarks))
+
+                # Save filter state
+                await self.session_service.add_event(
+                    self.active_session_id,
+                    "note",
+                    {
+                        "type": "filter_state",
+                        "filters": {
+                            "category": self.active_filters.category,
+                            "course": self.active_filters.course,
+                            "difficulty": self.active_filters.difficulty,
+                        },
                     },
-                },
-            )
-            # Save bookmarks
-            await self.session_service.add_event(
-                self.active_session_id,
-                "note",
-                {
-                    "type": "bookmarks",
-                    "bookmarks": [asdict(b) for b in self.bookmarks],
-                },
-            )
-            self.notify("Session saved")
+                )
+                # Save bookmarks
+                await self.session_service.add_event(
+                    self.active_session_id,
+                    "note",
+                    {
+                        "type": "bookmarks",
+                        "bookmarks": [asdict(b) for b in self.bookmarks],
+                    },
+                )
+                self.notify("Session saved")
         except Exception as e:
             self.notify(f"Save failed: {e}", severity="error")
 
@@ -495,33 +558,37 @@ class ObjlibApp(App):
             # Load most recent session
             session = sessions[0]
             session_id = session["id"]
-            events = await self.session_service.get_events(session_id)
 
-            # Restore from events (scan in reverse to find latest state)
-            for event in reversed(events):
-                if event["event_type"] == "note":
-                    payload = event["payload"]
-                    if payload.get("type") == "bookmarks" and not self.bookmarks:
-                        bm_data = payload.get("bookmarks", [])
-                        self.bookmarks = [Bookmark(**b) for b in bm_data]
-                    elif payload.get("type") == "filter_state":
-                        f = payload.get("filters", {})
-                        self.active_filters = FilterSet(
-                            category=f.get("category"),
-                            course=f.get("course"),
-                            difficulty=f.get("difficulty"),
-                        )
+            with self.telemetry.span("tui.session_load") as span:
+                span.set_attribute("session.id", session_id)
+                events = await self.session_service.get_events(session_id)
 
-            # Restore search history from search events
-            search_events = [e for e in events if e["event_type"] == "search"]
-            self.search_history = [
-                e["payload"]["query"]
-                for e in search_events
-                if "query" in e["payload"]
-            ]
+                # Restore from events (scan in reverse to find latest state)
+                for event in reversed(events):
+                    if event["event_type"] == "note":
+                        payload = event["payload"]
+                        if payload.get("type") == "bookmarks" and not self.bookmarks:
+                            bm_data = payload.get("bookmarks", [])
+                            self.bookmarks = [Bookmark(**b) for b in bm_data]
+                        elif payload.get("type") == "filter_state":
+                            f = payload.get("filters", {})
+                            self.active_filters = FilterSet(
+                                category=f.get("category"),
+                                course=f.get("course"),
+                                difficulty=f.get("difficulty"),
+                            )
 
-            self.active_session_id = session_id
-            self.notify(f"Session loaded: {session['name']}")
+                # Restore search history from search events
+                search_events = [e for e in events if e["event_type"] == "search"]
+                self.search_history = [
+                    e["payload"]["query"]
+                    for e in search_events
+                    if "query" in e["payload"]
+                ]
+
+                self.active_session_id = session_id
+                span.set_attribute("session.search_history_count", len(self.search_history))
+                self.notify(f"Session loaded: {session['name']}")
         except Exception as e:
             self.notify(f"Load failed: {e}", severity="error")
 
@@ -548,33 +615,41 @@ class ObjlibApp(App):
             return
 
         self.notify("Synthesizing...")
-        try:
-            output = await self.search_service.synthesize(
-                self.query, self.results
-            )
-            if output:
-                preview = self.query_one(PreviewPane)
-                from rich.text import Text
-
-                text = Text()
-                if output.bridging_intro:
-                    text.append(output.bridging_intro + "\n\n")
-                for claim in output.claims:
-                    text.append(f"  {claim.claim_text}\n")
-                    text.append(
-                        f'  "{claim.citation.quote}"\n', style="italic dim"
-                    )
-                if output.bridging_conclusion:
-                    text.append("\n" + output.bridging_conclusion)
-                preview.clear()
-                preview.write(text)
-            else:
-                self.notify(
-                    "Synthesis not available (need 5+ results)",
-                    severity="warning",
+        with self.telemetry.span("tui.synthesize") as span:
+            span.set_attribute("synthesize.result_count", len(self.results))
+            span.set_attribute("synthesize.query", self.query)
+            try:
+                output = await self.search_service.synthesize(
+                    self.query, self.results
                 )
-        except Exception as e:
-            self.notify(f"Synthesis failed: {e}", severity="error")
+                span.set_attribute("synthesize.has_output", output is not None)
+                if output:
+                    preview = self.query_one(PreviewPane)
+                    from rich.text import Text
+
+                    text = Text()
+                    if output.bridging_intro:
+                        text.append(output.bridging_intro + "\n\n")
+                    for claim in output.claims:
+                        text.append(f"  {claim.claim_text}\n")
+                        text.append(
+                            f'  "{claim.citation.quote}"\n', style="italic dim"
+                        )
+                    if output.bridging_conclusion:
+                        text.append("\n" + output.bridging_conclusion)
+                    preview.clear()
+                    preview.write(text)
+                    self.telemetry.log.info(
+                        f"synthesis completed query={self.query!r} result_count={len(self.results)}"
+                    )
+                else:
+                    self.notify(
+                        "Synthesis not available (need 5+ results)",
+                        severity="warning",
+                    )
+            except Exception as e:
+                span.record_exception(e)
+                self.notify(f"Synthesis failed: {e}", severity="error")
 
     # ------------------------------------------------------------------
     # Navigation / UI toggle actions

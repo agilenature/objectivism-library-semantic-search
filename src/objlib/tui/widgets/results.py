@@ -15,6 +15,7 @@ from rich.text import Text
 
 from objlib.models import Citation
 from objlib.tui.messages import ResultSelected
+from objlib.tui.telemetry import get_telemetry
 
 
 class ResultItem(Static):
@@ -53,11 +54,22 @@ class ResultItem(Static):
         self.citation = citation
         self.result_index = result_index
 
+        # Guard: a valid title looks like a filename (has an extension).
+        # A raw Gemini file ID (e.g. "l38iajfzqsjq") has no "." — log an
+        # error and substitute a safe display title so it never reaches the user.
+        display_title = citation.title
+        if "." not in citation.title:
+            get_telemetry().log.error(
+                f"unresolved gemini file id in result index={result_index} "
+                f"raw_id={citation.title!r} — enrichment lookup missed this file"
+            )
+            display_title = f"[Unresolved file #{result_index + 1}]"
+
         # Build Rich Text display
         display = Text()
 
         # Line 1: filename (bold)
-        display.append(citation.title, style="bold")
+        display.append(display_title, style="bold")
         display.append("\n")
 
         # Line 2: metadata summary (course | difficulty | year) if available
@@ -86,11 +98,18 @@ class ResultItem(Static):
 
     def on_click(self, event: events.Click) -> None:
         """Post ResultSelected when the card is clicked."""
+        event.stop()  # Prevent click from bubbling to parent scroll container
+        get_telemetry().log.info(
+            f"result item clicked index={self.result_index} title={self.citation.title!r}"
+        )
         self.post_message(ResultSelected(index=self.result_index, citation=self.citation))
 
     def on_key(self, event: events.Key) -> None:
         """Post ResultSelected when Enter is pressed on a focused card."""
         if event.key == "enter":
+            get_telemetry().log.info(
+                f"result item enter index={self.result_index} title={self.citation.title!r}"
+            )
             self.post_message(ResultSelected(index=self.result_index, citation=self.citation))
 
 
@@ -121,9 +140,9 @@ class ResultsList(VerticalScroll):
         """
         self.remove_children()
         if not citations:
-            self.mount(Static("No results found", id="results-status"))
+            self.mount(Static("No results found"))
         else:
-            self.mount(Static(f"{len(citations)} results", id="results-header"))
+            self.mount(Static(f"{len(citations)} results"))
             for i, citation in enumerate(citations):
                 self.mount(ResultItem(citation, i))
 
@@ -136,7 +155,7 @@ class ResultsList(VerticalScroll):
             text: Status message to display.
         """
         self.remove_children()
-        self.mount(Static(text, id="results-status"))
+        self.mount(Static(text))
 
     def select_index(self, index: int) -> None:
         """Highlight the result card at the given index.

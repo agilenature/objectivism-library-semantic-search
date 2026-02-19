@@ -13,6 +13,7 @@ from rich.panel import Panel
 from rich.text import Text
 
 from objlib.models import Citation
+from objlib.tui.telemetry import get_telemetry
 
 
 class PreviewPane(RichLog):
@@ -52,18 +53,27 @@ class PreviewPane(RichLog):
             highlight_terms: Optional list of search terms to highlight
                 in the document text.
         """
-        self.clear()
-        self._current_content = content
-        self._current_file_path = file_path
+        with get_telemetry().span("widget.preview_document") as span:
+            span.set_attribute("preview.file_path", file_path)
+            span.set_attribute("preview.content_length", len(content))
+            span.set_attribute("preview.highlight_count", len(highlight_terms) if highlight_terms else 0)
 
-        text = Text(content)
-        if highlight_terms:
-            for term in highlight_terms:
-                text.highlight_words(
-                    [term], style="bold yellow on dark_green", case_sensitive=False
-                )
+            self.clear()
+            self._current_content = content
+            self._current_file_path = file_path
 
-        self.write(text)
+            text = Text(content)
+            if highlight_terms:
+                for term in highlight_terms:
+                    text.highlight_words(
+                        [term], style="bold yellow on dark_green", case_sensitive=False
+                    )
+
+            self.write(text)
+            get_telemetry().log.info(
+                f"preview document file={file_path!r} "
+                f"length={len(content)} highlights={len(highlight_terms) if highlight_terms else 0}"
+            )
 
     def show_citation_detail(self, citation: Citation) -> None:
         """Display a citation as a detailed panel with metadata.
@@ -108,6 +118,7 @@ class PreviewPane(RichLog):
         )
         self.write(panel)
         self._current_content = None
+        get_telemetry().log.info(f"preview citation title={citation.title!r}")
 
     def scroll_to_citation(self, citation_text: str) -> None:
         """Scroll to the location of a citation passage in the document.
@@ -128,6 +139,9 @@ class PreviewPane(RichLog):
         if pos >= 0:
             line_number = self._current_content[:pos].count("\n")
             self.scroll_to(y=line_number, animate=True)
+            get_telemetry().log.info(
+                f"preview scroll found=True line={line_number}"
+            )
         else:
             self.write(
                 Text(
@@ -135,6 +149,7 @@ class PreviewPane(RichLog):
                     style="dim italic",
                 )
             )
+            get_telemetry().log.info("preview scroll found=False")
 
     def show_placeholder(self, message: str = "Select a result to preview") -> None:
         """Show a placeholder message when no document is loaded.
@@ -161,3 +176,6 @@ class PreviewPane(RichLog):
             )
         )
         self._current_content = None
+        get_telemetry().log.warning(
+            f"preview unavailable file={self._current_file_path!r}"
+        )

@@ -11,6 +11,7 @@ from __future__ import annotations
 from textual.widgets import Tree
 
 from objlib.tui.messages import FileSelected, NavigationRequested
+from objlib.tui.telemetry import get_telemetry
 
 
 class NavTree(Tree):
@@ -43,33 +44,42 @@ class NavTree(Tree):
         Args:
             library_service: LibraryService instance (accessed via App).
         """
-        self.clear()
+        with get_telemetry().span("widget.nav_populate") as span:
+            self.clear()
 
-        categories = await library_service.get_categories()
+            categories = await library_service.get_categories()  # type: ignore[attr-defined]
+            course_count = 0
 
-        for cat_name, count in categories:
-            cat_node = self.root.add(
-                f"{cat_name} ({count})",
-                data={"type": "category", "name": cat_name},
+            for cat_name, count in categories:
+                cat_node = self.root.add(
+                    f"{cat_name} ({count})",
+                    data={"type": "category", "name": cat_name},
+                )
+
+                # For the "course" category, also load course names as children
+                if cat_name == "course":
+                    courses = await library_service.get_courses()  # type: ignore[attr-defined]
+                    course_count = len(courses)
+                    for course_name, course_count_item in courses:
+                        cat_node.add(
+                            f"{course_name} ({course_count_item})",
+                            data={"type": "course", "name": course_name},
+                        )
+
+            # Bookmarks node at the top level
+            self.root.add(
+                "Bookmarks",
+                data={"type": "bookmarks"},
             )
 
-            # For the "course" category, also load course names as children
-            if cat_name == "course":
-                courses = await library_service.get_courses()
-                for course_name, course_count in courses:
-                    cat_node.add(
-                        f"{course_name} ({course_count})",
-                        data={"type": "course", "name": course_name},
-                    )
+            # Expand root so categories are visible immediately
+            self.root.expand()
 
-        # Bookmarks node at the top level
-        self.root.add(
-            "Bookmarks",
-            data={"type": "bookmarks"},
-        )
-
-        # Expand root so categories are visible immediately
-        self.root.expand()
+            span.set_attribute("nav.category_count", len(categories))
+            span.set_attribute("nav.course_count", course_count)
+            get_telemetry().log.info(
+                f"nav tree populated categories={len(categories)} courses={course_count}"
+            )
 
     async def expand_course(
         self, course_name: str, node: object, library_service: object
@@ -84,17 +94,23 @@ class NavTree(Tree):
             node: The TreeNode being expanded.
             library_service: LibraryService instance.
         """
-        files = await library_service.get_files_by_course(course_name)
-        for file_dict in files:
-            filename = file_dict.get("filename", "")
-            file_path = file_dict.get("file_path", "")
-            node.add_leaf(
-                filename,
-                data={
-                    "type": "file",
-                    "file_path": file_path,
-                    "filename": filename,
-                },
+        with get_telemetry().span("widget.nav_course_expanded") as span:
+            span.set_attribute("nav.course", course_name)
+            files = await library_service.get_files_by_course(course_name)  # type: ignore[attr-defined]
+            for file_dict in files:
+                filename = file_dict.get("filename", "")
+                file_path = file_dict.get("file_path", "")
+                node.add_leaf(  # type: ignore[attr-defined]
+                    filename,
+                    data={
+                        "type": "file",
+                        "file_path": file_path,
+                        "filename": filename,
+                    },
+                )
+            span.set_attribute("nav.file_count", len(files))
+            get_telemetry().log.info(
+                f"course expanded course={course_name!r} file_count={len(files)}"
             )
 
     def on_tree_node_selected(self, event: Tree.NodeSelected) -> None:
@@ -106,6 +122,9 @@ class NavTree(Tree):
         node_type = data.get("type")
 
         if node_type == "file":
+            get_telemetry().log.info(
+                f"nav node selected type=file filename={data['filename']!r}"
+            )
             self.post_message(
                 FileSelected(
                     file_path=data["file_path"],
@@ -113,10 +132,16 @@ class NavTree(Tree):
                 )
             )
         elif node_type == "category":
+            get_telemetry().log.info(
+                f"nav node selected type=category name={data['name']!r}"
+            )
             self.post_message(
                 NavigationRequested(category=data["name"])
             )
         elif node_type == "course":
+            get_telemetry().log.info(
+                f"nav node selected type=course name={data['name']!r}"
+            )
             self.post_message(
                 NavigationRequested(course=data["name"])
             )
@@ -129,7 +154,7 @@ class NavTree(Tree):
 
         if data.get("type") == "course" and not event.node.children:
             # Lazy load -- fetch files for this course
-            library_service = self.app.library_service
+            library_service = self.app.library_service  # type: ignore[attr-defined]
             if library_service is not None:
                 self.app.call_later(
                     self.expand_course,

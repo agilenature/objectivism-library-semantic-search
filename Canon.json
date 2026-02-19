@@ -8,10 +8,12 @@
     "docs/user/",
     "docs/architecture/",
     "src/objlib/services/",
-    "src/objlib/tui/"
+    "src/objlib/tui/",
+    "src/objlib/tui/widgets/"
   ],
   "excludeFolders": [
     "docs/archive/",
+    "logs",
     "src/objlib/__pycache__",
     "src/objlib/upload",
     "src/objlib/extraction",
@@ -31,7 +33,7 @@
   ],
   "rules": [
     "Import only from objlib.services — never from objlib.cli, objlib.upload, objlib.extraction, objlib.entities, or objlib.sync; those are internal pipeline modules, not part of the public API.",
-    "Initialize: api_key = get_api_key(); app = AppState(store_resource_name=STORE_NAME); then SearchService(api_key, app), LibraryService(db), SessionService(db) form the complete client backend.",
+    "Initialize services with db_path and api_key strings: SearchService(api_key, store_resource_name, db_path), LibraryService(db_path), SessionService(db_path) — all three form the complete client backend.",
     "SearchService.search() is async with 300ms–2s Gemini latency — always await it in an async context or background worker (asyncio.run_coroutine_threadsafe); never block the TUI main thread.",
     "Always call LibraryService.enrich_citations(citations, db) after SearchService.search() before rendering — unenriched Citations have file_path=None and metadata=None.",
     "Enriched Citation fields: index (rank), title (filename), text (excerpt), confidence (0–1), file_path, metadata (keys: course, year, difficulty, primary_topics, topic_aspects, description, entities).",
@@ -41,7 +43,7 @@
     "Filter syntax: 'field:value' for strings ('course:OPAR'), 'field:N' for numeric ('year:2023'), 'field:>=N' for comparison — pass lists to LibraryService filter methods; never write raw SQL.",
     "Session events are append-only — use SessionService.add_event(); there are no update or delete methods for session records.",
     "Disk commands (scan, upload, sync) require /Volumes/U32 Shadow mounted — query commands (search, browse, filter, view) work without it; design clients to degrade gracefully when the disk is absent.",
-    "CLI: 'python -m objlib --store NAME search QUERY' (search); 'python -m objlib browse' (list all); 'python -m objlib filter EXPR' (filter) — --store precedes search but follows 'view --show-related'."
+    "CLI: 'python -m objlib --store NAME search QUERY' (search); 'python -m objlib browse' (list all); 'python -m objlib tui' (interactive TUI) — --store precedes search but follows 'view --show-related'."
   ],
   "previousVersions": [],
   "branchVersions": []

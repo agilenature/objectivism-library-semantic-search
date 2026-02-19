@@ -12,6 +12,7 @@ from textual import events
 from textual.widgets import Input
 
 from objlib.tui.messages import SearchRequested
+from objlib.tui.telemetry import get_telemetry
 
 
 class SearchBar(Input):
@@ -41,6 +42,7 @@ class SearchBar(Input):
             id="search-bar",
         )
         self._debounce_timer = None
+        self._debounce_gen: int = 0  # Incremented on each new timer or Enter press
         self._history: list[str] = []
         self._history_index: int = -1
 
@@ -54,10 +56,12 @@ class SearchBar(Input):
         if event.input is not self:
             return
 
-        # Cancel previous debounce timer
+        # Cancel previous debounce timer and bump generation
         if self._debounce_timer is not None:
             self._debounce_timer.stop()
             self._debounce_timer = None
+        self._debounce_gen += 1
+        gen = self._debounce_gen
 
         query = event.value.strip()
 
@@ -66,14 +70,23 @@ class SearchBar(Input):
             self.post_message(SearchRequested(query=""))
             return
 
-        # Start debounce timer
+        # Start debounce timer, capturing generation so stale callbacks are ignored
         self._debounce_timer = self.set_timer(
             self.DEBOUNCE_SECONDS,
-            lambda: self._fire_search(query),
+            lambda: self._fire_search(query, gen),
         )
 
-    def _fire_search(self, query: str) -> None:
-        """Post SearchRequested and record in history."""
+    def _fire_search(self, query: str, gen: int | None = None) -> None:
+        """Post SearchRequested and record in history.
+
+        Args:
+            query: The search query string.
+            gen: Debounce generation that triggered this call. If the generation
+                has advanced (e.g. Enter was pressed after the timer was set),
+                this call is stale and is silently dropped.
+        """
+        if gen is not None and gen != self._debounce_gen:
+            return  # Stale debounce — Enter already fired for this query
         self._debounce_timer = None
         self.post_message(SearchRequested(query=query))
 
@@ -83,6 +96,10 @@ class SearchBar(Input):
 
         # Reset history navigation position
         self._history_index = -1
+
+        get_telemetry().log.info(
+            f"search fired query={query!r} history_size={len(self._history)}"
+        )
 
     def on_key(self, event: events.Key) -> None:
         """Handle history navigation and immediate Enter.
@@ -98,6 +115,10 @@ class SearchBar(Input):
             elif self._history_index > 0:
                 self._history_index -= 1
             self.value = self._history[self._history_index]
+            get_telemetry().log.info(
+                f"history navigate direction=up index={self._history_index} "
+                f"query={self.value!r}"
+            )
             event.prevent_default()
 
         elif event.key == "down" and self._history_index >= 0:
@@ -109,10 +130,17 @@ class SearchBar(Input):
                 # Past the end: clear to empty
                 self._history_index = -1
                 self.value = ""
+            get_telemetry().log.info(
+                f"history navigate direction=down index={self._history_index} "
+                f"query={self.value!r}"
+            )
             event.prevent_default()
 
         elif event.key == "enter":
-            # Fire immediately, bypassing debounce
+            # Fire immediately, bypassing debounce.
+            # Bump generation first so any in-flight debounce timer callback
+            # sees a stale generation and silently drops itself.
+            self._debounce_gen += 1
             if self._debounce_timer is not None:
                 self._debounce_timer.stop()
                 self._debounce_timer = None
@@ -126,3 +154,4 @@ class SearchBar(Input):
         self.value = ""
         self._history_index = -1
         self.post_message(SearchRequested(query=""))
+        get_telemetry().log.info("search bar cleared")

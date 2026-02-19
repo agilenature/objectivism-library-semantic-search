@@ -1,6 +1,6 @@
 # Database Schema
 
-SQLite database at `data/library.db`. Current version: **V7**.
+SQLite database at `data/library.db`. Current version: **V8**.
 
 WAL mode enabled for read concurrency. Foreign keys enforced.
 
@@ -17,6 +17,7 @@ WAL mode enabled for read concurrency. Foreign keys enforced.
 | V5 | `upload_attempt_count`, `last_upload_hash` on files | Inline ALTER TABLE in V5 block |
 | V6 | `passages`, `sessions`, `session_events` tables | `MIGRATION_V6_SQL` |
 | V7 | `mtime`, `orphaned_gemini_file_id`, `missing_since`, `upload_hash`, `enrichment_version` columns on `files`; expanded `status` CHECK constraint; `library_config` table | `MIGRATION_V7_SQL` |
+| V8 | `session_events` table rebuild to add `'bookmark'` to `event_type` CHECK constraint | `MIGRATION_V8_SQL` |
 
 Migration strategy: `PRAGMA user_version` tracks current version. Each block uses `ALTER TABLE ADD COLUMN` with try/except (SQLite lacks `IF NOT EXISTS` for columns) and `CREATE TABLE IF NOT EXISTS` for new tables. **Exception:** V7 uses a full table rebuild (`CREATE files_v7` → `INSERT ... SELECT` → `DROP files` → `ALTER TABLE ... RENAME`) because SQLite cannot modify an existing CHECK constraint in-place.
 
@@ -409,7 +410,7 @@ CREATE TABLE session_events (
     id          TEXT PRIMARY KEY,              -- UUID
     session_id  TEXT NOT NULL,
     event_type  TEXT NOT NULL
-        CHECK(event_type IN ('search','view','synthesize','note','error')),
+        CHECK(event_type IN ('search','view','synthesize','note','error','bookmark')),
     payload_json TEXT NOT NULL,               -- Event-specific data
     created_at  TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')),
     FOREIGN KEY (session_id) REFERENCES sessions(id)
@@ -427,6 +428,7 @@ CREATE TABLE session_events (
 | `view` | filename |
 | `note` | `text` |
 | `error` | `message` |
+| `bookmark` | `file_path`, `action` (`"added"` or `"removed"`) |
 
 ---
 
@@ -487,4 +489,4 @@ Normalization: add `"files/"` prefix when looking up by Gemini ID.
 
 ---
 
-_Last updated: Phase 5 — Schema V7 (sync columns on files, library_config table, expanded status CHECK)_
+_Last updated: Phase 7 — Schema V8 (session_events 'bookmark' event type)_

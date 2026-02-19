@@ -12,6 +12,7 @@ from textual.widgets import Select, Static
 
 from objlib.tui.messages import FilterChanged
 from objlib.tui.state import FilterSet
+from objlib.tui.telemetry import get_telemetry
 
 
 class FilterPanel(Vertical):
@@ -64,12 +65,12 @@ class FilterPanel(Vertical):
 
     async def on_mount(self) -> None:
         """Populate category and course options from the library database."""
-        if self.app.library_service is None:
+        if self.app.library_service is None:  # type: ignore[attr-defined]
             return
 
         try:
-            categories = await self.app.library_service.get_categories()
-            courses = await self.app.library_service.get_courses()
+            categories = await self.app.library_service.get_categories()  # type: ignore[attr-defined]
+            courses = await self.app.library_service.get_courses()  # type: ignore[attr-defined]
 
             self.query_one("#filter-category", Select).set_options(
                 [(name, name) for name, _ in categories]
@@ -77,9 +78,11 @@ class FilterPanel(Vertical):
             self.query_one("#filter-course", Select).set_options(
                 [(name, name) for name, _ in courses]
             )
-        except Exception:
-            # Gracefully handle database errors during mount
-            pass
+            get_telemetry().log.info(
+                f"filter panel mounted categories={len(categories)} courses={len(courses)}"
+            )
+        except Exception as e:
+            get_telemetry().log.error(f"filter panel mount failed error={e!r}")
 
     def on_select_changed(self, event: Select.Changed) -> None:
         """Build FilterSet from current Select states and post FilterChanged."""
@@ -93,6 +96,10 @@ class FilterPanel(Vertical):
             difficulty=diff_val if diff_val is not Select.NULL else None,
             course=course_val if course_val is not Select.NULL else None,
         )
+        get_telemetry().log.info(
+            f"filter dropdown changed widget={event.select.id!r} "
+            f"value={event.value!r} filters={filter_set}"
+        )
         self.post_message(FilterChanged(filters=filter_set))
 
     def reset_filters(self) -> None:
@@ -100,4 +107,5 @@ class FilterPanel(Vertical):
         self.query_one("#filter-category", Select).value = Select.NULL
         self.query_one("#filter-difficulty", Select).value = Select.NULL
         self.query_one("#filter-course", Select).value = Select.NULL
+        get_telemetry().log.info("filters reset")
         self.post_message(FilterChanged(filters=FilterSet()))

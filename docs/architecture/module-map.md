@@ -18,7 +18,7 @@ Key structures:
 - Sub-apps: `config_app`, `metadata_app`, `entities_app`, `session_app`, `glossary_app`
 
 Commands defined:
-- Root: `scan`, `status`, `purge`, `upload`, `enriched-upload`, `sync`, `search`, `view`, `browse`, `filter`
+- Root: `scan`, `status`, `purge`, `upload`, `enriched-upload`, `sync`, `search`, `view`, `browse`, `filter`, `tui`, `logs`
 - `config`: `set-api-key`, `get-api-key`, `remove-api-key`, `set-mistral-key`, `get-mistral-key`, `remove-mistral-key`
 - `metadata`: `show`, `update`, `batch-update`, `extract-wave1`, `wave1-report`, `wave1-select`, `extract`, `review`, `approve`, `stats`, `batch-extract`
 - `entities`: `extract`, `stats`, `report`
@@ -40,6 +40,7 @@ Commands defined:
 - `MIGRATION_V4_SQL`: Entity tables — `person`, `person_alias`, `transcript_entity` with seed data for 15 canonical persons
 - `MIGRATION_V6_SQL`: Phase 4 tables — `passages`, `sessions`, `session_events`
 - `MIGRATION_V7_SQL`: Sync columns — table rebuild to expand CHECK constraint; adds `mtime`, `orphaned_gemini_file_id`, `missing_since`, `upload_hash`, `enrichment_version` to `files`; creates `library_config` table
+- `MIGRATION_V8_SQL`: `session_events` table rebuild to expand `event_type` CHECK constraint to include `'bookmark'`
 - `Database` class: context manager, WAL mode setup, schema migration, all CRUD methods
 
 Key methods: `upsert_file()`, `get_pending_files()`, `get_status_counts()`, `get_file_metadata_by_filenames()`, `filter_files_by_metadata()`, `upsert_passage()`, `get_files_needing_entity_extraction()`, `save_transcript_entities()`, `get_enriched_pending_files()`, `get_ai_metadata_stats()`, `approve_files_by_confidence()`
@@ -170,6 +171,41 @@ Sync methods (Phase 5): `mark_missing()`, `get_missing_files()`, `get_orphaned_f
 
 ---
 
+## `services/`
+
+**Public services facade — the boundary between clients (TUI, tests) and internal pipeline modules.**
+
+Clients should import only from `objlib.services`, never from internal modules (`search/`, `session/`, `database.py`).
+
+| File | Responsibility |
+|------|----------------|
+| `search.py` | `SearchService` — async `search(query, filters, ...)` wrapping `GeminiSearchClient` + `enrich_citations()`. Lazy Gemini client init via `_ensure_client()`. |
+| `library.py` | `LibraryService` — browse (`get_categories`, `get_courses`, `get_course_files`), filter (`filter_files`), document retrieval (`get_file_content`), citation enrichment (`enrich_citations`) |
+| `session.py` | `SessionService` — thin wrapper around `SessionManager`: `create_session`, `add_event`, `get_recent_sessions`, `get_session` |
+| `__init__.py` | Exports: `SearchService`, `LibraryService`, `SessionService` |
+
+---
+
+## `tui/`
+
+**Textual-based interactive terminal UI for live search, browsing, and session management (Phase 7).**
+
+| File | Responsibility |
+|------|----------------|
+| `app.py` | `ObjlibApp` — main Textual App: composes layout, wires message handlers, drives search via `@work(exclusive=True)` + 300ms debounce, manages bookmarks and sessions, command palette integration |
+| `telemetry.py` | `Telemetry` OTel span facade; `get_telemetry()` / `set_telemetry()` singleton; `_JsonFormatter` for JSON-lines log output; `configure_file_logging()` writes `logs/tui-YYYYMMDD.log` |
+| `state.py` | `FilterSet` dataclass (category, difficulty, course) |
+| `messages.py` | Textual message classes: `SearchRequested`, `ResultSelected`, `FileSelected`, `NavigationRequested`, `FilterChanged` |
+| `providers.py` | `ObjlibCommands` — Textual `CommandProvider` for the command palette |
+| `__init__.py` | `run_tui()` — resolves store name, creates services, calls `configure_file_logging()`, launches `ObjlibApp` |
+| `widgets/search_bar.py` | `SearchBar` — debounced search input (300ms timer) with history navigation (↑/↓) |
+| `widgets/nav_tree.py` | `NavTree` — hierarchical tree (categories → courses → files) with lazy file expansion |
+| `widgets/filter_panel.py` | `FilterPanel` — Select dropdowns for category/difficulty/course, populated from `LibraryService` on mount |
+| `widgets/results.py` | `ResultItem`, `ResultsList` — scrollable citation cards with keyboard focus and selection highlighting |
+| `widgets/preview.py` | `PreviewPane` — RichLog for full document display, keyword highlighting, citation scroll-to-passage |
+
+---
+
 ## `sync/`
 
 **Incremental sync pipeline — change detection, upload-first replacement, orphan cleanup (Phase 5).**
@@ -212,4 +248,4 @@ Key methods:
 
 ---
 
-_Last updated: Phase 5 — sync/ module (disk detection, change detection, incremental upload)_
+_Last updated: Phase 7 — services/ and tui/ modules, cli.py tui/logs commands, database.py V8 migration_
