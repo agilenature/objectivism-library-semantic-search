@@ -83,22 +83,81 @@ def extract_citations(grounding_metadata: Any | None) -> list[Citation]:
     return citations
 
 
-def enrich_citations(citations: list[Citation], db: Database) -> list[Citation]:
-    """Enrich citations with local SQLite metadata.
+def _apply_api_fallback(
+    citations: list[Citation],
+    db: Database,
+    gemini_client: Any,
+) -> None:
+    """Resolve orphaned Gemini file IDs via the Files API.
+
+    When a citation's title is an unresolved Gemini file ID (an old/duplicate
+    upload whose ID is not tracked in the local DB), calls ``files.get()``
+    synchronously to retrieve the ``display_name``, then looks up the file
+    in the DB by filename.
+
+    This handles the case where the File Search store has multiple copies of
+    the same document (from multiple upload runs) and Gemini returns an older
+    file ID that the DB doesn't recognize.
+
+    Best-effort: API errors are silently ignored.
+
+    Args:
+        citations: Citations to resolve in place.
+        db: Database instance for filename lookup.
+        gemini_client: Synchronous ``genai.Client`` instance.
+    """
+    for citation in citations:
+        # Skip already-resolved citations (filename contains ".")
+        if not citation.title or "." in citation.title:
+            continue
+        # This looks like an unresolved Gemini file ID — try API fallback
+        raw_id = citation.title
+        full_id = raw_id if raw_id.startswith("files/") else f"files/{raw_id}"
+        try:
+            file_obj = gemini_client.files.get(name=full_id)
+            display_name = getattr(file_obj, "display_name", None)
+            if not display_name:
+                continue
+            match = db.get_file_metadata_by_filenames([display_name]).get(display_name)
+            if match:
+                citation.title = display_name
+                citation.file_path = match["file_path"]
+                citation.metadata = match["metadata"]
+        except Exception:
+            pass  # Best-effort: API errors silently ignored
+
+
+def enrich_citations(
+    citations: list[Citation],
+    db: Database,
+    gemini_client: Any | None = None,
+) -> list[Citation]:
+    """Enrich citations with local SQLite metadata and deduplicate.
 
     Collects all titles from citations, looks up matching filenames in
     SQLite, and populates ``file_path`` and ``metadata`` on each citation.
 
-    Tries two lookup strategies:
+    Tries three lookup strategies in order:
     1. Lookup by filename (when Gemini returns display_name as title)
     2. Lookup by Gemini file ID (when Gemini returns file ID as title)
+    3. API fallback via ``files.get()`` for orphaned/duplicate file IDs not
+       tracked in the local DB (only when ``gemini_client`` is provided)
+
+    After enrichment, deduplicates: when two citations share the same
+    passage text (first 100 chars), the enriched (filename-resolved)
+    citation is kept and the unresolved (raw Gemini ID) duplicate is
+    dropped. This handles the case where a file appears twice in Gemini
+    results — once with a known ID and once with an orphaned ID.
 
     Args:
         citations: List of Citation objects (mutated in place).
         db: Database instance for metadata lookup.
+        gemini_client: Optional synchronous ``genai.Client`` for API fallback.
+            When provided, unresolved Gemini file IDs are resolved via the
+            Files API. Best-effort — failures are silently ignored.
 
     Returns:
-        The same list of citations (mutated in place).
+        Deduplicated list of enriched citations.
     """
     if not citations:
         return citations
@@ -127,7 +186,28 @@ def enrich_citations(citations: list[Citation], db: Database) -> list[Citation]:
                 citation.file_path = gemini_match["file_path"]
                 citation.metadata = gemini_match["metadata"]
 
-    return citations
+    # Third pass: API fallback for IDs still unresolved after DB lookups
+    if gemini_client is not None:
+        _apply_api_fallback(citations, db, gemini_client)
+
+    # Deduplicate by passage text: keep enriched citations over raw-ID ones.
+    # A citation is "resolved" when its title contains a "." (looks like a filename).
+    seen_text: dict[str, Citation] = {}  # passage_key -> best citation so far
+    for citation in citations:
+        passage_key = citation.text[:100].strip().lower()
+        existing = seen_text.get(passage_key)
+        if existing is None:
+            seen_text[passage_key] = citation
+        else:
+            # Prefer the one with a resolved filename (has "." in title)
+            existing_resolved = "." in existing.title
+            current_resolved = "." in citation.title
+            if current_resolved and not existing_resolved:
+                seen_text[passage_key] = citation
+
+    # Rebuild list preserving original relative order
+    kept = set(id(c) for c in seen_text.values())
+    return [c for c in citations if id(c) in kept]
 
 
 def build_metadata_filter(filters: list[str]) -> str | None:

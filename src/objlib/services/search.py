@@ -119,7 +119,7 @@ class SearchService:
                 from objlib.database import Database
 
                 with Database(self._db_path) as db:
-                    return enrich_citations(cites, db)
+                    return enrich_citations(cites, db, self._client)
 
             citations = await asyncio.to_thread(_enrich, citations)
 

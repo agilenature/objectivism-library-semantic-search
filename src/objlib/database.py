@@ -813,6 +813,30 @@ class Database:
                     }
         return result
 
+    def get_canonical_gemini_file_id_suffixes(self) -> set[str]:
+        """Return the bare file ID suffixes for all canonical uploaded files.
+
+        Extracts the last path segment from each ``gemini_file_id`` (e.g.,
+        ``"eafkmpzjs39o"`` from ``"files/eafkmpzjs39o"``) for all files with
+        ``status='uploaded'`` and a non-null ``gemini_file_id``.
+
+        Used by the ``store-sync`` purge command to identify which store
+        documents are canonical vs orphaned.
+
+        Returns:
+            Set of bare file ID strings (no ``"files/"`` prefix).
+        """
+        rows = self.conn.execute(
+            "SELECT gemini_file_id FROM files WHERE status = 'uploaded' AND gemini_file_id IS NOT NULL"
+        ).fetchall()
+        suffixes: set[str] = set()
+        for row in rows:
+            gid = row["gemini_file_id"] or ""
+            suffix = gid.split("/")[-1]
+            if suffix:
+                suffixes.add(suffix)
+        return suffixes
+
     def get_pending_files(self, limit: int = 200) -> list[sqlite3.Row]:
         """Return files with status='pending' for upload processing.
 

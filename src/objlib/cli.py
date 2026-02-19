@@ -411,6 +411,158 @@ def purge(
         console.print(f"[green]Purged {count} record(s).[/green]")
 
 
+@app.command("store-sync")
+def store_sync(
+    store_name: Annotated[
+        str,
+        typer.Option("--store", "-s", help="Gemini File Search store display name"),
+    ] = "objectivism-library-test",
+    db_path: Annotated[
+        Path,
+        typer.Option("--db", "-d", help="Path to SQLite database file"),
+    ] = Path("data/library.db"),
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run/--no-dry-run", help="Preview what would be deleted without making changes (default: on)"),
+    ] = True,
+    confirm: Annotated[
+        bool,
+        typer.Option("--yes", "-y", help="Skip confirmation prompt when --no-dry-run is set"),
+    ] = False,
+    batch_size: Annotated[
+        int,
+        typer.Option("--batch-size", help="Pause briefly after every N deletions for rate limiting"),
+    ] = 20,
+) -> None:
+    """Remove orphaned/duplicate documents from the Gemini File Search store.
+
+    Compares every document in the store against the local DB's canonical
+    ``gemini_file_id`` records. Documents whose file ID is not the canonical
+    one tracked in the DB are deleted.
+
+    This fixes two classes of orphans:
+
+    \\b
+    - Duplicate uploads: the same file was uploaded in multiple pipeline runs,
+      creating multiple Gemini file IDs. Only the most recent ID is in the DB.
+    - Pre-filter uploads: old PDFs/EPUBs uploaded before the .txt-only filter.
+      These have no ``gemini_file_id`` in the DB (status='skipped').
+
+    Always run with [bold]--dry-run[/bold] first (the default) to verify what
+    would be deleted before committing to [bold]--no-dry-run[/bold].
+    """
+    import asyncio
+
+    from rich.table import Table
+
+    if not db_path.exists():
+        console.print(f"[red]Database not found:[/red] {db_path}")
+        raise typer.Exit(code=1)
+
+    from objlib.config import get_api_key
+
+    try:
+        api_key = get_api_key()
+    except RuntimeError as e:
+        console.print(f"[red]{e}[/red]")
+        raise typer.Exit(code=1)
+
+    # Step 1: Get canonical file ID suffixes from DB
+    with Database(db_path) as db:
+        canonical_suffixes = db.get_canonical_gemini_file_id_suffixes()
+
+    console.print(f"[dim]Canonical uploaded file IDs in DB:[/dim] {len(canonical_suffixes)}")
+
+    # Step 2: Initialize Gemini upload client
+    from objlib.upload.circuit_breaker import RollingWindowCircuitBreaker
+    from objlib.upload.client import GeminiFileSearchClient
+    from objlib.upload.rate_limiter import AdaptiveRateLimiter, RateLimiterConfig
+
+    circuit_breaker = RollingWindowCircuitBreaker()
+    rate_limiter = AdaptiveRateLimiter(RateLimiterConfig(), circuit_breaker)
+    client = GeminiFileSearchClient(api_key, circuit_breaker, rate_limiter)
+
+    async def run_sync() -> None:
+        # Resolve and connect to store
+        await client.get_or_create_store(store_name)
+
+        # List all store documents
+        console.print("[dim]Listing store documents (this may take a moment)...[/dim]")
+        documents = await client.list_store_documents()
+        console.print(f"[dim]Total store documents:[/dim] {len(documents)}")
+
+        # Classify each document as canonical or orphaned
+        orphaned = []  # list of (doc, suffix, display_name)
+        canonical_count = 0
+
+        for doc in documents:
+            doc_name = getattr(doc, "name", "") or ""
+            # The document resource name encodes the source file ID in its last segment
+            # e.g. "fileSearchStores/abc/documents/eafkmpzjs39o"
+            suffix = doc_name.rsplit("/", 1)[-1] if "/" in doc_name else doc_name
+            display_name = getattr(doc, "display_name", "") or ""
+
+            if suffix in canonical_suffixes:
+                canonical_count += 1
+            else:
+                orphaned.append((doc, suffix, display_name))
+
+        console.print(f"[green]Canonical documents:[/green] {canonical_count}")
+        console.print(f"[yellow]Orphaned documents:[/yellow] {len(orphaned)}")
+
+        if not orphaned:
+            console.print("[green]Store is clean — nothing to purge.[/green]")
+            return
+
+        # Show a sample of what would be deleted
+        sample_table = Table(show_header=True, header_style="bold")
+        sample_table.add_column("Document Resource Name", no_wrap=True)
+        sample_table.add_column("Display Name")
+        sample_table.add_column("File ID Suffix")
+        for doc, suffix, display_name in orphaned[:15]:
+            sample_table.add_row(
+                getattr(doc, "name", ""),
+                display_name[:55],
+                suffix,
+            )
+        if len(orphaned) > 15:
+            sample_table.add_row(f"... and {len(orphaned) - 15} more", "", "")
+        console.print(sample_table)
+
+        if dry_run:
+            console.print(
+                f"\n[yellow]DRY RUN[/yellow] — {len(orphaned)} documents would be deleted.\n"
+                "Re-run with [bold]--no-dry-run[/bold] to perform the actual deletion."
+            )
+            return
+
+        if not confirm:
+            proceed = typer.confirm(
+                f"\nDelete {len(orphaned)} orphaned documents from store '{store_name}'?"
+            )
+            if not proceed:
+                console.print("[yellow]Purge cancelled.[/yellow]")
+                return
+
+        # Delete orphaned documents in batches
+        deleted = 0
+        failed = 0
+        for i, (doc, suffix, _display) in enumerate(orphaned):
+            doc_name = getattr(doc, "name", "")
+            ok = await client.delete_store_document(doc_name)
+            if ok:
+                deleted += 1
+            else:
+                failed += 1
+            if (i + 1) % batch_size == 0:
+                console.print(f"[dim]  {i + 1}/{len(orphaned)} processed...[/dim]")
+                await asyncio.sleep(1.0)  # Gentle rate limiting between batches
+
+        console.print(f"\n[green]Done:[/green] {deleted} deleted, {failed} failed.")
+
+    asyncio.run(run_sync())
+
+
 @app.command()
 def upload(
     store_name: Annotated[
@@ -1094,7 +1246,7 @@ def search(
 
     # --- Stage 3: Enrich and cache passages ---
     with Database(state.db_path) as db:
-        enrich_citations(citations, db)
+        enrich_citations(citations, db, state.gemini_client)
 
         # Cache passages in SQLite for citation stability (passage_id = UUID5 of file+text)
         for citation in citations:
@@ -1345,7 +1497,7 @@ def view(
         related_citations = extract_citations(grounding)
 
         with Database(db_path) as db:
-            enrich_citations(related_citations, db)
+            enrich_citations(related_citations, db, client)
 
         response_text = response.text or "(Related documents)"
         console.print()
@@ -3280,3 +3432,139 @@ def tui() -> None:
     from objlib.tui import run_tui
 
     run_tui()
+
+
+@app.command(name="logs")
+def logs_cmd(
+    trace: Annotated[
+        str | None,
+        typer.Option("--trace", "-t", help="Filter to a specific trace ID (prefix match)"),
+    ] = None,
+    level: Annotated[
+        str | None,
+        typer.Option(
+            "--level",
+            "-l",
+            help="Minimum log level to show (DEBUG, INFO, WARNING, ERROR)",
+        ),
+    ] = None,
+    since: Annotated[
+        str | None,
+        typer.Option("--since", "-s", help="Show logs from this date onward (YYYY-MM-DD)"),
+    ] = None,
+    tail: Annotated[
+        int,
+        typer.Option("--tail", "-n", help="Show only the last N entries (0 = all)"),
+    ] = 0,
+) -> None:
+    """Browse TUI session logs from the logs/ directory.
+
+    Reads all JSON-lines log files matching ``logs/tui-*.log`` and renders
+    them as a Rich table. Supports filtering by trace ID, log level, and date.
+
+    Examples:
+
+    \\b
+      objlib logs                          # all log entries
+      objlib logs --level ERROR            # errors only
+      objlib logs --trace abcd1234         # one trace
+      objlib logs --since 2026-02-18       # today's entries
+      objlib logs --tail 50                # last 50 entries
+    """
+    import json as _json
+    from pathlib import Path
+
+    _LEVEL_ORDER = {"DEBUG": 0, "INFO": 1, "WARNING": 2, "ERROR": 3, "CRITICAL": 4}
+
+    min_level_int = 0
+    if level:
+        level_upper = level.upper()
+        if level_upper not in _LEVEL_ORDER:
+            console.print(
+                f"[red]Unknown level '{level}'. Choose from: DEBUG, INFO, WARNING, ERROR[/red]"
+            )
+            raise typer.Exit(1)
+        min_level_int = _LEVEL_ORDER[level_upper]
+
+    log_files = sorted(Path("logs").glob("tui-*.log")) if Path("logs").exists() else []
+    if not log_files:
+        console.print("[dim]No TUI log files found in logs/[/dim]")
+        return
+
+    # Parse all matching lines
+    rows: list[dict] = []
+    parse_errors = 0
+    for log_file in log_files:
+        with log_file.open(encoding="utf-8") as fh:
+            for raw_line in fh:
+                raw_line = raw_line.strip()
+                if not raw_line:
+                    continue
+                try:
+                    entry = _json.loads(raw_line)
+                except _json.JSONDecodeError:
+                    parse_errors += 1
+                    continue
+
+                # --since filter (compare ISO date prefix)
+                if since and entry.get("ts", "") < since:
+                    continue
+
+                # --level filter
+                entry_level = entry.get("level", "INFO")
+                if _LEVEL_ORDER.get(entry_level, 0) < min_level_int:
+                    continue
+
+                # --trace filter (prefix match)
+                if trace and not entry.get("trace", "").startswith(trace):
+                    continue
+
+                rows.append(entry)
+
+    if not rows:
+        console.print("[dim]No log entries matched the given filters.[/dim]")
+        return
+
+    # --tail
+    if tail > 0:
+        rows = rows[-tail:]
+
+    # Render table
+    table = Table(
+        show_header=True,
+        header_style="bold",
+        expand=True,
+        show_lines=False,
+    )
+    table.add_column("Timestamp", style="dim", no_wrap=True, min_width=19)
+    table.add_column("Level", no_wrap=True, min_width=7)
+    table.add_column("Trace", style="dim", no_wrap=True, min_width=8)
+    table.add_column("Message", overflow="fold")
+
+    _LEVEL_STYLES = {
+        "DEBUG": "dim",
+        "INFO": "green",
+        "WARNING": "yellow",
+        "ERROR": "bold red",
+        "CRITICAL": "bold red on white",
+    }
+
+    for entry in rows:
+        lvl = entry.get("level", "")
+        trace_short = entry.get("trace", "")[:8]
+        # Dim the zero-trace prefix so real traces stand out
+        if trace_short == "00000000":
+            trace_short = "[dim]--------[/dim]"
+        table.add_row(
+            entry.get("ts", ""),
+            f"[{_LEVEL_STYLES.get(lvl, '')}]{lvl}[/{_LEVEL_STYLES.get(lvl, '')}]",
+            trace_short,
+            entry.get("msg", ""),
+        )
+
+    console.print(table)
+    console.print(
+        f"[dim]{len(rows)} entries from {len(log_files)} file(s)"
+        + (f" — {parse_errors} parse error(s) skipped" if parse_errors else "")
+        + "[/dim]"
+    )
