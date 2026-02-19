@@ -115,6 +115,177 @@ Some assumptions can be validated in an hour. Others require waiting — for an 
 
 **4. The Council Gate** *(see "The Agent Council" below)*
 
+**5. The Stability Re-Verification Schedule** *(see "The Temporal Stability Protocol" below)*
+
+For waves at SKEPTICAL or HOSTILE distrust level whose assumptions involve an external stateful system, gate passage is **provisional**. The council writes a Stability Algorithm at gate time and prescribes a re-check schedule. The wave is not truly closed until all scheduled checks have passed. **Wave N+1 is blocked until the T+24h check passes.**
+
+---
+
+## The Temporal Stability Protocol
+
+### The Problem: Time-Separated Failures
+
+A gate passage at time T proves that the assumption was true at T. It does not prove the assumption will remain true at T+4h, T+24h, or T+36h.
+
+For integrations with external stateful systems — remote file stores, APIs with their own persistence layers, databases that can independently evolve — the most dangerous failure class is **temporal instability**: everything looks synchronized at gate time, implementation proceeds, and then the external system's state silently diverges from the local record. The failure doesn't announce itself. It shows up the next day, or the day after, when a user gets broken results and there is no obvious commit or event to blame.
+
+The council's four agents cannot prevent this. The Results Agent catches point-in-time evidence gaps. The Risk Agent identifies future betrayal scenarios. The Strategy Agent builds contingency options. The Next-Step Agent synthesizes and recommends. None of them, by design, can verify that evidence collected at T still holds at T+24h. That requires something the council cannot provide at gate time: **elapsed time and repeated automated observation.**
+
+### The Solution: Provisional Gate Passage + Automated Re-Checks
+
+For any wave at SKEPTICAL or HOSTILE distrust level where the assumption involves an external stateful system, gate passage is **provisional**. The council records a **Stability Re-Verification Schedule** as part of its gate record, and writes the **Stability Algorithm** — a runnable script that will be executed at each scheduled check. The wave is not truly closed until all scheduled checks have run and passed.
+
+The re-verification schedule follows this template:
+
+```
+STABILITY RE-VERIFICATION SCHEDULE — Wave N
+Wave passed (provisionally) at: T
+
+  T + 4h    → Run Stability Algorithm → PASS or FAIL
+  T + 24h   → Run Stability Algorithm → PASS or FAIL  ◀── GATE BLOCKER
+  T + 36h   → Run Stability Algorithm → PASS or FAIL
+
+RULE: Wave N+1 is blocked until T+24h check PASSES.
+      Any FAIL at any checkpoint triggers council reconvene.
+```
+
+The T+4h check surfaces fast-degrading problems — things that drift within hours. The T+24h check is the gate blocker: it is the minimum interval that surfaces "worked yesterday, broken today" failures. The T+36h check confirms that stability is not a 24-hour coincidence.
+
+### The Stability Algorithm
+
+The re-verification check is not a human observation. It is an **automated, distrustful algorithm** — a runnable script that must be written as part of the council gate record. Not described informally. Written as executable pseudocode or an actual script, committed alongside the council record.
+
+The algorithm does not ask *"does everything look fine?"* It asks: **"What are all the assumptions baked into the current implementation, and does a fresh scan of the external system confirm each one independently?"**
+
+Each assumption is tested with positive evidence — not "no errors were thrown" but "the measured state matches the expected state exactly."
+
+**For integrations between a local DB and an external API store, the algorithm covers:**
+
+```
+STABILITY ALGORITHM — Local DB ↔ External API Store
+
+ASSUMPTION 1: Count invariant
+  DB_indexed  = COUNT(files WHERE state = 'indexed')
+  API_present = COUNT(list_store_documents())
+  ASSERT DB_indexed == API_present
+  FAILURE: "Count mismatch: DB claims N indexed, API has M.
+            Drift has occurred since last check."
+
+ASSUMPTION 2: Identity — DB records must exist in API (no ghosts)
+  DB_doc_ids  = SET(store_doc_id WHERE state = 'indexed')
+  API_doc_ids = SET(doc.resource_name for doc in list_store_documents())
+  ghost_ids   = DB_doc_ids - API_doc_ids
+  ASSERT len(ghost_ids) == 0
+  FAILURE: "N DB records claim INDEXED but their store documents
+            are gone. DB believes they are searchable; they are not."
+
+ASSUMPTION 3: Identity — API documents must exist in DB (no orphans)
+  orphan_ids = API_doc_ids - DB_doc_ids
+  ASSERT len(orphan_ids) == 0
+  FAILURE: "N documents exist in API store with no DB record.
+            Search will return [Unresolved citation] for these."
+
+ASSUMPTION 4: Searchability sample (positive evidence, not count-matching)
+  sample = RANDOM_SAMPLE(DB_doc_ids, n=min(5, len(DB_doc_ids)))
+  FOR each doc_id IN sample:
+    file_name = DB.lookup_filename(doc_id)
+    results   = search(query=extract_distinctive_term(file_name))
+    ASSERT doc_id APPEARS IN results
+  FAILURE: "File X is INDEXED in DB but does not appear in search
+            results. State is marked correct; reality differs."
+
+ASSUMPTION 5: No stuck transitions
+  stuck = COUNT(files WHERE state IN ('uploading', 'processing')
+                AND state_updated_at < NOW() - 30_MINUTES)
+  ASSERT stuck == 0
+  FAILURE: "N files have been in a transient state >30 min.
+            A transition has silently stalled."
+
+ASSUMPTION 6: User-facing criterion (the ultimate consequence)
+  result = search(query=any_broad_query_expected_to_return_results)
+  ASSERT no unresolved citation appears in result
+  FAILURE: "Unresolved citation appeared in search results.
+            The Definition of Done criterion is violated."
+```
+
+Each assertion produces an independent pass/fail. A stability check report looks like this:
+
+```
+STABILITY CHECK — Wave N, T+24h
+Run at: 2026-02-20 14:32:11
+
+  ASSUMPTION 1 (Count invariant):       PASS — DB: 50, API: 50
+  ASSUMPTION 2 (DB→API identity):       PASS — 0 ghost records
+  ASSUMPTION 3 (API→DB identity):       PASS — 0 orphan documents
+  ASSUMPTION 4 (Searchability sample):  PASS — 5/5 files searchable
+  ASSUMPTION 5 (No stuck transitions):  PASS — 0 stuck files
+  ASSUMPTION 6 (User-facing criterion): PASS — 0 unresolved citations
+
+VERDICT: STABLE — Wave N confirmed. Wave N+1 may proceed.
+```
+
+If any assertion fails:
+
+```
+STABILITY CHECK — Wave N, T+24h
+Run at: 2026-02-20 14:32:11
+
+  ASSUMPTION 1 (Count invariant):       FAIL — DB: 50, API: 47
+  ASSUMPTION 2 (DB→API identity):       FAIL — 3 ghost records
+  ASSUMPTION 3 (API→DB identity):       PASS — 0 orphan documents
+  ASSUMPTION 4 (Searchability sample):  FAIL — 2/5 files not searchable
+  ASSUMPTION 5 (No stuck transitions):  PASS — 0 stuck files
+  ASSUMPTION 6 (User-facing criterion): FAIL — unresolved citation
+                                               in search results
+
+VERDICT: UNSTABLE — Council reconvenes. Wave N is un-passed.
+         Wave N+1 is blocked until root cause resolved.
+```
+
+An UNSTABLE verdict does not mean the wave must be rerun from scratch. It means the council reconvenes with the stability report as new evidence and determines:
+
+1. What changed between T and the failing check?
+2. Was the drift caused by our code, the API, an external event, or a time-dependent behavior we haven't modeled?
+3. Does Wave N need to be redesigned, or is the drift a recoverable condition?
+
+### The Distrustful Design Requirement
+
+The Stability Algorithm is not written generically by the framework. **It must be written specifically for each wave, by the council, at gate time.** The algorithm is the council's explicit statement of what it would take for the world to have changed in a way that invalidates the gate passage. Writing it forces the council to enumerate every assumption it is carrying forward — and makes those assumptions testable rather than implicit.
+
+When writing the algorithm for a gate record, the council asks:
+
+- *"What would have to be true in the external system for our gate passage to still be valid at T+24h?"*
+- *"What would silent drift look like? How would we detect it?"*
+- *"What is the minimum set of checks that covers every class of drift we've imagined?"*
+
+The algorithm is distrustful by construction: it starts from the assumption that drift has occurred and requires positive evidence to the contrary. "Everything looks fine" is not a Stability Algorithm. "Count matches, identities match, sample files are searchable, no citations unresolved" — that is a Stability Algorithm.
+
+### Gate Blocking Diagram
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  WAVE N                                                          │
+│  Spike → Council Gate → Provisional Pass                         │
+│                │                                                 │
+│                ├──▶ T+4h:  Stability Algorithm → PASS/FAIL      │
+│                │           PASS → log, continue waiting         │
+│                │           FAIL → council reconvenes            │
+│                │                                                 │
+│                ├──▶ T+24h: Stability Algorithm → PASS/FAIL ◀── GATE BLOCKER
+│                │           PASS → Wave N confirmed ✓             │
+│                │                  Wave N+1 may begin ─────────▶ │
+│                │           FAIL → council reconvenes             │
+│                │                  Wave N+1 remains blocked       │
+│                │                                                 │
+│                └──▶ T+36h: Stability Algorithm → PASS/FAIL      │
+│                            (Wave N+1 may be running; a FAIL     │
+│                             here is a red flag — investigate     │
+│                             before continuing Wave N+1)         │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+At **WATCHFUL** distrust, the temporal stability protocol is optional and may be waived with explicit council justification. At **CAUTIOUS** and above, it is mandatory for any wave whose assumption involves an external stateful system. At **SKEPTICAL** and **HOSTILE**, no justification for waiving it is accepted.
+
 ---
 
 ## The Agent Council: The Innovation
@@ -242,6 +413,24 @@ SUFFICIENT:   "We fetched pages 1, 2, and 3. We also tested:
 ```
 
 The distrustful question is always: *"What happens when the input isn't perfect?"* Because in production, the input is never perfect.
+
+**4. Temporal Stability (SKEPTICAL and HOSTILE, when assumption involves external state)**
+
+For assumptions that depend on an external stateful system remaining consistent over time, a single gate-time measurement is insufficient. The assumption must hold not only at T, but across the re-verification schedule (T+4h, T+24h, T+36h).
+
+```
+INSUFFICIENT: "We verified the store had 50 documents and all
+               were searchable at gate time."
+
+SUFFICIENT:   "We verified the store had 50 documents at gate time.
+               Stability Algorithm ran at T+4h: STABLE.
+               Stability Algorithm ran at T+24h: STABLE.
+               Stability Algorithm ran at T+36h: STABLE.
+               All 6 assertions PASSED at each check.
+               No drift observed across a 36-hour window."
+```
+
+The distrustful question is: *"Does this still hold tomorrow?"* External systems don't stay still. They drift, expire, get updated, silently fail, and sometimes forget things without issuing any error. A single point-in-time measurement cannot surface this class of failure. Only time can.
 
 ---
 
@@ -426,8 +615,9 @@ The Next-Step Agent doesn't just synthesize — it **stress-tests its own recomm
 3. **Boundary Check:** Was at least one non-happy-path condition tested?
 4. **Risk Acceptance Check:** Are the residual risks identified by the Risk Agent acceptable? Are the betrayal probabilities low enough? Are the failure scenarios detectable?
 5. **Confidence Trajectory Check:** Is our confidence *increasing* across waves? Or are we accumulating unresolved risks that compound?
+6. **Temporal Stability Check (SKEPTICAL and HOSTILE):** Does this wave's assumption involve an external stateful system? If yes: has the Stability Algorithm been written and committed to the gate record? Is Wave N+1 explicitly blocked until the T+24h check passes? A gate recommendation without a completed stability schedule is incomplete at these distrust levels.
 
-Only when all five checks are satisfied does the Next-Step Agent recommend proceeding. If any check fails, the recommendation is to **deepen the current wave** — not to skip ahead optimistically.
+Only when all applicable checks are satisfied does the Next-Step Agent recommend proceeding. If any check fails, the recommendation is to **deepen the current wave** — not to skip ahead optimistically.
 
 **Output:** A next-step directive with an explicit **confidence scorecard:**
 
@@ -443,21 +633,28 @@ CONFIDENCE SCORECARD:
                                   VERY HARD detection
   ~ Confidence Trajectory: MIXED — Wave 1 increased confidence,
                                     Wave 2 has stalled
+  ✗ Temporal Stability:    NO  — external API state involved;
+                                  Stability Algorithm not yet written;
+                                  T+24h check not scheduled
 
 RATIONALE: The happy path is validated, but the council cannot
 recommend proceeding when a high-probability, hard-to-detect failure
-mode remains untested. The Risk Agent's adversarial tests must be
-executed before the gate can pass.
+mode remains untested and the temporal stability obligation is unmet.
+The Risk Agent's adversarial tests must be executed before the gate
+can pass, and the Stability Algorithm must be written before gate
+passage is declared provisional.
 
 PRESCRIBED ACTIONS FOR WAVE 2 EXTENSION:
 1. Execute cursor mutation test (insert record during pagination)
 2. Execute cursor expiration test (wait 30 min, resume)
 3. Execute boundary test (last page, page_size extremes)
-4. Reconvene council with extended results
+4. Write Stability Algorithm for this wave's assumption
+5. Reconvene council with extended results
 
 ESTIMATED TIME: 3-4 hours of spike work + 1 hour council review
 
-IF ADVERSARIAL TESTS PASS: Proceed to Wave 3 with confidence
+IF ADVERSARIAL TESTS PASS: Provisional gate passage; schedule
+  stability checks at T+4h, T+24h, T+36h; Wave 3 blocked until T+24h
 IF ADVERSARIAL TESTS FAIL: Trigger Strategy Agent Option B or D
 ```
 
@@ -774,13 +971,19 @@ The philosophical core is identical: **confront the worst outcome while you stil
 
 **Confusing distrust with dysfunction** — Distrust in this framework is epistemic, not interpersonal. The council doesn't distrust the *team* — it distrusts *unverified claims about external reality*. The API doesn't care about your feelings. The gate shouldn't either.
 
+**Treating a single gate-time observation as proof of temporal stability** — A gate passage at time T proves the assumption was true at T. For any integration with an external stateful system, it says nothing about T+24h. "It worked when we tested it" and "it will keep working" are different claims that require different evidence. The most destructive failure pattern is "synchronized yesterday, broken today" — and it is completely invisible at gate time. Only the Temporal Stability Protocol can surface it.
+
+**Writing the Stability Algorithm after drift is observed** — The algorithm must be written at gate time, by the agents who ran the spike, in fresh detail. An algorithm written the next day — after drift has already been observed — is forensics, not prevention. The value of writing it at gate time is precisely that it forces the council to articulate what "stable" means before anyone has seen what "unstable" looks like.
+
+**Letting the T+24h check lapse without running it** — The re-verification schedule is a commitment recorded in the council record, not a suggestion that can be quietly dropped when the team is busy. If the T+24h check is not run, the wave has not passed. Proceeding to Wave N+1 without the T+24h check is equivalent to skipping the council gate entirely. The time pressure of the next wave is not a valid reason to skip it — it is, in fact, the exact condition that produces the failures this protocol exists to prevent.
+
 ---
 
 ## Summary
 
 1. **Step 1 — Pre-Mortem**: Assume failure. Write the story of how it happened. Extract assumptions. Rank by risk. The risk score determines the distrust level.
 2. **Step 2 — Planning**: Map ranked assumptions to waves. Define spikes for each wave. Sequence by risk, not by feature.
-3. **Step 3 — Wave Execution + Distrustful Council Gates**: Execute spikes. At each gate, the Agent Council deliberates in sequence — Results (with evidence gaps and a Distrust Challenge), Risk (with betrayal probabilities and adversarial test prescriptions), Strategy (with no option assuming full confidence), Next Step (with a 5-point confidence scorecard). The default is "this did not work." The burden of proof is on the evidence. Humans review and decide.
+3. **Step 3 — Wave Execution + Distrustful Council Gates**: Execute spikes. At each gate, the Agent Council deliberates in sequence — Results (with evidence gaps and a Distrust Challenge), Risk (with betrayal probabilities and adversarial test prescriptions), Strategy (with no option assuming full confidence), Next Step (with a 6-point confidence scorecard). The default is "this did not work." The burden of proof is on the evidence. Humans review and decide. For waves at SKEPTICAL or HOSTILE distrust involving external stateful systems, gate passage is **provisional**: the council writes a Stability Algorithm at gate time, schedules automated re-checks at T+4h, T+24h, and T+36h, and blocks Wave N+1 until the T+24h check passes. A gate is not truly closed until temporal stability is confirmed.
 4. **Build**: Once critical assumptions survive the council's distrust — with positive evidence, reproducibility, and boundary testing — build the feature on ground that has been tested not just for success, but for resistance to failure.
 
 The goal is not to eliminate uncertainty — that's impossible. The goal is to **refuse to believe uncertainty has been eliminated until the evidence forces you to believe it.** Distrust is not the enemy of progress. Misplaced confidence is.
