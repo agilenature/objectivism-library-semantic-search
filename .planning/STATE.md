@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** Three equally critical pillars -- semantic search quality, metadata preservation, incremental updates
-**Current focus:** Phase 7: Interactive TUI -- Wave 1 in progress
+**Current focus:** Phase 7: Interactive TUI -- Wave 1 foundation executing
 **Execution strategy:** Phase 6 before full upload (1,721 files) to enrich metadata first
 
 ## Current Position
@@ -13,7 +13,7 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 Phase: 7 of 7+ (Interactive TUI)
 Plan: 2 of 7
 Status: In progress -- Wave 1 (foundation) executing
-Last activity: 2026-02-19 - Completed 07-02-PLAN.md (App Skeleton & State)
+Last activity: 2026-02-19 - Re-executed 07-01-PLAN.md (Services Facade Layer)
 
 Progress: [########################░░░] ~87% (36 plans of ~41 estimated total)
 
@@ -207,6 +207,10 @@ Recent decisions affecting current work:
 - [06.3-08]: src/objlib/services/ kept in folders despite not existing (aspirational Phase 7 target)
 - [06.3-08]: 2 pre-existing test failures confirmed: test_formatter score bars, test_search _FakeDB (not regressions)
 - [06.3-08]: Coverage 38% overall; core modules 78-95%; extraction/upload untested (API-dependent)
+- [07-01]: Lazy Gemini client init via _ensure_client() to defer API key usage until first search call
+- [07-01]: Database connections scoped inside sync functions in asyncio.to_thread() -- never across await
+- [07-01]: V8 migration rebuilds session_events for bookmark event type CHECK constraint
+- [07-01]: SessionService.get_session tries exact UUID then prefix lookup for flexibility
 - [07-02]: Textual 8.0.0 installed (latest stable, compatible with plan requirements)
 - [07-02]: reactive() used with callable factories for mutable defaults (list, FilterSet)
 - [07-02]: Services stored as opaque constructor args -- no service imports in app.py
@@ -220,11 +224,11 @@ Phase 7 Wave 1 in progress. Plans 07-01 and 07-02 complete. Wave 2 (pane widgets
 
 ### Blockers/Concerns
 
-- Pre-existing test failures resolved (schema v8 test fixed by 07-01)
+- Pre-existing test failures resolved (schema version test updated for v8 by 07-01)
 - Coverage at 38% overall (extraction/ and upload/ modules need API mocking for meaningful coverage)
 
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 07-02. TUI App skeleton with reactive state, messages, and three-pane layout.
+Stopped at: Re-executed 07-01. Services facade layer with SearchService, LibraryService, SessionService.
 Resume file: .planning/phases/07-interactive-tui/07-03-PLAN.md (Wave 2: Navigation pane)
