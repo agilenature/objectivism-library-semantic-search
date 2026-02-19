@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 Phase: 7 of 7+ (Interactive TUI)
-Plan: 2 of 7
-Status: In progress -- Wave 1 (foundation) executing
-Last activity: 2026-02-19 - Re-executed 07-01-PLAN.md (Services Facade Layer)
+Plan: 3 of 7
+Status: In progress -- Wave 2 (pane widgets) executing
+Last activity: 2026-02-19 - Completed 07-03-PLAN.md (Navigation Tree & Search Bar Widgets)
 
-Progress: [########################░░░] ~87% (36 plans of ~41 estimated total)
+Progress: [#########################░░░] ~88% (37 plans of ~41 estimated total)
 
 Phase 1 Progress: [##########] 3/3 plans -- COMPLETE
 Phase 2 Progress: [##########] 4/4 plans -- COMPLETE
@@ -26,14 +26,14 @@ Phase 6 Progress: [##########] 5/5 plans -- COMPLETE
 Phase 6.1 Progress: [##########] 2/2 plans -- COMPLETE
 Phase 6.2 Progress: [##########] 2/2 plans -- COMPLETE
 Phase 6.3 Progress: [##########] 8/8 plans -- COMPLETE
-Phase 7 Progress:  [##░░░░░░░░] 2/7 plans -- IN PROGRESS
+Phase 7 Progress:  [###░░░░░░░] 3/7 plans -- IN PROGRESS
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 36
-- Average duration: 3.4 min
-- Total execution time: 116 min
+- Total plans completed: 37
+- Average duration: 3.3 min
+- Total execution time: 118 min
 
 **By Phase:**
 
@@ -49,10 +49,10 @@ Phase 7 Progress:  [##░░░░░░░░] 2/7 plans -- IN PROGRESS
 | 05-incremental-updates | 4/4 | ~12 min | ~3.0 min |
 | 06.3-test-foundation | 8/8 | ~20 min | ~2.5 min |
 
-| 07-interactive-tui | 2/7 | ~6 min | ~3.0 min |
+| 07-interactive-tui | 3/7 | ~8 min | ~2.7 min |
 
 **Recent Trend:**
-- Last 5 plans: 06.3-07 (2 min), 06.3-08 (2 min), 07-01 (3 min), 07-02 (3 min)
+- Last 5 plans: 06.3-08 (2 min), 07-01 (3 min), 07-02 (3 min), 07-03 (2 min)
 - Trend: Stable at 2-3 min per plan
 
 *Updated after each plan completion*
@@ -217,10 +217,14 @@ Recent decisions affecting current work:
 - [07-02]: Message subclasses use __init__ pattern (not dataclass-style) for Textual 8.x compatibility
 - [07-02]: Three responsive breakpoints via CSS class toggling in on_resize()
 - [07-02]: 300ms debounce + @work(exclusive=True) for search auto-cancel
+- [07-03]: NavTree accesses services via self.app.library_service (no direct reference storage)
+- [07-03]: Course file expansion uses call_later() for async lazy-loading on node expand
+- [07-03]: SearchBar uses timer stop/restart pattern for debounce (Textual Timer.stop())
+- [07-03]: History navigation uses index-based traversal with -1 sentinel for live input
 
 ### Pending Todos
 
-Phase 7 Wave 1 in progress. Plans 07-01 and 07-02 complete. Wave 2 (pane widgets) next.
+Phase 7 Wave 2 in progress. Plans 07-01 through 07-03 complete. Remaining pane widgets next.
 
 ### Blockers/Concerns
 
@@ -230,5 +234,5 @@ Phase 7 Wave 1 in progress. Plans 07-01 and 07-02 complete. Wave 2 (pane widgets
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Re-executed 07-01. Services facade layer with SearchService, LibraryService, SessionService.
-Resume file: .planning/phases/07-interactive-tui/07-03-PLAN.md (Wave 2: Navigation pane)
+Stopped at: Completed 07-03. NavTree and SearchBar widgets for library browsing and search input.
+Resume file: .planning/phases/07-interactive-tui/07-04-PLAN.md (Wave 2: Results list or next pane)
