@@ -1,175 +1,138 @@
-# Requirements: Objectivism Library Semantic Search
+# Requirements: Objectivism Library Semantic Search — v2.0
 
-**Defined:** 2026-02-15
-**Core Value:** Three equally critical pillars - semantic search quality, metadata preservation, incremental updates
+**Defined:** 2026-02-19
+**Milestone:** v2.0 — Gemini File Lifecycle FSM
+**Core Value:** `[Unresolved file #N]` never appears in TUI search results — permanently.
+**Pre-mortem source:** `governance/pre-mortem-gemini-fsm.md`
 
-## v1 Requirements
+---
 
-Requirements for initial release. Each maps to roadmap phases.
+## Hard Constraint: AI-Enriched Metadata Is Sacred
 
-### Foundation & State Management
+The AI-enriched metadata (categories, difficulty, topics, aspects, semantic descriptions, entity extractions) was computed via Mistral batch API and stored in SQLite. It represents irreplaceable work that must NOT be re-derived.
 
-- [ ] **FOUN-01**: SQLite database with WAL mode for state tracking (file hashes, upload status, metadata, Gemini IDs)
-- [ ] **FOUN-02**: File scanner with recursive discovery of library directory structure
-- [ ] **FOUN-03**: Hash-based change detection (SHA-256 content hashing for each file)
-- [ ] **FOUN-04**: Metadata extraction from hierarchical folder structure (Course/Year/Quarter/Week patterns)
-- [ ] **FOUN-05**: Metadata extraction from filenames (dates, topics, instructors, session numbers)
-- [ ] **FOUN-06**: Idempotency keys using content hashes for deduplication
-- [ ] **FOUN-07**: Upload timestamp tracking to prevent 48-hour expiration issues
-- [ ] **FOUN-08**: Embedding model version tracking in state schema
-- [ ] **FOUN-09**: Status tracking with atomic state transitions (pending -> uploading -> uploaded/failed)
+**Rule:** Store migration resets ONLY Gemini-related state columns (`status`, `gemini_file_id`, `gemini_store_doc_id`, `gemini_state`). All AI metadata columns (`metadata_json`, AI metadata, entity tables) are untouched. The re-upload reads this preserved metadata directly via `build_enriched_metadata()`.
 
-### Upload Pipeline
+---
 
-- [ ] **UPLD-01**: Gemini File Search API client wrapper using google-genai SDK (v1.63.0+)
-- [ ] **UPLD-02**: Async batch upload with rate limiting (5-10 concurrent uploads via Semaphore)
-- [ ] **UPLD-03**: Exponential backoff with jitter using tenacity library
-- [ ] **UPLD-04**: Operation polling for indexing completion status
-- [ ] **UPLD-05**: Per-file status updates with idempotent retry (skip already-succeeded files)
-- [ ] **UPLD-06**: Circuit breaker pattern to prevent rate limit cascades (reduce rate 50% after 5% 429 errors)
-- [ ] **UPLD-07**: Batch processing orchestrator (100-200 files per batch, 36-hour completion deadline)
-- [ ] **UPLD-08**: Attach rich metadata to each uploaded file (20-30 fields)
-- [ ] **UPLD-09**: Progress tracking and reporting with Rich progress bars
-- [ ] **UPLD-10**: Resume capability from any interruption point using SQLite state
+## v2.0 Requirements
 
-### Semantic Search
+### Store Migration (MIGR)
 
-- [ ] **SRCH-01**: Semantic search via Gemini File Search API (vector similarity)
-- [ ] **SRCH-02**: Keyword/full-text search capabilities
-- [ ] **SRCH-03**: Hybrid search combining semantic + keyword with unified ranking
-- [ ] **SRCH-04**: Metadata filtering (author, course, year, quarter, difficulty, topic, branch)
-- [ ] **SRCH-05**: Structural navigation (browse by course, year, quarter without query)
-- [ ] **SRCH-06**: Source citation with passage-level attribution
-- [ ] **SRCH-07**: Result context/preview showing relevant text excerpts
-- [ ] **SRCH-08**: Cross-reference discovery (find related discussions automatically)
+- [ ] **MIGR-01**: User can run a pre-flight check showing current store document count and the number of files that will lose gemini-related state, with explicit confirmation required before any irreversible action proceeds
+- [ ] **MIGR-02**: Migration deletes `objectivism-library-test` and creates the permanent `objectivism-library` store as a single explicitly-confirmed operation
+- [ ] **MIGR-03**: DB schema migration adds three columns to the `files` table: `gemini_store_doc_id TEXT`, `gemini_state TEXT DEFAULT 'untracked'`, `gemini_state_updated_at TEXT`
+- [ ] **MIGR-04**: All files with `status = 'uploaded'` are reset to `gemini_state = 'untracked'` and `gemini_store_doc_id = NULL`; AI-enriched metadata columns are untouched
 
-### Query Interface
+### Stability Infrastructure (STAB)
 
-- [ ] **INTF-01**: CLI interface using Typer with type-hint-driven commands
-- [ ] **INTF-02**: Rich terminal formatting (tables, panels, progress bars)
-- [ ] **INTF-03**: Search command with semantic query input
-- [ ] **INTF-04**: Filter command with metadata-based filtering
-- [ ] **INTF-05**: Browse command for structural navigation without query
-- [ ] **INTF-06**: Response formatter mapping Gemini file refs to human-readable source names
-- [ ] **INTF-07**: Display results with relevance scores and source citations
+- [ ] **STAB-01**: `scripts/check_stability.py` validates 6 independent assertions: (1) count invariant — DB `indexed` count matches store document count; (2) DB→Store — no files marked indexed but absent from store; (3) Store→DB — no store documents without a DB record; (4) no stuck transitions — no files in `uploading` state; (5) search returns results — sample query returns at least one citation; (6) citation resolution — all citations returned by search resolve to DB records
+- [ ] **STAB-02**: `check_stability.py` exits with code 0 (STABLE — all pass), 1 (UNSTABLE — at least one failed), or 2 (ERROR — misconfiguration such as wrong store name or missing API key)
+- [ ] **STAB-03**: Passing the old store name (`objectivism-library-test`) after migration returns exit code 2 (ERROR/store not found), not 1 (UNSTABLE) — misconfiguration is distinguishable from instability
+- [ ] **STAB-04**: `check_stability.py` is the mandatory gate instrument: run at T=0, T+4h, T+24h, T+36h after any upload/purge/reset-existing; wave N+1 is blocked until T+24h reports STABLE
 
-### Advanced Features
+### FSM Core (FSM)
 
-- [ ] **ADVN-01**: Concept evolution tracking (show how concepts develop from intro -> advanced)
-- [ ] **ADVN-02**: Cross-encoder reranking for top-50 -> top-10 precision improvement
-- [ ] **ADVN-03**: Multi-document synthesis with LLM (synthesized answers from 5-10 passages)
-- [ ] **ADVN-04**: Inline citation format (every claim traces to source passage with quote)
-- [ ] **ADVN-05**: Query expansion for philosophical terminology (synonym mapping)
-- [ ] **ADVN-06**: Difficulty-aware result ordering (surface introductory explanations first for learning)
-- [ ] **ADVN-07**: Saved searches / research sessions with resume capability
+- [ ] **FSM-01**: The chosen FSM approach (library or hand-rolled) passes affirmative concurrent-transition testing in the asyncio + aiosqlite stack — "no errors thrown" is insufficient; positive evidence of correct behavior under concurrent load is required (Wave 1 gate)
+- [ ] **FSM-02**: Every identified crash point in the multi-API-call `INDEXED → UPLOADING` (reset) transition has a tested automatic recovery path; no stuck state requires manual SQL to escape (Wave 2 gate)
+- [ ] **FSM-03**: `gemini_state` persists as a plain string enum (`'untracked'`, `'uploading'`, `'processing'`, `'indexed'`, `'failed'`) — never library-native serialization — stable across library version upgrades
+- [ ] **FSM-04**: `AsyncUploadStateManager` write methods are FSM transition triggers; no gemini-related state mutation bypasses the FSM
+- [ ] **FSM-05**: `_reset_existing_files()` calls `delete_store_document()` before `delete_file()` during reset — orphaned store documents cannot accumulate from reset operations
 
-### Incremental Updates
+### Validation Waves (VLID)
 
-- [ ] **INCR-01**: Change detection via content hash comparison
-- [ ] **INCR-02**: Incremental upload (only upload new/modified files)
-- [ ] **INCR-03**: Orphan cleanup (delete old chunks when document re-processed)
-- [ ] **INCR-04**: Force re-process flag for manual override
-- [ ] **INCR-05**: Sync command to detect and upload changes
+- [ ] **VLID-01** (Wave 1 gate): Chosen FSM approach selected and documented with affirmative concurrent async evidence; approach committed before Wave 2 begins
+- [ ] **VLID-02** (Wave 2 gate): Every crash scenario in the two-API-call reset transition tested (not designed); recovery confirmed automatic; `FAILED` state escape path designed for all failure modes
+- [ ] **VLID-03** (Wave 3 gate): `display_name` confirmed caller-set via SDK source (not empirical assumption); import-to-visible lag measured (P50/P95/P99) and bounded; `PROCESSING → INDEXED` trigger strategy decided and documented
+- [ ] **VLID-04** (Wave 4 gate): 50/50 test files have correct non-null `gemini_store_doc_id` after FSM-managed upload; all 50 store documents cross-verified via `list_store_documents()`
+- [ ] **VLID-05** (Wave 5 gate): All query sites using legacy `status` column inventoried and mapped to `gemini_state` equivalents with no TUI/CLI/test breakage; migration window defined with explicit end date
+- [ ] **VLID-06** (Wave 6 gate): FSM transition overhead measured (not estimated) under 818-file simulated batch; bottleneck identified; acceptable throughput defined with a tested mitigation
+- [ ] **VLID-07** (Wave 7 gate): Import-to-searchable lag characterized empirically (P50/P95/P99); `store-sync` ongoing role explicitly defined (routine / scheduled / emergency only) and its contract relative to the FSM documented
 
-## v2 Requirements
+### Pipeline Integration & Definition of Done (PIPE)
 
-Deferred to future release. Tracked but not in current roadmap.
+- [ ] **PIPE-01**: `[Unresolved file #N]` does not appear in any TUI search result after the full ~1,748-file upload — the sole definition of done for this milestone
+- [ ] **PIPE-02**: `check_stability.py --store objectivism-library` reports STABLE (exit 0) at T=0, T+4h, T+24h, and T+36h after the full library upload
 
-### Advanced Intelligence
+---
 
-- **ADVN2-01**: Knowledge graph of philosophical concepts with entity extraction
-- **ADVN2-02**: Contradiction and tension detection across sources
-- **ADVN2-03**: Reading list / learning path generation (ordered sequences intro -> advanced)
-- **ADVN2-04**: Hierarchical chunk indexing with query routing (summaries vs details)
-- **ADVN2-05**: Domain-tuned embeddings fine-tuned on corpus for better concept similarity
+## v3 Requirements (deferred)
 
-### Visualization & Integration
+### STALE state automation
 
-- **VIZ-01**: Visual concept mapping / graph visualization
-- **INTG-01**: Spaced repetition integration
-- **INTG-02**: Note-taking system integration (Obsidian, Roam)
-- **INTG-03**: Export to knowledge graph formats
+- **STALE-01**: Automated scanner detecting content hash changes and triggering `INDEXED → STALE` automatically; only implement if Wave 7 determines this is required for store-sync elimination
+- **STALE-02**: `STALE` FSM state — only implement alongside STALE-01; if the scanner is deferred, drop `STALE` from the state enum entirely (dead code is worse than a missing state)
 
-### Interface Enhancements
+### Concurrency lock
 
-- **UI-01**: Web interface (currently CLI-only)
-- **UI-02**: Interactive research workspace with side-by-side comparison
-- **UI-03**: Batch export of synthesis documents
+- **CONC-01**: Lockfile (`/tmp/objlib-upload.lock`) preventing two concurrent pipeline invocations; acceptable risk at personal-use scale but Story J shows it causes double-uploads
 
-## Out of Scope
+---
 
-Explicitly excluded. Documented to prevent scope creep.
+## Out of Scope for v2.0
 
 | Feature | Reason |
 |---------|--------|
-| "Chat with your library" as primary interface | Obscures provenance, encourages trust over verification, hallucination risk; semantic search with citations is better for research |
-| Over-retrieval (top-50+ results by default) | LLM position bias causes middle results to be ignored; top-10-20 with reranking is optimal |
-| Real-time web search integration | Pollutes curated corpus with unvetted content; this is a closed-corpus tool |
-| Automatic summarization of entire documents | Loses argumentative structure that IS the philosophical content |
-| Multi-user collaboration features | Single-user personal research tool; collaboration adds massive complexity for zero value |
-| Support for non-.txt file formats in v1 | Text files only for v1; PDF/EPUB defer to v2 |
-| Docker containerization | Single-machine Python CLI adds complexity without benefit |
-| LangChain/LlamaIndex integration | Massive dependency trees that hide Gemini-specific features; unnecessary for single-provider system |
-| Separate vector database (ChromaDB, Pinecone, Weaviate) | Gemini File Search manages vector storage internally; separate DB creates duplicate infrastructure |
+| Re-running AI metadata extraction | Metadata is already perfect in SQLite; re-extraction is wasted work and cost |
+| Backfilling `gemini_store_doc_id` from old store | Old store is deleted; starting fresh eliminates backfill complexity (Story E eliminated by the store migration precondition) |
+| `STALE` state without automated scanner | Dead code; pre-mortem Open Question 9 — drop the state if scanner is not in scope |
+| Quota/billing eviction recovery (A12) | Document the risk; find API documentation confirming permanence before Wave 8 full upload |
+| Non-.txt file format support | v1.0 decision stands |
+| Multi-user support | Personal use only |
+
+---
 
 ## Traceability
 
-Which phases cover which requirements. Updated during roadmap creation.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FOUN-01 | Phase 1: Foundation | Pending |
-| FOUN-02 | Phase 1: Foundation | Pending |
-| FOUN-03 | Phase 1: Foundation | Pending |
-| FOUN-04 | Phase 1: Foundation | Pending |
-| FOUN-05 | Phase 1: Foundation | Pending |
-| FOUN-06 | Phase 1: Foundation | Pending |
-| FOUN-07 | Phase 1: Foundation | Pending |
-| FOUN-08 | Phase 1: Foundation | Pending |
-| FOUN-09 | Phase 1: Foundation | Pending |
-| UPLD-01 | Phase 2: Upload Pipeline | Pending |
-| UPLD-02 | Phase 2: Upload Pipeline | Pending |
-| UPLD-03 | Phase 2: Upload Pipeline | Pending |
-| UPLD-04 | Phase 2: Upload Pipeline | Pending |
-| UPLD-05 | Phase 2: Upload Pipeline | Pending |
-| UPLD-06 | Phase 2: Upload Pipeline | Pending |
-| UPLD-07 | Phase 2: Upload Pipeline | Pending |
-| UPLD-08 | Phase 2: Upload Pipeline | Pending |
-| UPLD-09 | Phase 2: Upload Pipeline | Pending |
-| UPLD-10 | Phase 2: Upload Pipeline | Pending |
-| SRCH-01 | Phase 3: Search & CLI | Pending |
-| SRCH-02 | Phase 3: Search & CLI | Pending |
-| SRCH-03 | Phase 3: Search & CLI | Pending |
-| SRCH-04 | Phase 3: Search & CLI | Pending |
-| SRCH-05 | Phase 3: Search & CLI | Pending |
-| SRCH-06 | Phase 3: Search & CLI | Pending |
-| SRCH-07 | Phase 3: Search & CLI | Pending |
-| SRCH-08 | Phase 3: Search & CLI | Pending |
-| INTF-01 | Phase 3: Search & CLI | Pending |
-| INTF-02 | Phase 3: Search & CLI | Pending |
-| INTF-03 | Phase 3: Search & CLI | Pending |
-| INTF-04 | Phase 3: Search & CLI | Pending |
-| INTF-05 | Phase 3: Search & CLI | Pending |
-| INTF-06 | Phase 3: Search & CLI | Pending |
-| INTF-07 | Phase 3: Search & CLI | Pending |
-| ADVN-01 | Phase 4: Quality Enhancements | Pending |
-| ADVN-02 | Phase 4: Quality Enhancements | Pending |
-| ADVN-03 | Phase 4: Quality Enhancements | Pending |
-| ADVN-04 | Phase 4: Quality Enhancements | Pending |
-| ADVN-05 | Phase 4: Quality Enhancements | Pending |
-| ADVN-06 | Phase 4: Quality Enhancements | Pending |
-| ADVN-07 | Phase 4: Quality Enhancements | Pending |
-| INCR-01 | Phase 5: Incremental Updates | Pending |
-| INCR-02 | Phase 5: Incremental Updates | Pending |
-| INCR-03 | Phase 5: Incremental Updates | Pending |
-| INCR-04 | Phase 5: Incremental Updates | Pending |
-| INCR-05 | Phase 5: Incremental Updates | Pending |
+| MIGR-01 | Phase 8 | Pending |
+| MIGR-02 | Phase 8 | Pending |
+| MIGR-03 | Phase 8 | Pending |
+| MIGR-04 | Phase 8 | Pending |
+| STAB-01 | Phase 8 | Pending |
+| STAB-02 | Phase 8 | Pending |
+| STAB-03 | Phase 8 | Pending |
+| STAB-04 | Phase 8 | Pending |
+| FSM-01 | Phase 9 | Pending |
+| VLID-01 | Phase 9 | Pending |
+| FSM-02 | Phase 10 | Pending |
+| VLID-02 | Phase 10 | Pending |
+| VLID-03 | Phase 11 | Pending |
+| FSM-04 | Phase 12 | Pending |
+| FSM-05 | Phase 12 | Pending |
+| VLID-04 | Phase 12 | Pending |
+| FSM-03 | Phase 13 | Pending |
+| VLID-05 | Phase 13 | Pending |
+| VLID-06 | Phase 14 | Pending |
+| VLID-07 | Phase 15 | Pending |
+| PIPE-01 | Phase 16 | Pending |
+| PIPE-02 | Phase 16 | Pending |
 
 **Coverage:**
-- v1 requirements: 46 total
-- Mapped to phases: 46
-- Unmapped: 0
+- v2.0 requirements: 22 total
+- Mapped to phases: 22
+- Unmapped: 0 ✓
 
 ---
-*Requirements defined: 2026-02-15*
-*Last updated: 2026-02-15 after roadmap creation (phase names added to traceability, count corrected to 46)*
+
+## Archive: v1.0 Requirements (Phases 1–7, all complete)
+
+<details>
+<summary>v1.0 requirements — 46 total, all shipped</summary>
+
+FOUN-01 through FOUN-09: Foundation & State Management (Phase 1) ✓
+UPLD-01 through UPLD-10: Upload Pipeline (Phase 2) ✓
+SRCH-01 through SRCH-08: Semantic Search (Phase 3) ✓
+INTF-01 through INTF-07: Query Interface (Phase 3) ✓
+ADVN-01 through ADVN-07: Advanced Features (Phase 4) ✓
+INCR-01 through INCR-05: Incremental Updates (Phase 5) ✓
+META-01 through META-05: AI-Powered Metadata (Phase 6) ✓
+TUI-01 through TUI-08: Interactive TUI (Phase 7) ✓ (07-07 pending)
+
+</details>
+
+---
+*Requirements defined: 2026-02-19*
+*Pre-mortem: governance/pre-mortem-gemini-fsm.md*
+*Last updated: 2026-02-19 after initial v2.0 definition*
