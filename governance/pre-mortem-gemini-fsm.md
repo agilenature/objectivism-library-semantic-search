@@ -72,6 +72,26 @@ ALTER TABLE files ADD COLUMN gemini_state_updated_at TEXT; -- last confirmed tim
 The FSM is not advisory. It is the **only authorized path** for mutating Gemini-related state. `AsyncUploadStateManager`'s write methods become FSM transition triggers. You cannot call `record_upload_success()` without the FSM first verifying the transition `UPLOADING → PROCESSING` is valid and recording the new state.
 
 ---
+
+### Definition of Done — The Ultimate Validation
+
+All the internal correctness properties — `gemini_state = 'indexed'` meaning indexed, orphan count staying at zero, `--limit N` scoping exactly N files — are intermediate. They are means, not the end.
+
+**The solution is complete when `[Unresolved file #N]` never appears in the TUI.**
+
+This is the only user-facing consequence that matters. Every failure mode documented in this pre-mortem — orphaned store documents, stale DB state, half-committed transitions, Gemini-side silent failures — manifests to the user as a search result that shows `[Unresolved file #N]` instead of the actual file name. The citation was returned by Gemini but could not be resolved to a record in the DB.
+
+When the FSM is working correctly:
+- Every file Gemini returns as a citation has `gemini_state = 'indexed'` in the DB
+- That state guarantees a valid `gemini_store_doc_id` that links the citation back to a DB record
+- The DB record resolves to a file name, author, topics, and metadata
+- The TUI displays the actual file name in every citation, every time
+
+The acceptance test for the entire implementation is therefore not a unit test, not a store-sync dry-run count, and not an API call log. It is: **run a search in the TUI and confirm that every citation in every result displays a real file name.** If any result shows `[Unresolved file #N]`, the FSM has not solved the problem.
+
+This criterion must survive Wave 7's council gate. If `[Unresolved file #N]` can still appear after the FSM is implemented — due to Gemini-side indexing lag, API silent failures, or any other cause — the implementation is incomplete regardless of how clean the DB state looks internally.
+
+---
 ---
 
 # PRE-MORTEM EXECUTION
