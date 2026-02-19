@@ -497,15 +497,15 @@ def store_sync(
 
         for doc in documents:
             doc_name = getattr(doc, "name", "") or ""
-            # The document resource name encodes the source file ID in its last segment
-            # e.g. "fileSearchStores/abc/documents/eafkmpzjs39o"
-            suffix = doc_name.rsplit("/", 1)[-1] if "/" in doc_name else doc_name
+            # display_name holds the plain file ID (e.g. "eafkmpzjs39o") set at
+            # import time. The document resource name suffix is a compound key
+            # (e.g. "eafkmpzjs39o-<chunkId>") and does NOT match DB file IDs.
             display_name = getattr(doc, "display_name", "") or ""
 
-            if suffix in canonical_suffixes:
+            if display_name in canonical_suffixes:
                 canonical_count += 1
             else:
-                orphaned.append((doc, suffix, display_name))
+                orphaned.append((doc, display_name, display_name))
 
         console.print(f"[green]Canonical documents:[/green] {canonical_count}")
         console.print(f"[yellow]Orphaned documents:[/yellow] {len(orphaned)}")
@@ -910,31 +910,39 @@ def enriched_upload(
         rate_limit_tier="tier1",
     )
 
-    # Get enriched pending file count for progress tracker
-    async def _get_count() -> int:
+    # Get enriched file counts for progress tracker.
+    # When --reset-existing is set, also count reset-eligible files so the
+    # pre-check doesn't exit early when there are 0 currently-pending files.
+    async def _get_counts() -> tuple[int, int]:
         async with AsyncUploadStateManager(str(db_path)) as state:
-            files = await state.get_enriched_pending_files(
+            pending = await state.get_enriched_pending_files(
                 limit=limit if limit > 0 else 10000,
                 include_needs_review=include_needs_review,
             )
-            return len(files)
+            reset_count = 0
+            if reset_existing:
+                reset_files = await state.get_files_to_reset_for_enriched_upload()
+                cap = limit if limit > 0 else len(reset_files)
+                reset_count = min(len(reset_files), cap)
+            return len(pending), reset_count
 
-    pending_count = asyncio.run(_get_count())
+    pending_count, reset_count = asyncio.run(_get_counts())
+    total_count = pending_count + reset_count
 
-    if pending_count == 0:
+    if total_count == 0:
         console.print(
-            "[yellow]No enriched pending files to upload.[/yellow]\n"
+            "[yellow]No enriched files to upload.[/yellow]\n"
             "Ensure AI metadata extraction and entity extraction have run:\n"
             "  [cyan]objlib metadata extract[/cyan]\n"
             "  [cyan]objlib entities extract[/cyan]"
         )
         return
 
-    total_batches = (pending_count + batch_size - 1) // batch_size
+    total_batches = (total_count + batch_size - 1) // batch_size
 
     console.print(
         Panel(
-            f"Uploading [bold]{pending_count}[/bold] enriched files to "
+            f"Uploading [bold]{total_count}[/bold] enriched files to "
             f"[bold]{store_name}[/bold]\n"
             f"Batches: {total_batches} x {batch_size} | "
             f"Concurrency: {max_concurrent}\n"
@@ -954,7 +962,7 @@ def enriched_upload(
         rate_limiter=rate_limiter,
     )
     progress = UploadProgressTracker(
-        total_files=pending_count, total_batches=total_batches
+        total_files=total_count, total_batches=total_batches
     )
 
     async def _run_enriched_upload() -> dict[str, int]:

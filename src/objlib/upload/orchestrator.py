@@ -518,7 +518,7 @@ class EnrichedUploadOrchestrator(UploadOrchestrator):
         try:
             # Step 3: Reset already-uploaded files if requested
             if self._reset_existing:
-                await self._reset_existing_files()
+                await self._reset_existing_files(limit=self._file_limit)
 
             # Step 4: Get enriched pending files
             limit = self._file_limit if self._file_limit > 0 else 10000
@@ -582,15 +582,21 @@ class EnrichedUploadOrchestrator(UploadOrchestrator):
     # Reset already-uploaded files
     # ------------------------------------------------------------------
 
-    async def _reset_existing_files(self) -> None:
+    async def _reset_existing_files(self, limit: int = 0) -> None:
         """Delete already-uploaded files from Gemini and reset to pending.
 
         Identifies files that were uploaded with Phase 1 metadata only
         (or failed) and have enriched metadata available. For each:
         1. Delete from Gemini via client.delete_file() if gemini_file_id exists
         2. Reset status to 'pending' in the database
+
+        Args:
+            limit: Max files to reset (0 = no limit). Should match file_limit
+                so that --limit N resets at most N files, not all eligible files.
         """
         files_to_reset = await self._state.get_files_to_reset_for_enriched_upload()
+        if limit > 0:
+            files_to_reset = files_to_reset[:limit]
 
         if not files_to_reset:
             logger.info("No files need resetting for enriched re-upload")
@@ -603,6 +609,30 @@ class EnrichedUploadOrchestrator(UploadOrchestrator):
 
         db = self._state._ensure_connected()
         now = self._state._now_iso()
+
+        # Fetch all store documents once to build an O(1) lookup.
+        # Avoids calling list_store_documents() inside the loop (which would be O(N²)).
+        doc_name_by_file_id: dict[str, str] = {}
+        try:
+            store_documents = await self._client.list_store_documents()
+            for _doc in store_documents:
+                _doc_name = getattr(_doc, "name", "") or ""
+                # display_name holds the plain file ID set at import time.
+                # The document resource name uses a compound suffix that does
+                # not match DB gemini_file_id values directly.
+                _display = getattr(_doc, "display_name", "") or ""
+                if _doc_name and _display:
+                    doc_name_by_file_id[_display] = _doc_name
+            logger.info(
+                "Built store document lookup with %d entries for reset cleanup",
+                len(doc_name_by_file_id),
+            )
+        except Exception as exc:
+            logger.warning(
+                "Could not list store documents for reset cleanup: %s -- "
+                "store documents will not be deleted during this reset",
+                exc,
+            )
 
         for file_info in files_to_reset:
             file_path = file_info["file_path"]
@@ -624,6 +654,28 @@ class EnrichedUploadOrchestrator(UploadOrchestrator):
                             gemini_file_id,
                             exc,
                         )
+
+                    # Delete the corresponding store document (permanently indexed entry).
+                    # Raw files (Files API) expire in 48hr; store documents never expire
+                    # and must be explicitly deleted. Without this, every --reset-existing
+                    # run leaves an orphaned store document that accumulates indefinitely
+                    # and causes [Unresolved file #N] in search results.
+                    file_id_suffix = gemini_file_id.replace("files/", "")
+                    store_doc_name = doc_name_by_file_id.get(file_id_suffix)
+                    if store_doc_name:
+                        try:
+                            await self._client.delete_store_document(store_doc_name)
+                            logger.info(
+                                "Deleted store document %s for %s",
+                                store_doc_name,
+                                gemini_file_id,
+                            )
+                        except Exception as exc:
+                            logger.warning(
+                                "Could not delete store document %s: %s",
+                                store_doc_name,
+                                exc,
+                            )
 
                 # Reset to pending in database
                 await db.execute(

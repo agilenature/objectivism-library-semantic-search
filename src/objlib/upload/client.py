@@ -17,6 +17,7 @@ from typing import Any
 
 from google import genai
 from google.genai import errors as genai_errors
+from google.genai import types as genai_types
 from tenacity import (
     AsyncRetrying,
     retry_if_result,
@@ -331,6 +332,7 @@ class GeminiFileSearchClient:
             await self._safe_call(
                 self._client.aio.file_search_stores.documents.delete,
                 name=document_name,
+                config=genai_types.DeleteDocumentConfig(force=True),
             )
             logger.info("Deleted store document: %s", document_name)
             return True
