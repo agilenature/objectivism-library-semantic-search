@@ -93,6 +93,63 @@ The FSM is not advisory. It is the **only authorized path** for mutating Gemini-
 
 ---
 
+### The Stability Instrument: `scripts/check_stability.py`
+
+The Temporal Stability Protocol (defined in `pre-mortem-framework.md`) requires a runnable Stability Algorithm written at gate time. For this project, that algorithm is implemented as a permanent, version-controlled script:
+
+```
+scripts/check_stability.py
+```
+
+**Why it exists:** Every major failure in this project's history had a "looked correct, then wasn't" signature — the state at T=0 appeared clean, and the failure only surfaced later. `check_stability.py` is the mechanism that converts the T+24h re-check from a human intention into an automated, objective verdict.
+
+**What it checks (6 independent assertions):**
+
+| Check | What it catches |
+|---|---|
+| 1. Count invariant | Mismatches between `status='uploaded'` count and store document count |
+| 2. DB→Store (no ghosts) | Files marked "uploaded" in DB but absent from store — would produce search misses |
+| 3. Store→DB (no orphans) | Store documents with no DB record — would produce `[Unresolved file #N]` |
+| 4. No stuck transitions | Files stuck in `uploading` state — failed mid-flight transitions |
+| 5. Search returns results | Store is actually searchable (not just structurally consistent) |
+| 6. Citation resolution | All citations returned by search resolve to DB records — the user-facing criterion |
+
+Any single failure → `UNSTABLE` verdict → exit code 1. All pass → `STABLE` verdict → exit code 0.
+
+**How to run it:**
+
+```bash
+# Against the current test store (pre-migration):
+python scripts/check_stability.py --store objectivism-library-test --verbose
+
+# Against the production store (post-migration, Wave 3+):
+python scripts/check_stability.py --store objectivism-library --verbose
+
+# With a custom query (use something specific enough to return results from your corpus):
+python scripts/check_stability.py --store objectivism-library --query "Ayn Rand theory of rights"
+
+# Scheduled re-checks (exit code 0 = STABLE, 1 = UNSTABLE, 2 = ERROR):
+python scripts/check_stability.py --store objectivism-library && echo "STABLE" || echo "UNSTABLE — council reconvenes"
+```
+
+**When to run it:**
+
+| Moment | Command | Purpose |
+|---|---|---|
+| After every upload/purge/reset-existing | `--store objectivism-library` | Establish T=0 baseline |
+| T+4h after any SKEPTICAL/HOSTILE wave gate | Same | Fast-drift detection |
+| T+24h (gate blocker) | Same | Wave N+1 blocked until this PASSES |
+| T+36h | Same | Confirm stability is not a 24h coincidence |
+
+**Critical constraint — store name after migration:** Once "objectivism-library-test" is deleted (Wave 3 precondition), the default `--store` value in the script is wrong. **You must pass `--store objectivism-library` explicitly from that point forward.** The script will exit with code 2 ("store not found") if the store name is wrong — this is not an UNSTABLE verdict, it is a misconfiguration.
+
+**What check_stability.py cannot catch:**
+- Silent content corruption inside a store document (file indexed under correct ID but wrong content)
+- Search *quality* regressions (all citations resolve, but the most relevant files are ranked last)
+- Gemini-side indexing lag — a file just imported may pass structural checks but not yet be searchable (Check 5 will catch this if the lag exceeds the search timeout)
+
+---
+
 ### Definition of Done — The Ultimate Validation
 
 All the internal correctness properties — `gemini_state = 'indexed'` meaning indexed, orphan count staying at zero, `--limit N` scoping exactly N files — are intermediate. They are means, not the end.
@@ -173,6 +230,30 @@ The FSM added guard checks and DB reads before every transition. Under normal si
 
 ---
 
+**Story H: "The Quota Eviction"**
+
+Three months after the full upload, search broke overnight with no code changes. Every search result showed `[Unresolved file #N]`. `check_stability.py` reported UNSTABLE: 1,748 store docs had existed at T+36h; by the next morning, 0 remained. Investigation: the Google Cloud project had hit its monthly File Search storage quota. Gemini silently evicted all store documents. The FSM's `gemini_state = 'indexed'` for all 1,748 files was now a lie. Every file needed to be re-uploaded. The FSM had no recovery path for mass eviction — its `ORPHANED` state was designed for individual files, not the entire corpus. The pre-mortem had assumed store documents were permanent. They were not.
+
+---
+
+**Story I: "The STALE State That Never Fired"**
+
+Six months after deployment, an Objectivism article was corrected and the source file updated on disk. The content hash changed. The FSM defined `INDEXED → STALE` on `content_changed()` — but nothing called `content_changed()`. The trigger existed in the FSM specification but had no implementation. There was no scanner that ran periodically to compare disk hashes against the `upload_hash` column. The corrected content was never re-uploaded. Search continued returning the old version. The STALE state was architecturally sound and practically unreachable. The FSM's `--reset-existing` flag remained the only way to force a re-upload, which is exactly the manual band-aid the FSM was supposed to eliminate.
+
+---
+
+**Story J: "The Concurrent Upload Race"**
+
+During a routine session, two terminal windows were left open in the project directory. The developer ran `enriched-upload` in window 1, then forgot and ran it again in window 2 thirty seconds later. Both saw the same 50 files in UNTRACKED state and both began transitioning them to UPLOADING. SQLite's WAL mode serialized DB writes, so the race played out in the Gemini API layer: both instances called `upload_file()` and `import_to_store()` for the same files. Each file got two raw uploads and two store documents. The FSM transitions completed successfully for both instances — each wrote its own `gemini_store_doc_id`. The second write overwrote the first. The first instance's store document is now orphaned. `check_stability.py` caught it: 50 orphaned documents (the first run's store docs), 50 canonical. `store-sync` cleaned them up. But this would have been invisible without the stability check, and neither instance reported any error.
+
+---
+
+**Story K: "check_stability.py Lied"**
+
+Wave 3 passed. We ran `check_stability.py` at T=0, T+4h, T+24h, T+36h. All STABLE. Wave 4 began. On day 5 of Wave 4, a search returned `[Unresolved file #N]`. We ran `check_stability.py` again — STABLE. How? The script's Check 5 ran the sample query: "Ayn Rand theory of individual rights and capitalism." The 50-file test corpus happened to contain three files that matched this query. Those three files were INDEXED and resolvable. But the file that search returned as `[Unresolved file #N]` was a different file — one the sample query never retrieved. Check 5 only tests the files that the specific query returns. A store document with a bad `display_name` (set incorrectly during import) was indexed and listed correctly, but its `display_name` didn't match any DB `gemini_file_id`. It was invisible to the count check (it counted as canonical) and invisible to the sample search (the query never returned it). The check passed because the test was narrow, not because the store was healthy. The script gave a false STABLE verdict.
+
+---
+
 ### Assumption Extraction
 
 From the failure stories, the following assumptions are being treated as true but have not been verified:
@@ -190,6 +271,10 @@ From the failure stories, the following assumptions are being treated as true bu
 | A9 | The FSM eliminates (or drastically reduces) the need for `store-sync` | Scope | D |
 | A10 | The Gemini API's import operation is reliable enough that "API returned success" = "document is indexed" | Technical Integration | D |
 | A11 | Uploading files incrementally — 50 today to validate, then ~1,700 more days later — does not introduce problems: search quality is consistent with a partial corpus, the time gap between batches doesn't cause orphaning or indexing inconsistencies, and the store handles incremental population without side effects | Technical Integration | (staged upload strategy itself, Wave 8) |
+| A12 | Gemini File Search store documents are permanent — they are never evicted by Gemini due to project quotas, billing changes, storage limits, or API policy changes | Domain Understanding | H |
+| A13 | The FSM's STALE trigger (`content_changed()`) will be implemented as an automated scanner that detects hash changes — not left as an unimplemented callback that requires manual `--reset-existing` | Scope | I |
+| A14 | Running two concurrent instances of the upload pipeline does not cause double-uploads or orphaned store documents — the WAL pattern prevents race conditions at the Gemini API layer as well as the DB layer | Technical Integration | J |
+| A15 | `check_stability.py`'s sample query covers enough of the corpus to surface all classes of indexing failures — a passing stability check is not a false STABLE verdict caused by a narrow sample | Scope | K |
 
 ---
 
@@ -208,6 +293,10 @@ From the failure stories, the following assumptions are being treated as true bu
 | A8 | Transition overhead is acceptable under batch load | 3 | 4 | **12** | CAUTIOUS |
 | A9 | `store-sync` becomes unnecessary | 4 | 2 | **8** | WATCHFUL |
 | A11 | Incremental upload is safe (50 files now, ~1,700 files later) | 4 | 4 | **16** | SKEPTICAL |
+| A12 | Store documents are permanent (no eviction by quota/billing) | 3 | 5 | **15** | SKEPTICAL |
+| A13 | STALE trigger will be implemented as an automated scanner | 4 | 3 | **12** | CAUTIOUS |
+| A14 | Concurrent pipeline instances cannot cause double-uploads | 3 | 3 | **9** | WATCHFUL |
+| A15 | Stability check sample query is broad enough to surface all failure classes | 3 | 4 | **12** | CAUTIOUS |
 
 ---
 
@@ -780,6 +869,14 @@ These questions cannot be resolved by pre-mortem analysis alone — they require
 
 7. **The minimum viable proxy size**: We assert 50 files is sufficient. This has not been justified beyond intuition. Wave 8 must record whether 50 files was adequate — so that future pre-mortems in this project can reference an empirical precedent rather than a guess.
 
+8. **Store document permanence**: A12 is currently SKEPTICAL, not HOSTILE, because the cost of being wrong is high but the uncertainty seems low — Gemini's documentation implies permanence. Before Wave 8's full upload, find explicit documentation (not empirical assumption) that store documents are not subject to quota eviction. If no documentation exists, treat A12 as HOSTILE and design a recovery path for mass eviction before uploading 1,748 files.
+
+9. **The STALE scanner**: If implementing the STALE state without an automated file-hash scanner, the FSM's `INDEXED → STALE` transition is dead code. Decide before Wave 5 whether to (a) implement the scanner, (b) drop the STALE state entirely and document `--reset-existing` as the explicit re-upload mechanism, or (c) implement STALE as a manual-trigger-only state with a clear operator command. Option (a) is the only one where the FSM handles content changes without human intervention.
+
+10. **The `check_stability.py` sample query selection**: At the 50-file corpus stage, verify that the default query ("Ayn Rand theory of individual rights and capitalism") returns at least 3 results from the test corpus. If it returns 0, Check 5 will fail with "0 citations" even when the store is healthy — a false UNSTABLE. If it returns exactly the same 3 files every time, Check 6 only tests those 3 files — a narrow STABLE that misses the other 47. The query should be reviewed at Wave 3 against the actual test corpus and updated if needed.
+
+11. **Concurrent pipeline concurrency lock**: There is no process lock preventing two simultaneous `enriched-upload` invocations. Until A14 is validated (Wave 2 or a dedicated spike), consider adding a lockfile mechanism (`/tmp/objlib-upload.lock`) so that a second invocation blocks or exits with a clear error instead of silently causing double-uploads.
+
 ---
 
 ## Anti-Patterns This Pre-Mortem Anticipates
@@ -799,6 +896,16 @@ These questions cannot be resolved by pre-mortem analysis alone — they require
 **"50 files is enough to validate"** — This is a convenience assumption, not a proven one. It may be true (most structural failures appear at any corpus size), or it may fail (some failures are scale-dependent or gap-dependent). Wave 8 exists to test the assumption, not skip it. Do not proceed to the full upload as if the proxy result were definitive.
 
 **"Incremental upload is obviously fine"** — We know the store has accepted multiple upload rounds (that's how we accumulated 2,038 orphans). But "accepts multiple rounds" is not the same as "produces consistent search results after each round." The gap between batches is a distinct failure surface. Wave 8 tests it; don't skip Wave 8 because the logic seems sound.
+
+**"Store documents are permanent"** — This is the assumption that makes the entire FSM's INDEXED state meaningful. If it is wrong — if Gemini can evict store documents due to quota, billing, or policy — every file transitions silently from INDEXED to orphaned with no trigger in the FSM. The consequence is exactly what we've already seen (2,038 orphaned documents, `[Unresolved file #N]`), but now with no `--reset-existing` to recover from it. Find explicit API documentation for this assumption before committing 1,748 files to the new store.
+
+**"check_stability.py passing means the store is healthy"** — A STABLE verdict means all six assertions passed. It does not mean all files are correctly indexed — only that the files the sample query returned are resolvable. If the sample query consistently returns the same 3 files, the other 1,745 are invisible to the check. The stability check is a sampling instrument, not a full audit. `store-sync` (count + identity) plus `check_stability.py` (searchability sample) together provide better coverage than either alone.
+
+**"Two terminal windows can't cause double-uploads"** — They can. The WAL pattern protects the DB, but two independent processes can both call Gemini API upload endpoints for the same file before either has written the result back to the DB. A lockfile or advisory lock at the process level is the correct fix, not reliance on DB-level protection.
+
+**"The STALE state will handle content updates automatically"** — Only if the scanner is implemented. Without the scanner, every content update requires a human to notice the file changed and manually invoke `--reset-existing`. This is the same manual intervention the FSM was supposed to eliminate. If the scanner is not in scope for this implementation, drop the STALE state from the spec rather than leaving it as a permanent gap between design and reality.
+
+**"Changing the sample query later is a minor tweak"** — The sample query is the only positive-evidence search test in the stability check. If it's changed after Wave 3's baseline is established, the T+24h results from Wave 3 and the T+24h results from Wave 4 are no longer comparable. Treat the query selection as an architectural decision made at Wave 3, not a configuration knob to tune later.
 
 ---
 
