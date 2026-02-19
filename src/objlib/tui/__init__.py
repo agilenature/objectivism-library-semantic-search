@@ -17,9 +17,9 @@ def run_tui(
 ) -> None:
     """Initialize services and launch the TUI application.
 
-    Resolves the Gemini store name, creates service instances,
-    and runs the Textual app. All imports are deferred for fast
-    module loading.
+    Resolves the Gemini store name via the static method on
+    GeminiSearchClient, creates service instances, and runs the
+    Textual app. All imports are deferred for fast module loading.
 
     Args:
         db_path: Path to the SQLite library database.
@@ -38,35 +38,31 @@ def run_tui(
         )
         raise SystemExit(1)
 
-    # Resolve store name to resource name (network call)
+    # Resolve store name to resource name (static method on GeminiSearchClient)
+    resolved_store = store_name  # fallback to display name
     try:
-        from objlib.search import GeminiSearchClient
+        from google import genai
 
-        client = GeminiSearchClient(api_key=api_key)
-        resolved_store = client.resolve_store_name(store_name)
-    except Exception as exc:
-        print(f"Warning: Could not resolve store name: {exc}")
-        resolved_store = None
+        from objlib.search.client import GeminiSearchClient
 
-    # Create service instances (services facade from plan 07-01)
-    # Services may not be available yet -- handle gracefully
-    search_service = None
-    library_service = None
-    session_service = None
-
-    try:
-        from objlib.services import LibraryService, SearchService, SessionService
-
-        search_service = SearchService(
-            api_key=api_key,
-            store_name=resolved_store or store_name,
-            db_path=db_path,
+        genai_client = genai.Client(api_key=api_key)
+        resolved_store = GeminiSearchClient.resolve_store_name(
+            genai_client, store_name
         )
-        library_service = LibraryService(db_path=db_path)
-        session_service = SessionService(db_path=db_path)
-    except (ImportError, Exception) as exc:
-        print(f"Note: Services not fully available: {exc}")
-        print("TUI will launch with limited functionality.")
+    except Exception as exc:
+        print(f"Warning: Could not resolve store name '{store_name}': {exc}")
+        print("Continuing with display name as fallback...")
+
+    # Create service instances
+    from objlib.services import LibraryService, SearchService, SessionService
+
+    search_service = SearchService(
+        api_key=api_key,
+        store_resource_name=resolved_store,
+        db_path=db_path,
+    )
+    library_service = LibraryService(db_path=db_path)
+    session_service = SessionService(db_path=db_path)
 
     # Create and run the app
     app = ObjlibApp(

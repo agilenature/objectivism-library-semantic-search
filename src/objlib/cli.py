@@ -3272,3 +3272,11 @@ def glossary_suggest(
     except Exception as e:
         console.print(f"[red]Suggestion failed:[/red] {e}")
         raise typer.Exit(code=1)
+
+
+@app.command()
+def tui() -> None:
+    """Launch the interactive TUI for library exploration."""
+    from objlib.tui import run_tui
+
+    run_tui()

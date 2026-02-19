@@ -1,19 +1,27 @@
 """Objectivism Library TUI Application.
 
 Main Textual App subclass with three-pane layout, centralized reactive
-state, key bindings, and message handlers. Pane widgets (Wave 2) will
-replace the placeholder Static widgets in compose().
+state, key bindings, and message handlers. Wires all widgets together
+and delegates search/browse to service facades.
 """
 
 from __future__ import annotations
 
 from textual import work
 from textual.app import App, ComposeResult
-from textual.containers import Horizontal
+from textual.containers import Horizontal, Vertical
 from textual.reactive import reactive
-from textual.widgets import Footer, Header, Input, Static
+from textual.widgets import Footer, Header, Static
 
+from objlib.tui.messages import (
+    FileSelected,
+    FilterChanged,
+    NavigationRequested,
+    ResultSelected,
+    SearchRequested,
+)
 from objlib.tui.state import FilterSet
+from objlib.tui.widgets import FilterPanel, NavTree, PreviewPane, ResultsList, SearchBar
 
 
 class ObjlibApp(App):
@@ -28,12 +36,6 @@ class ObjlibApp(App):
     SUB_TITLE = "Semantic Search & Browse"
 
     CSS = """
-    #search-bar {
-        dock: top;
-        height: 3;
-        padding: 0 1;
-    }
-
     #main {
         layout: horizontal;
         height: 1fr;
@@ -141,60 +143,51 @@ class ObjlibApp(App):
         self.search_service = search_service
         self.library_service = library_service
         self.session_service = session_service
-        self._search_timer = None
 
     def compose(self) -> ComposeResult:
-        """Compose the three-pane layout with placeholder widgets.
-
-        Wave 2 plans will replace Static placeholders with full
-        NavigationTree, ResultsList, and PreviewPane widgets.
-        """
+        """Compose the three-pane layout with real widgets."""
         yield Header(show_clock=True)
-        yield Input(placeholder="Search the library... (Ctrl+F)", id="search-bar")
+        yield SearchBar()
         with Horizontal(id="main"):
-            yield Static("Navigation", id="nav-pane")
-            yield Static("Results", id="results-pane")
-            yield Static("Preview", id="preview-pane")
+            with Vertical(id="nav-pane"):
+                yield FilterPanel()
+                yield NavTree()
+            with Vertical(id="results-pane"):
+                yield ResultsList()
+            with Vertical(id="preview-pane"):
+                yield PreviewPane()
         yield Static(
-            "Ready | Ctrl+P: Commands | Tab: Switch Pane",
+            "Ready | 0 results | Ctrl+P: Commands",
             id="status-bar",
         )
         yield Footer()
 
-    def on_resize(self) -> None:
-        """Adjust layout classes based on terminal width."""
-        width = self.size.width
-        self.remove_class("layout-medium", "layout-narrow")
-        if width < 80:
-            self.add_class("layout-narrow")
-        elif width < 140:
-            self.add_class("layout-medium")
+    async def on_mount(self) -> None:
+        """Populate nav tree and show preview placeholder on startup."""
+        if self.library_service is not None:
+            try:
+                await self.query_one(NavTree).populate(self.library_service)
+            except Exception as e:
+                self.log.error(f"Failed to populate nav tree: {e}")
+        self.query_one(PreviewPane).show_placeholder()
 
-    def on_input_changed(self, event: Input.Changed) -> None:
-        """Handle search input changes with 300ms debounce."""
-        if event.input.id != "search-bar":
-            return
+    # ------------------------------------------------------------------
+    # Message handlers
+    # ------------------------------------------------------------------
 
-        # Cancel previous debounce timer
-        if self._search_timer is not None:
-            self._search_timer.stop()
-
-        query = event.value.strip()
-        if not query:
-            self.query = ""
+    def on_search_requested(self, event: SearchRequested) -> None:
+        """Handle search requests from the SearchBar widget."""
+        self.query = event.query
+        if not event.query:
             self.results = []
+            self.selected_index = None
+            self.query_one(ResultsList).update_status("Enter a search query")
+            self.query_one(PreviewPane).show_placeholder()
+            self.query_one("#status-bar", Static).update(
+                "Ready | 0 results | Ctrl+P: Commands"
+            )
             return
-
-        # Set 300ms debounce timer
-        self._search_timer = self.set_timer(
-            0.3,
-            lambda: self._fire_search(query),
-        )
-
-    def _fire_search(self, query: str) -> None:
-        """Initiate search after debounce expires."""
-        self.query = query
-        self._run_search(query)
+        self._run_search(event.query)
 
     @work(exclusive=True)
     async def _run_search(self, query: str) -> None:
@@ -208,20 +201,134 @@ class ObjlibApp(App):
 
         self.is_searching = True
         try:
-            result = await self.search_service.search(query)
-            if result is not None:
-                self.results = result.citations if hasattr(result, "citations") else []
-            else:
-                self.results = []
-        except Exception:
-            self.results = []
+            results_widget = self.query_one(ResultsList)
+            results_widget.update_status("Searching...")
+
+            # Build filter strings if any active filters
+            filters = None
+            if not self.active_filters.is_empty():
+                filters = self.active_filters.to_filter_strings()
+
+            result = await self.search_service.search(query, filters=filters)
+            self.results = result.citations if hasattr(result, "citations") else []
+            results_widget.update_results(self.results)
+
+            # Update status bar
+            count = len(self.results)
+            truncated_query = query[:30]
+            self.query_one("#status-bar", Static).update(
+                f"{count} results | {truncated_query} | Ctrl+P: Commands"
+            )
+
+            # Log to session if active
+            if self.active_session_id and self.session_service:
+                try:
+                    await self.session_service.add_event(
+                        self.active_session_id,
+                        "search",
+                        {"query": query, "result_count": count},
+                    )
+                except Exception:
+                    pass
+        except Exception as e:
+            self.query_one(ResultsList).update_status(f"Search error: {e}")
+            self.notify("Search error", severity="error")
         finally:
             self.is_searching = False
 
+    async def on_result_selected(self, event: ResultSelected) -> None:
+        """Handle result selection -- update highlight and show preview."""
+        self.selected_index = event.index
+        results_widget = self.query_one(ResultsList)
+        try:
+            results_widget.select_index(event.index)
+        except Exception:
+            pass  # Index may not exist if results were cleared
+
+        preview = self.query_one(PreviewPane)
+        if event.citation is None:
+            return
+
+        # Try to load full document content
+        file_path = getattr(event.citation, "file_path", None)
+        if file_path and self.library_service is not None:
+            content = await self.library_service.get_file_content(file_path)
+            if content:
+                highlight = [self.query] if self.query else None
+                preview.show_document(content, file_path, highlight_terms=highlight)
+            else:
+                preview.show_unavailable()
+        else:
+            # No file path -- show citation detail panel instead
+            preview.show_citation_detail(event.citation)
+
+    async def on_file_selected(self, event: FileSelected) -> None:
+        """Handle file selection from nav tree -- show document preview."""
+        preview = self.query_one(PreviewPane)
+        if self.library_service is None:
+            preview.show_unavailable()
+            return
+
+        content = await self.library_service.get_file_content(event.file_path)
+        if content:
+            preview.show_document(content, event.file_path)
+        else:
+            preview.show_unavailable()
+
+    async def on_navigation_requested(self, event: NavigationRequested) -> None:
+        """Handle nav tree category/course selection -- show file listing."""
+        if self.library_service is None:
+            return
+
+        results_widget = self.query_one(ResultsList)
+        try:
+            if event.course:
+                files = await self.library_service.get_files_by_course(event.course)
+                label = f"Course: {event.course}"
+            elif event.category:
+                files = await self.library_service.get_items_by_category(event.category)
+                label = f"Category: {event.category}"
+            else:
+                return
+
+            count = len(files)
+            self.query_one("#status-bar", Static).update(
+                f"{count} files | {label} | Ctrl+P: Commands"
+            )
+            # Show a status message since navigation results are not Citation objects
+            results_widget.update_status(
+                f"{count} files in {label}\n\nSelect files from the navigation tree to preview."
+            )
+        except Exception as e:
+            results_widget.update_status(f"Navigation error: {e}")
+
+    def on_filter_changed(self, event: FilterChanged) -> None:
+        """Handle filter changes -- re-run search with new filters."""
+        self.active_filters = event.filters
+        if self.query:
+            self._run_search(self.query)
+
+    def watch_is_searching(self, searching: bool) -> None:
+        """Update status bar when search state changes."""
+        if searching:
+            self.query_one("#status-bar", Static).update("Searching...")
+
+    # ------------------------------------------------------------------
+    # Key binding actions
+    # ------------------------------------------------------------------
+
+    def on_resize(self) -> None:
+        """Adjust layout classes based on terminal width."""
+        width = self.size.width
+        self.remove_class("layout-medium", "layout-narrow")
+        if width < 80:
+            self.add_class("layout-narrow")
+        elif width < 140:
+            self.add_class("layout-medium")
+
     def action_focus_search(self) -> None:
         """Focus the search input bar."""
-        search_input = self.query_one("#search-bar", Input)
-        search_input.focus()
+        self.query_one(SearchBar).focus()
 
     def action_toggle_nav(self) -> None:
         """Toggle navigation pane visibility."""
@@ -230,8 +337,7 @@ class ObjlibApp(App):
 
     def action_clear_search(self) -> None:
         """Clear search input and results."""
-        search_input = self.query_one("#search-bar", Input)
-        search_input.value = ""
+        self.query_one(SearchBar).clear_and_reset()
         self.query = ""
         self.results = []
         self.selected_index = None
@@ -240,4 +346,4 @@ class ObjlibApp(App):
         """Save current session state."""
         if self.session_service is None:
             return
-        # Session save implementation will be added in Wave 3
+        # Session save implementation will be added in Wave 4
