@@ -96,8 +96,8 @@ Plans:
 **Plans**: 2 plans in 2 waves
 
 Plans:
-- [ ] 09-01-PLAN.md -- Spike infrastructure, Protocol, FSM adapter (library or hand-rolled), full adversarial test harness with all 4 affirmative evidence criteria
-- [ ] 09-02-PLAN.md -- Approach selection documentation with test matrix and evidence, integration scaffold for Phase 10
+- [x] 09-01-PLAN.md -- Spike infrastructure, Protocol, FSM adapter (library or hand-rolled), full adversarial test harness with all 4 affirmative evidence criteria
+- [x] 09-02-PLAN.md -- Approach selection documentation with test matrix and evidence, integration scaffold for Phase 10
 
 ---
 
@@ -256,7 +256,7 @@ Each wave's gate is BLOCKING for the next. If a gate fails, the failing phase mu
 | 6.3. Test Foundation | v1.0 | 8/8 | Complete | 2026-02-18 |
 | 7. Interactive TUI | v1.0 | 6/7 | In progress | - |
 | 8. Store Migration | v2.0 | 3/3 | Complete | 2026-02-20 |
-| 9. Async FSM Spike | v2.0 | 0/2 | Not started | - |
+| 9. Async FSM Spike | v2.0 | 2/2 | Complete | 2026-02-20 |
 | 10. Transition Atomicity | v2.0 | 0/2 | Not started | - |
 | 11. display_name + Import | v2.0 | 0/2 | Not started | - |
 | 12. 50-File FSM Upload | v2.0 | 0/2 | Not started | - |
