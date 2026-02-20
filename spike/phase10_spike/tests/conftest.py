@@ -2,8 +2,7 @@
 
 import asyncio
 import os
-import tempfile
-from collections.abc import AsyncGenerator, Callable
+from collections.abc import Callable
 
 import aiosqlite
 import pytest
@@ -12,10 +11,10 @@ from spike.phase10_spike.db import init_spike_db
 
 
 @pytest.fixture
-def spike_db(tmp_path) -> str:
+async def spike_db(tmp_path) -> str:
     """Create a temporary Phase 10 spike database, yield its path, clean up."""
     db_path = str(tmp_path / "phase10_spike.db")
-    asyncio.get_event_loop().run_until_complete(init_spike_db(db_path))
+    await init_spike_db(db_path)
     yield db_path
     # Clean up WAL/SHM files
     for suffix in ("", "-wal", "-shm"):
