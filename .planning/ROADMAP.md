@@ -77,9 +77,9 @@
 **Plans**: 3 plans in 2 waves
 
 Plans:
-- [ ] 08-01-PLAN.md -- DB schema migration (V9 columns, state reset, metadata preservation verification)
-- [ ] 08-02-PLAN.md -- Store migration (pre-flight check, create permanent store, delete old store)
-- [ ] 08-03-PLAN.md -- check_stability.py v2 rewrite (FSM-aware assertions, exit code verification)
+- [x] 08-01-PLAN.md -- DB schema migration (V9 columns, state reset, metadata preservation verification)
+- [x] 08-02-PLAN.md -- Store migration (pre-flight check, create permanent store, delete old store)
+- [x] 08-03-PLAN.md -- check_stability.py v2 rewrite (FSM-aware assertions, exit code verification)
 
 ---
 
@@ -255,7 +255,7 @@ Each wave's gate is BLOCKING for the next. If a gate fails, the failing phase mu
 | 5. Incremental Updates | v1.0 | 4/4 | Complete | 2026-02-18 |
 | 6.3. Test Foundation | v1.0 | 8/8 | Complete | 2026-02-18 |
 | 7. Interactive TUI | v1.0 | 6/7 | In progress | - |
-| 8. Store Migration | v2.0 | 0/3 | Planned | - |
+| 8. Store Migration | v2.0 | 3/3 | Complete | 2026-02-20 |
 | 9. Async FSM Spike | v2.0 | 0/2 | Not started | - |
 | 10. Transition Atomicity | v2.0 | 0/2 | Not started | - |
 | 11. display_name + Import | v2.0 | 0/2 | Not started | - |
@@ -268,4 +268,4 @@ Each wave's gate is BLOCKING for the next. If a gate fails, the failing phase mu
 ---
 *Roadmap created: 2026-02-19*
 *Pre-mortem: governance/pre-mortem-gemini-fsm.md*
-*Last updated: 2026-02-19*
+*Last updated: 2026-02-20*
