@@ -150,11 +150,22 @@ Plans:
   4. `AsyncUploadStateManager` write methods are FSM transition triggers: no gemini-related state mutation (`gemini_state`, `gemini_store_doc_id`, `gemini_file_id`) occurs outside an FSM transition -- verified by grep/audit of all DB write sites
   5. `check_stability.py --store objectivism-library` reports STABLE (exit 0) at T=0 after the 50-file upload
   6. `RecoveryCrawler._recover_file()` checks the return value of `finalize_reset()` and raises if it returns False -- the Phase 10 spike (spike/phase10_spike/recovery_crawler.py:65) silently ignores a False return (OCC conflict during recovery), which means a file can remain in partial-intent state while being logged as "Recovered"; the production implementation must not have this defect -- verified by a test that injects an OCC conflict during `finalize_reset()` and confirms the crawler raises rather than silently succeeds
+**Temporal Stability Protocol** (gates within this phase):
+  T=0  -- immediately after upload: check_stability + DB audit + store-sync dry-run + TUI (5 queries)
+  T+4h -- fast drift: check_stability + orphan count (must still be 0)
+  T+24h -- GATE BLOCKER for Phase 13: check_stability + same 5 TUI queries + full bidirectional cross-check
+  T+36h -- confirm T+24h was not a coincidence: check_stability
+  Each temporal check is a separate plan/wave because each requires waiting for real time to pass.
+  "No errors" is not sufficient at any checkpoint -- positive evidence required (HOSTILE posture inherited from Waves 1-3).
+
 **Plans**: TBD
 
 Plans:
-- [ ] 12-01: FSM integration into upload pipeline (AsyncUploadStateManager as FSM trigger, _reset_existing_files fix)
-- [ ] 12-02: 50-file upload execution, cross-verification, and stability check
+- [ ] 12-01: FSM integration into upload pipeline (AsyncUploadStateManager as FSM trigger, _reset_existing_files fix, display_name.strip() sanitization, Document.display_name audit)
+- [ ] 12-02: 50-file upload execution + T=0 baseline (upload completes, DB audit, bidirectional store cross-check, TUI 5 queries, record baseline results)
+- [ ] 12-03: T+4h drift check (check_stability, orphan count vs T=0 baseline, flag any delta)
+- [ ] 12-04: T+24h gate -- BLOCKING for Phase 13 (check_stability, same 5 TUI queries as T=0, full bidirectional cross-check of all 50 files)
+- [ ] 12-05: T+36h confirmation (check_stability exit 0 -- confirms T+24h was not a transient STABLE)
 
 ---
 
