@@ -998,6 +998,165 @@ def enriched_upload(
     console.print(Panel(summary_table, title="Enriched Upload Complete"))
 
 
+@app.command("fsm-upload")
+def fsm_upload(
+    store_name: Annotated[
+        str,
+        typer.Option("--store", "-s", help="Gemini File Search store display name"),
+    ] = "objectivism-library",
+    db_path: Annotated[
+        Path,
+        typer.Option("--db", "-d", help="Path to SQLite database file"),
+    ] = Path("data/library.db"),
+    batch_size: Annotated[
+        int,
+        typer.Option("--batch-size", "-b", help="Files per logical batch"),
+    ] = 10,
+    max_concurrent: Annotated[
+        int,
+        typer.Option("--concurrency", "-n", help="Max concurrent uploads (default 2)"),
+    ] = 2,
+    limit: Annotated[
+        int,
+        typer.Option("--limit", "-l", help="Max files to upload (0 = all untracked). Default: 50."),
+    ] = 50,
+    reset_existing: Annotated[
+        bool,
+        typer.Option("--reset-existing/--no-reset-existing", help="Reset and re-upload already-indexed files"),
+    ] = False,
+) -> None:
+    """Upload files to Gemini File Search using FSM-mediated state transitions.
+
+    Uses the FSM lifecycle (untracked -> uploading -> processing -> indexed)
+    with OCC-guarded transitions. All gemini_state mutations go through
+    transition_to_*() methods (SC4 compliance).
+
+    Selects first N alphabetically by file_path WHERE gemini_state='untracked'
+    AND filename LIKE '%.txt'.
+
+    Examples:
+
+    \\b
+      objlib fsm-upload --store objectivism-library --limit 50
+      objlib fsm-upload --store objectivism-library --limit 10 --batch-size 5
+      objlib fsm-upload --store objectivism-library --reset-existing
+    """
+    # Check disk availability for source files (OFFL-03)
+    from objlib.sync.disk import check_disk_availability, disk_error_message
+
+    availability = check_disk_availability(DEFAULT_LIBRARY_ROOT)
+    if availability != "available":
+        msg = disk_error_message(availability, DEFAULT_LIBRARY_ROOT, "fsm-upload")
+        console.print(f"[red]Error:[/red] {msg}")
+        raise typer.Exit(code=1)
+
+    # Validate database exists
+    if not db_path.exists():
+        console.print(
+            f"[red]Error:[/red] Database not found: {db_path}\n"
+            "Run [bold]objlib scan --library /path/to/library[/bold] first."
+        )
+        raise typer.Exit(code=1)
+
+    # Get API key from system keyring
+    try:
+        from objlib.config import get_api_key_from_keyring
+
+        api_key = get_api_key_from_keyring()
+    except RuntimeError as e:
+        console.print(f"[red]{e}[/red]")
+        raise typer.Exit(code=1)
+
+    import asyncio
+
+    from objlib.models import UploadConfig
+    from objlib.upload.circuit_breaker import RollingWindowCircuitBreaker
+    from objlib.upload.client import GeminiFileSearchClient
+    from objlib.upload.orchestrator import FSMUploadOrchestrator
+    from objlib.upload.rate_limiter import AdaptiveRateLimiter, RateLimiterConfig
+    from objlib.upload.state import AsyncUploadStateManager
+
+    # Build configuration
+    config = UploadConfig(
+        store_name=store_name,
+        api_key=api_key,
+        max_concurrent_uploads=max_concurrent,
+        batch_size=batch_size,
+        db_path=str(db_path),
+        rate_limit_tier="tier1",
+    )
+
+    # Get count of FSM pending files for pre-flight display
+    async def _get_pending_count() -> int:
+        async with AsyncUploadStateManager(str(db_path)) as state:
+            pending = await state.get_fsm_pending_files(
+                limit=limit if limit > 0 else 10000,
+            )
+            return len(pending)
+
+    pending_count = asyncio.run(_get_pending_count())
+
+    if pending_count == 0 and not reset_existing:
+        console.print(
+            "[yellow]No untracked .txt files to upload.[/yellow]\n"
+            "All files are already in a non-untracked gemini_state."
+        )
+        return
+
+    total_batches = (pending_count + batch_size - 1) // batch_size if pending_count > 0 else 0
+
+    console.print(
+        Panel(
+            f"Uploading [bold]{pending_count}[/bold] files via FSM pipeline to "
+            f"[bold]{store_name}[/bold]\n"
+            f"Batches: {total_batches} x {batch_size} | "
+            f"Concurrency: {max_concurrent}\n"
+            f"Reset existing: {reset_existing}",
+            title="FSM Upload Pipeline",
+        )
+    )
+
+    # Create components
+    circuit_breaker = RollingWindowCircuitBreaker()
+    rate_limiter_config = RateLimiterConfig(tier=config.rate_limit_tier)
+    rate_limiter = AdaptiveRateLimiter(rate_limiter_config, circuit_breaker)
+    client = GeminiFileSearchClient(
+        api_key=api_key,
+        circuit_breaker=circuit_breaker,
+        rate_limiter=rate_limiter,
+    )
+
+    async def _run_fsm_upload() -> dict[str, int]:
+        async with AsyncUploadStateManager(str(db_path)) as state:
+            orchestrator = FSMUploadOrchestrator(
+                client=client,
+                state=state,
+                circuit_breaker=circuit_breaker,
+                config=config,
+                reset_existing=reset_existing,
+                file_limit=limit,
+            )
+            return await orchestrator.run_fsm(store_name)
+
+    result = asyncio.run(_run_fsm_upload())
+
+    # Print final summary
+    summary_table = Table(title="FSM Upload Summary")
+    summary_table.add_column("Metric", style="bold")
+    summary_table.add_column("Count", justify="right")
+
+    summary_table.add_row("Total files", str(result["total"]))
+    summary_table.add_row("Succeeded", f"[green]{result['succeeded']}[/green]")
+    summary_table.add_row("Failed", f"[red]{result['failed']}[/red]")
+    summary_table.add_row("Skipped", f"[yellow]{result['skipped']}[/yellow]")
+    summary_table.add_row("Reset (re-uploaded)", f"[cyan]{result['reset']}[/cyan]")
+    if result.get("retried", 0) > 0:
+        summary_table.add_row("Retried (successful)", f"[magenta]{result['retried']}[/magenta]")
+    summary_table.add_row("Pending", str(result["pending"]))
+
+    console.print(Panel(summary_table, title="FSM Upload Complete"))
+
+
 @app.command()
 def sync(
     library_path: Annotated[

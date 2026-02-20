@@ -27,7 +27,7 @@ from objlib.upload.content_preparer import cleanup_temp_file, prepare_enriched_c
 from objlib.upload.exceptions import OCCConflictError
 from objlib.upload.fsm import create_fsm
 from objlib.upload.metadata_builder import build_enriched_metadata, compute_upload_hash
-from objlib.upload.recovery import RecoveryManager
+from objlib.upload.recovery import RecoveryManager, retry_failed_file
 from objlib.upload.state import AsyncUploadStateManager
 
 logger = logging.getLogger(__name__)
@@ -1180,9 +1180,23 @@ class FSMUploadOrchestrator(EnrichedUploadOrchestrator):
             )
             await asyncio.sleep(30.0)
 
+            # Reset failed files back to untracked before retrying
             retry_operations = []
             for f in failed_files:
-                result = await self._upload_fsm_file(f)
+                fp = f["file_path"]
+                # Use retry_failed_file to reset FAILED -> UNTRACKED
+                reset_ok = await retry_failed_file(self._state, fp)
+                if not reset_ok:
+                    logger.warning(
+                        "Could not reset %s for retry (not in failed state?)", fp
+                    )
+                    continue
+                # Re-read current version and state from DB
+                state_val, version_val = await self._state.get_file_version(fp)
+                f_updated = dict(f)
+                f_updated["version"] = version_val
+                f_updated["gemini_state"] = state_val
+                result = await self._upload_fsm_file(f_updated)
                 if result is not None:
                     retry_operations.append(result)
 
