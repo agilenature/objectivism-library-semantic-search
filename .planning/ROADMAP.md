@@ -111,11 +111,11 @@ Plans:
   1. The write-ahead intent pattern covers the two-API-call reset transition (`delete_store_document()` + `delete_file()` + DB update): for every crash point (after API call 1 but before DB write, after both API calls but before DB write, during DB write itself), a test simulates the crash and the recovery path automatically resolves the file to a consistent, non-stuck state
   2. No file can enter a state that requires manual SQL to escape -- every path into `FAILED` state has a designed and tested automatic recovery mechanism (recovery crawler on startup, idempotent retry, or explicit `FAILED -> UNTRACKED` transition)
   3. The compensation logic (recovery paths) is demonstrably simpler than the problem it solves -- measured by: fewer lines of recovery code than the transition code itself, and each recovery path tested with a single focused test case
-**Plans**: TBD
+**Plans**: 2 plans in 2 waves
 
 Plans:
-- [ ] 10-01: Write-ahead intent pattern for two-API-call transitions with crash simulation tests
-- [ ] 10-02: FAILED state recovery paths and startup recovery crawler
+- [ ] 10-01-PLAN.md -- Extended DB schema, FSM without final states, safe_delete wrappers, ResetTransitionManager, crash point tests
+- [ ] 10-02-PLAN.md -- RecoveryCrawler startup recovery, FAILED escape path, SC3 simplicity measurement, combined evidence harness
 
 ---
 
