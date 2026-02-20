@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 
 ## Current Position
 
-Phase: 11 of 16 (display_name + Import)
-Plan: 1 of 2 in current phase (Plan 01 complete)
-Status: Phase 11 in progress, Plan 11-02 next
-Last activity: 2026-02-20 -- Completed 11-01-PLAN.md (display_name spike + import lag measurement)
+Phase: 12 of 16 (50-File FSM Upload)
+Plan: 0 of 2 in current phase
+Status: Phase 11 COMPLETE (gate PASSED), Phase 12 ready to begin
+Last activity: 2026-02-20 -- Completed 11-02-PLAN.md (trigger strategy + gate evidence)
 
-Progress: [########░░] 8/20 v2.0 plans complete
+Progress: [#########░] 9/20 v2.0 plans complete
 
 Note: Phase 07-07 (TUI integration smoke test from v1.0) deferred to Phase 16, plan 16-03.
   Runs against full live corpus after upload -- more meaningful than running on empty store.
@@ -25,8 +25,8 @@ v2.0 Phase Progress:
 Phase 8:  [##########] 3/3 plans -- COMPLETE (Store Migration Precondition)
 Phase 9:  [##########] 2/2 plans -- COMPLETE (Wave 1: Async FSM Spike) -- gate PASSED 2026-02-20
 Phase 10: [##########] 2/2 plans -- COMPLETE (Wave 2: Transition Atomicity) -- gate PASSED 2026-02-20
-Phase 11: [#####░░░░░] 1/2 plans -- IN PROGRESS (Wave 3: display_name + Import)
-Phase 12: [░░░░░░░░░░] 0/2 plans -- BLOCKED by Phase 11 gate (Wave 4: 50-File FSM Upload)
+Phase 11: [##########] 2/2 plans -- COMPLETE (Wave 3: display_name + Import) -- gate PASSED 2026-02-20
+Phase 12: [░░░░░░░░░░] 0/2 plans -- READY (Phase 11 gate PASSED) (Wave 4: 50-File FSM Upload)
 Phase 13: [░░░░░░░░░░] 0/2 plans -- BLOCKED by Phase 12 gate (Wave 5: State Column Retirement)
 Phase 14: [░░░░░░░░░░] 0/2 plans -- BLOCKED by Phase 13 gate (Wave 6: Batch Performance)
 Phase 15: [░░░░░░░░░░] 0/2 plans -- BLOCKED by Phase 14 gate (Wave 7: Consistency + store-sync)
@@ -40,9 +40,9 @@ Phase 16: [░░░░░░░░░░] 0/3 plans -- BLOCKED by Phase 15 gate
 - Total execution time: 128 min
 
 **v2.0 Velocity:**
-- Total plans completed: 8
-- Average duration: 6.5 min
-- Total execution time: 54 min
+- Total plans completed: 9
+- Average duration: 6.1 min
+- Total execution time: 57 min
 
 *Updated after each plan completion*
 
@@ -87,6 +87,9 @@ Recent decisions affecting current work:
 - [11-01]: documents.get() P50=0.243s, documents.list() P50=0.495s -- get() is 2x faster and should be primary visibility check
 - [11-01]: No exponential backoff needed for post-import visibility -- documents visible immediately after import completes
 - [11-01]: Leading whitespace in display_name causes import hang -- defensive strip() recommended
+- [11-02]: Non-blocking polling: single documents.get() after operation.done is sufficient (P99=0.253s, 1,184x safety margin on 300s timeout)
+- [11-02]: No long-running polling loop needed -- visibility is immediate after import completes
+- [11-02]: Phase 11 BLOCKING gate PASSED -- all 3 success criteria met, Phase 12 unblocked
 
 ### Pending Todos
 
@@ -99,5 +102,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Phase 11 Plan 01 complete. Plan 11-02 (trigger strategy decision) next.
-Resume file: .planning/phases/11-display-name-import/11-02-PLAN.md
+Stopped at: Phase 11 COMPLETE (gate PASSED). Phase 12 ready to begin.
+Resume file: .planning/phases/12-50-file-fsm-upload/12-01-PLAN.md
