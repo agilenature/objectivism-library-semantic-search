@@ -490,6 +490,10 @@ ALTER TABLE files ADD COLUMN gemini_state TEXT DEFAULT 'untracked';
 ALTER TABLE files ADD COLUMN gemini_state_updated_at TEXT;
 """
 
+MIGRATION_V10_SQL = """-- V10: Phase 10 OCC + write-ahead intent columns
+-- Applied via ALTER TABLE in _setup_schema() for column-exists safety
+"""
+
 UPSERT_SQL = """
 INSERT INTO files(file_path, content_hash, filename, file_size,
                   metadata_json, metadata_quality, status)
@@ -555,6 +559,7 @@ class Database:
               5 new sync columns, library_config table
         - v8: session_events table rebuild for 'bookmark' event type
         - v9: gemini_store_doc_id, gemini_state, gemini_state_updated_at columns (Phase 8 FSM)
+        - v10: OCC version, intent_type, intent_started_at, intent_api_calls_completed columns (Phase 10)
         """
         self.conn.executescript(SCHEMA_SQL)
 
@@ -621,7 +626,26 @@ class Database:
                 except sqlite3.OperationalError:
                     pass  # Column already exists
 
-        self.conn.execute("PRAGMA user_version = 9")
+        if version < 10:
+            for alter_sql in [
+                "ALTER TABLE files ADD COLUMN version INTEGER NOT NULL DEFAULT 0",
+                "ALTER TABLE files ADD COLUMN intent_type TEXT",
+                "ALTER TABLE files ADD COLUMN intent_started_at TEXT",
+                "ALTER TABLE files ADD COLUMN intent_api_calls_completed INTEGER",
+            ]:
+                try:
+                    self.conn.execute(alter_sql)
+                except sqlite3.OperationalError:
+                    pass  # Column already exists
+            # Indexes for recovery and state queries
+            self.conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_intent_type ON files(intent_type)"
+            )
+            self.conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_gemini_state ON files(gemini_state)"
+            )
+
+        self.conn.execute("PRAGMA user_version = 10")
 
     def upsert_file(self, record: FileRecord) -> None:
         """Insert or update a single file record.
