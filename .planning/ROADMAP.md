@@ -151,7 +151,7 @@ Plans:
   5. `check_stability.py --store objectivism-library` reports STABLE (exit 0) at T=0 after the 50-file upload
   6. `RecoveryCrawler._recover_file()` checks the return value of `finalize_reset()` and raises if it returns False -- the Phase 10 spike (spike/phase10_spike/recovery_crawler.py:65) silently ignores a False return (OCC conflict during recovery), which means a file can remain in partial-intent state while being logged as "Recovered"; the production implementation must not have this defect -- verified by a test that injects an OCC conflict during `finalize_reset()` and confirms the crawler raises rather than silently succeeds
 **Temporal Stability Protocol** (gates within this phase):
-  MANDATORY: Each temporal check (12-02 through 12-05) MUST be executed in a fresh Claude Code
+  MANDATORY: Each temporal check (12-04 through 12-06) MUST be executed in a fresh Claude Code
   session with /clear run before starting. This is not optional ceremony -- it is a core validity
   requirement. A session that ran the previous checkpoint still holds memory of what it found.
   Claude's memory of "T=0 was clean" can unconsciously bias the T+4h verdict toward STABLE even
@@ -168,14 +168,15 @@ Plans:
   can compare against it without relying on Claude's memory of the previous session.
   "No errors" is not sufficient -- positive evidence required (HOSTILE posture inherited from Waves 1-3).
 
-**Plans**: TBD
+**Plans**: 6 plans in 6 waves
 
 Plans:
-- [ ] 12-01: FSM integration into upload pipeline (AsyncUploadStateManager as FSM trigger, _reset_existing_files fix, display_name.strip() sanitization, Document.display_name audit)
-- [ ] 12-02: 50-file upload + T=0 baseline [fresh session] -- record check_stability output, DB counts, store-sync count, and 5 TUI query results verbatim in SUMMARY.md
-- [ ] 12-03: T+4h drift check [fresh session, /clear before starting] -- check_stability, orphan count vs 12-02 SUMMARY.md baseline, flag any delta
-- [ ] 12-04: T+24h gate [fresh session, /clear before starting] -- check_stability, same 5 TUI queries as 12-02, full bidirectional cross-check of all 50 files -- BLOCKING for Phase 13
-- [ ] 12-05: T+36h confirmation [fresh session, /clear before starting] -- check_stability exit 0 only
+- [ ] 12-01-PLAN.md -- V10 DB migration + FSM core (FileLifecycleSM, OCCConflictError, transition_to_*() methods)
+- [ ] 12-02-PLAN.md -- FSM orchestrator integration + _reset_existing_files fix + RecoveryCrawler + tests
+- [ ] 12-03-PLAN.md -- 50-file FSM upload + T=0 baseline (check_stability, DB counts, store-sync, SC2, 5 TUI queries)
+- [ ] 12-04-PLAN.md -- T+4h drift check [fresh session, /clear before starting]
+- [ ] 12-05-PLAN.md -- T+24h gate [fresh session, /clear before starting] -- BLOCKING for Phase 13
+- [ ] 12-06-PLAN.md -- T+36h confirmation [fresh session, /clear before starting]
 
 ---
 
@@ -281,7 +282,7 @@ Each wave's gate is BLOCKING for the next. If a gate fails, the failing phase mu
 | 9. Async FSM Spike | v2.0 | 2/2 | Complete | 2026-02-20 |
 | 10. Transition Atomicity | v2.0 | 2/2 | Complete | 2026-02-20 |
 | 11. display_name + Import | v2.0 | 2/2 | Complete | 2026-02-20 |
-| 12. 50-File FSM Upload | v2.0 | 0/2 | Ready (Phase 11 gate PASSED) | - |
+| 12. 50-File FSM Upload | v2.0 | 0/6 | Ready (Phase 11 gate PASSED) | - |
 | 13. State Column Retirement | v2.0 | 0/2 | Not started | - |
 | 14. Batch Performance | v2.0 | 0/2 | Not started | - |
 | 15. Consistency + store-sync | v2.0 | 0/2 | Not started | - |
@@ -290,4 +291,4 @@ Each wave's gate is BLOCKING for the next. If a gate fails, the failing phase mu
 ---
 *Roadmap created: 2026-02-19*
 *Pre-mortem: governance/pre-mortem-gemini-fsm.md*
-*Last updated: 2026-02-20 -- Phase 11 gate PASSED*
+*Last updated: 2026-02-20 -- Phase 12 planned (6 plans in 6 waves)*
