@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 ## Current Position
 
 Phase: 12 of 16 (50-File FSM Upload)
-Plan: 2 of 6 in current phase
-Status: In progress
-Last activity: 2026-02-20 -- Completed 12-02-PLAN.md (FSM upload pipeline + RecoveryCrawler)
+Plan: 3 of 6 in current phase
+Status: In progress (checkpoint:human-verify pending for 12-03)
+Last activity: 2026-02-20 -- Completed 12-03-PLAN.md (50-file FSM upload + T=0 baseline)
 
-Progress: [###########] 11/26 v2.0 plans complete
+Progress: [############] 12/26 v2.0 plans complete
 
 Note: Phase 07-07 (TUI integration smoke test from v1.0) deferred to Phase 16, plan 16-03.
   Runs against full live corpus after upload -- more meaningful than running on empty store.
@@ -26,7 +26,7 @@ Phase 8:  [##########] 3/3 plans -- COMPLETE (Store Migration Precondition)
 Phase 9:  [##########] 2/2 plans -- COMPLETE (Wave 1: Async FSM Spike) -- gate PASSED 2026-02-20
 Phase 10: [##########] 2/2 plans -- COMPLETE (Wave 2: Transition Atomicity) -- gate PASSED 2026-02-20
 Phase 11: [##########] 2/2 plans -- COMPLETE (Wave 3: display_name + Import) -- gate PASSED 2026-02-20
-Phase 12: [####░░░░░░] 2/6 plans -- IN PROGRESS (Wave 4: 50-File FSM Upload)
+Phase 12: [#####░░░░░] 3/6 plans -- IN PROGRESS (Wave 4: 50-File FSM Upload)
 Phase 13: [░░░░░░░░░░] 0/2 plans -- BLOCKED by Phase 12 gate (Wave 5: State Column Retirement)
 Phase 14: [░░░░░░░░░░] 0/2 plans -- BLOCKED by Phase 13 gate (Wave 6: Batch Performance)
 Phase 15: [░░░░░░░░░░] 0/2 plans -- BLOCKED by Phase 14 gate (Wave 7: Consistency + store-sync)
@@ -40,9 +40,9 @@ Phase 16: [░░░░░░░░░░] 0/3 plans -- BLOCKED by Phase 15 gate
 - Total execution time: 128 min
 
 **v2.0 Velocity:**
-- Total plans completed: 11
-- Average duration: 6.3 min
-- Total execution time: 69 min
+- Total plans completed: 12
+- Average duration: 11.6 min
+- Total execution time: 139 min
 
 *Updated after each plan completion*
 
@@ -96,6 +96,9 @@ Recent decisions affecting current work:
 - [12-02]: retry_failed_file writes gemini_state directly (6th allowed write site) -- standalone FAILED->UNTRACKED escape per Phase 10 design
 - [12-02]: write_reset_intent does NOT increment version (Txn A pattern from Phase 10)
 - [12-02]: RecoveryCrawler.recover_all returns (recovered, occ_failures) tuple for caller visibility
+- [12-03]: gemini_store_doc_id stores document name suffix only, not full resource name -- reconstruct with store_name/documents/ prefix when needed
+- [12-03]: Poll timeout on large files (3MB+) requires store-lookup fallback -- operations.get() returns done=None indefinitely for some imports
+- [12-03]: retry_failed_file() must be called before retry pass in _process_fsm_batch -- stale version in file_info dict causes OCC conflicts
 
 ### Pending Todos
 
@@ -108,5 +111,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 12-02. Ready to execute 12-03.
-Resume file: .planning/phases/12-50-file-fsm-upload/12-03-PLAN.md
+Stopped at: Completed 12-03 Tasks 1-2. Checkpoint:human-verify pending for Task 3.
+Resume file: .planning/phases/12-50-file-fsm-upload/12-04-PLAN.md (after 12-03 checkpoint approved)
