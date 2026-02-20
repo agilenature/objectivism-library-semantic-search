@@ -24,6 +24,8 @@ from objlib.models import UploadConfig
 from objlib.upload.circuit_breaker import CircuitState, RollingWindowCircuitBreaker
 from objlib.upload.client import GeminiFileSearchClient, RateLimitError
 from objlib.upload.content_preparer import cleanup_temp_file, prepare_enriched_content
+from objlib.upload.exceptions import OCCConflictError
+from objlib.upload.fsm import create_fsm
 from objlib.upload.metadata_builder import build_enriched_metadata, compute_upload_hash
 from objlib.upload.recovery import RecoveryManager
 from objlib.upload.state import AsyncUploadStateManager
@@ -976,3 +978,558 @@ class EnrichedUploadOrchestrator(UploadOrchestrator):
             "retried": self._retry_succeeded,  # Post-batch retry successes
             "pending": self._total - self._succeeded - self._failed - self._skipped,
         }
+
+
+class FSMUploadOrchestrator(EnrichedUploadOrchestrator):
+    """Upload orchestrator using FSM-mediated state transitions.
+
+    Replaces legacy status-based upload path with FSM transitions.
+    All ``gemini_state`` mutations go through ``transition_to_*()``
+    methods on :class:`AsyncUploadStateManager` (SC4 compliance).
+
+    Key differences from :class:`EnrichedUploadOrchestrator`:
+
+    * Uses ``get_fsm_pending_files()`` (gemini_state='untracked')
+      instead of ``get_pending_files()`` (status='pending').
+    * All state transitions validated by :func:`create_fsm` before
+      DB persistence.
+    * ``_reset_existing_files_fsm()`` deletes store document BEFORE
+      raw file (SC3 compliance) with write-ahead intent.
+    * display_name sanitized with ``.strip()`` before upload
+      (Phase 11 finding: leading whitespace causes import hang).
+
+    Usage::
+
+        orchestrator = FSMUploadOrchestrator(client, state, cb, config)
+        await orchestrator.run_fsm("objectivism-library")
+    """
+
+    # ------------------------------------------------------------------
+    # FSM upload entry point
+    # ------------------------------------------------------------------
+
+    async def run_fsm(self, store_display_name: str) -> dict[str, int]:
+        """Execute the FSM-mediated upload pipeline.
+
+        1. Setup signal handlers
+        2. Ensure Gemini store exists
+        3. Acquire single-writer lock
+        4. Optionally reset already-indexed files (SC3-compliant)
+        5. Fetch untracked files via get_fsm_pending_files()
+        6. Process in batches using FSM transitions
+        7. Release lock and return summary
+
+        Args:
+            store_display_name: Display name for the Gemini File Search store.
+
+        Returns:
+            Summary dict with total, succeeded, failed, skipped, reset counts.
+        """
+        self.setup_signal_handlers()
+
+        # Step 1: Ensure store exists
+        logger.info("Ensuring store '%s' exists...", store_display_name)
+        await self._client.get_or_create_store(store_display_name)
+
+        # Step 2: Acquire single-writer lock
+        locked = await self._state.acquire_lock(self._instance_id)
+        if not locked:
+            logger.error("Could not acquire upload lock -- another instance may be running")
+            return self.enriched_summary
+
+        try:
+            # Step 3: Reset already-indexed files if requested
+            if self._reset_existing:
+                await self._reset_existing_files_fsm(limit=self._file_limit)
+
+            # Step 4: Get FSM pending files (untracked)
+            limit = self._file_limit if self._file_limit > 0 else 50
+            pending = await self._state.get_fsm_pending_files(limit=limit)
+            self._total = len(pending)
+
+            if not pending:
+                logger.info("No untracked files to upload")
+                return self.enriched_summary
+
+            logger.info(
+                "Found %d untracked files, processing in batches of %d",
+                self._total,
+                self._config.batch_size,
+            )
+
+            # Step 5: Split into batches and process
+            batches = [
+                pending[i : i + self._config.batch_size]
+                for i in range(0, len(pending), self._config.batch_size)
+            ]
+
+            if self._progress is not None:
+                self._progress.start()
+
+            try:
+                for batch_num, batch_files in enumerate(batches, start=1):
+                    if self._shutdown_event.is_set():
+                        logger.warning("Shutdown requested, skipping remaining batches")
+                        self._skipped += sum(
+                            len(b)
+                            for b in batches[batch_num:]
+                        )
+                        break
+                    await self._process_fsm_batch(batch_files, batch_num)
+            finally:
+                if self._progress is not None:
+                    self._progress.stop()
+
+        except asyncio.CancelledError:
+            logger.warning("Upload cancelled, saving state...")
+        finally:
+            # Step 6: Release lock
+            await self._state.release_lock()
+            logger.info(
+                "FSM upload complete: %d succeeded, %d failed, %d skipped, "
+                "%d reset of %d total",
+                self._succeeded,
+                self._failed,
+                self._skipped,
+                self._reset_count,
+                self._total,
+            )
+
+        return self.enriched_summary
+
+    # ------------------------------------------------------------------
+    # FSM batch processing
+    # ------------------------------------------------------------------
+
+    async def _process_fsm_batch(
+        self, files: list[dict], batch_number: int
+    ) -> None:
+        """Process a batch of files through FSM-mediated upload.
+
+        Same structure as parent ``_process_enriched_batch`` but uses
+        FSM transition methods. Includes a retry pass for transient
+        failures (30s cooldown).
+        """
+        batch_id = await self._state.create_batch(batch_number, len(files))
+
+        if self._progress is not None:
+            self._progress.start_batch(batch_number, len(files))
+
+        logger.info(
+            "Starting FSM batch %d (%d files)", batch_number, len(files)
+        )
+
+        # Phase 1: Upload all files with staggered launches
+        upload_tasks = []
+        file_map: dict[str, dict] = {}
+        for i, f in enumerate(files):
+            if i > 0:
+                await asyncio.sleep(1.0)  # Stagger to prevent burst
+            task = asyncio.create_task(self._upload_fsm_file(f))
+            upload_tasks.append(task)
+            file_map[f["file_path"]] = f
+
+        upload_results = await asyncio.gather(*upload_tasks, return_exceptions=True)
+
+        # Collect successful operations for polling
+        operations: list[tuple[str, Any, int]] = []  # (file_path, operation, version)
+        batch_succeeded = 0
+        batch_failed = 0
+
+        for result in upload_results:
+            if isinstance(result, Exception):
+                batch_failed += 1
+                logger.error("FSM upload task exception: %s", result)
+            elif result is None:
+                # Skipped (shutdown, circuit breaker, or invalid transition)
+                pass
+            else:
+                operations.append(result)
+
+        # Phase 2: Poll all operations
+        failed_files: list[dict] = []
+        if operations:
+            poll_tasks = [
+                self._poll_fsm_operation(op_info) for op_info in operations
+            ]
+            poll_results = await asyncio.gather(*poll_tasks, return_exceptions=True)
+
+            for i, result in enumerate(poll_results):
+                if isinstance(result, Exception):
+                    batch_failed += 1
+                    logger.error("FSM poll task exception: %s", result)
+                    file_path = operations[i][0]
+                    if file_path in file_map:
+                        failed_files.append(file_map[file_path])
+                elif result is True:
+                    batch_succeeded += 1
+                else:
+                    batch_failed += 1
+                    file_path = operations[i][0]
+                    if file_path in file_map:
+                        failed_files.append(file_map[file_path])
+
+        # Phase 3: Retry pass for failures
+        retry_succeeded = 0
+        retry_failed = 0
+        if failed_files and not self._shutdown_event.is_set():
+            logger.info(
+                "FSM batch %d: %d failures detected, starting retry pass after 30s cooldown...",
+                batch_number,
+                len(failed_files),
+            )
+            await asyncio.sleep(30.0)
+
+            retry_operations = []
+            for f in failed_files:
+                result = await self._upload_fsm_file(f)
+                if result is not None:
+                    retry_operations.append(result)
+
+            if retry_operations:
+                retry_poll_tasks = [
+                    self._poll_fsm_operation(op_info)
+                    for op_info in retry_operations
+                ]
+                retry_poll_results = await asyncio.gather(
+                    *retry_poll_tasks, return_exceptions=True
+                )
+
+                for result in retry_poll_results:
+                    if isinstance(result, Exception):
+                        retry_failed += 1
+                        logger.error("FSM retry poll exception: %s", result)
+                    elif result is True:
+                        retry_succeeded += 1
+                        batch_succeeded += 1
+                        batch_failed -= 1
+                        self._retry_succeeded += 1
+                    else:
+                        retry_failed += 1
+
+            logger.info(
+                "FSM batch %d retry pass: %d succeeded, %d still failed",
+                batch_number,
+                retry_succeeded,
+                retry_failed,
+            )
+
+        # Update batch record
+        status = "completed" if batch_failed == 0 else "failed"
+        await self._state.update_batch(
+            batch_id, batch_succeeded, batch_failed, status
+        )
+
+        if self._progress is not None:
+            self._progress.complete_batch(batch_number)
+
+        logger.info(
+            "FSM batch %d complete: %d succeeded, %d failed%s",
+            batch_number,
+            batch_succeeded,
+            batch_failed,
+            f" (after {retry_succeeded} retries)" if retry_succeeded > 0 else "",
+        )
+
+    # ------------------------------------------------------------------
+    # FSM single file upload
+    # ------------------------------------------------------------------
+
+    async def _upload_fsm_file(
+        self, file_info: dict
+    ) -> tuple[str, Any, int] | None:
+        """Upload a single file through FSM-mediated transitions.
+
+        Lifecycle: untracked -> uploading -> processing (after upload API).
+        The polling phase completes processing -> indexed.
+
+        Returns:
+            Tuple of (file_path, operation, current_version) for polling,
+            or None if skipped.
+        """
+        file_path = file_info["file_path"]
+
+        # Check shutdown
+        if self._shutdown_event.is_set():
+            self._skipped += 1
+            return None
+
+        # Check circuit breaker
+        if self._circuit_breaker.state == CircuitState.OPEN:
+            logger.warning("Circuit breaker OPEN, skipping %s", file_path)
+            self._skipped += 1
+            if self._progress is not None:
+                self._progress.file_rate_limited(file_path)
+            return None
+
+        # Read version from file_info (already provided by get_fsm_pending_files)
+        version = file_info.get("version", 0)
+        current_state = file_info.get("gemini_state", "untracked")
+
+        # Validate transition is legal via ephemeral FSM
+        try:
+            fsm = create_fsm(current_state)
+            fsm.start_upload()
+        except Exception as exc:
+            logger.warning(
+                "Invalid FSM transition for %s (state=%s): %s",
+                file_path, current_state, exc,
+            )
+            self._skipped += 1
+            return None
+
+        try:
+            # Write-ahead intent: transition to uploading (OCC-guarded)
+            version = await self._state.transition_to_uploading(file_path, version)
+
+            # Build display_name with .strip() (Phase 11: leading whitespace causes hang)
+            display_name = file_info.get("filename", os.path.basename(file_path))[:512].strip()
+
+            # Parse metadata and build enriched metadata if available
+            metadata_json = file_info.get("metadata_json") or "{}"
+            metadata = json.loads(metadata_json)
+            custom_metadata = self._client.build_custom_metadata(metadata)
+
+            # Prepare content (use enriched content if AI metadata available)
+            upload_path = file_path
+            temp_path = None
+            ai_json = file_info.get("ai_metadata_json")
+            if ai_json:
+                ai_metadata = json.loads(ai_json)
+                custom_metadata = build_enriched_metadata(
+                    metadata, ai_metadata,
+                    file_info.get("entity_names", []),
+                )
+                temp_path = prepare_enriched_content(file_path, ai_metadata)
+                if temp_path is not None:
+                    upload_path = temp_path
+
+            try:
+                # Upload with semaphore-limited concurrency
+                async with self._upload_semaphore:
+                    file_obj, operation = await self._client.upload_and_import(
+                        upload_path, display_name, custom_metadata
+                    )
+            finally:
+                cleanup_temp_file(temp_path)
+
+            # Transition to processing: record Gemini file identifiers
+            version = await self._state.transition_to_processing(
+                file_path,
+                version,
+                getattr(file_obj, "name", ""),
+                getattr(file_obj, "uri", ""),
+            )
+
+            if self._progress is not None:
+                self._progress.file_uploaded(file_path)
+
+            return (file_path, operation, version)
+
+        except OCCConflictError as exc:
+            logger.warning("OCC conflict uploading %s: %s", file_path, exc)
+            self._skipped += 1
+            return None
+
+        except RateLimitError as exc:
+            logger.warning("Rate limited uploading %s: %s", file_path, exc)
+            try:
+                await self._state.transition_to_failed(file_path, version, str(exc))
+            except OCCConflictError:
+                pass
+            self._failed += 1
+            if self._progress is not None:
+                self._progress.file_rate_limited(file_path)
+            return None
+
+        except Exception as exc:
+            logger.error("Failed to upload %s: %s", file_path, exc)
+            try:
+                await self._state.transition_to_failed(file_path, version, str(exc))
+            except OCCConflictError:
+                pass
+            self._failed += 1
+            if self._progress is not None:
+                self._progress.file_failed(file_path, str(exc))
+            return None
+
+    # ------------------------------------------------------------------
+    # FSM operation polling
+    # ------------------------------------------------------------------
+
+    async def _poll_fsm_operation(
+        self, operation_info: tuple[str, Any, int]
+    ) -> bool:
+        """Poll an operation and transition to indexed or failed.
+
+        Args:
+            operation_info: Tuple of (file_path, operation, current_version).
+
+        Returns:
+            True if the operation succeeded and file is indexed.
+        """
+        file_path, operation, version = operation_info
+
+        try:
+            async with self._poll_semaphore:
+                completed = await self._client.poll_operation(
+                    operation, timeout=self._config.poll_timeout_seconds
+                )
+
+            done = getattr(completed, "done", False)
+            error = getattr(completed, "error", None)
+
+            if done and not error:
+                # Extract document_name (gemini_store_doc_id)
+                gemini_store_doc_id = None
+                response = getattr(completed, "response", None)
+                if response is not None:
+                    gemini_store_doc_id = getattr(response, "document_name", None)
+                    if gemini_store_doc_id is None:
+                        # Fallback: check name attribute
+                        gemini_store_doc_id = getattr(response, "name", None)
+
+                # If still None, try raw dict parsing
+                if gemini_store_doc_id is None:
+                    raw = getattr(completed, "_raw_response", None)
+                    if isinstance(raw, dict):
+                        resp = raw.get("response", {})
+                        gemini_store_doc_id = resp.get("documentName") or resp.get("name")
+
+                if gemini_store_doc_id is None:
+                    logger.warning(
+                        "Could not extract document_name from operation response for %s",
+                        file_path,
+                    )
+                    gemini_store_doc_id = ""
+
+                # Transition to indexed
+                await self._state.transition_to_indexed(
+                    file_path, version, gemini_store_doc_id
+                )
+                self._succeeded += 1
+                return True
+            else:
+                error_msg = str(error) if error else "Operation did not complete"
+                await self._state.transition_to_failed(file_path, version, error_msg)
+                self._failed += 1
+                if self._progress is not None:
+                    self._progress.file_failed(file_path, error_msg)
+                return False
+
+        except OCCConflictError as exc:
+            logger.warning("OCC conflict polling %s: %s", file_path, exc)
+            self._failed += 1
+            return False
+
+        except Exception as exc:
+            logger.error("Poll failed for %s: %s", file_path, exc)
+            try:
+                await self._state.transition_to_failed(file_path, version, str(exc))
+            except OCCConflictError:
+                pass
+            self._failed += 1
+            if self._progress is not None:
+                self._progress.file_failed(file_path, str(exc))
+            return False
+
+    # ------------------------------------------------------------------
+    # SC3-compliant reset: store doc BEFORE raw file
+    # ------------------------------------------------------------------
+
+    async def _reset_existing_files_fsm(self, limit: int = 0) -> None:
+        """Reset indexed files for re-upload using FSM transitions.
+
+        SC3 compliance: deletes store document BEFORE raw file.
+        Uses write-ahead intent for crash recovery.
+
+        1. Write reset intent (OCC-guarded)
+        2. Delete store document (permanent indexed entry)
+        3. Delete raw file (temporary 48hr file)
+        4. Finalize reset (clear IDs, set untracked)
+
+        Args:
+            limit: Max files to reset (0 = no limit).
+        """
+        db = self._state._ensure_connected()
+        cursor = await db.execute(
+            """SELECT file_path, gemini_file_id, gemini_store_doc_id, version
+               FROM files
+               WHERE gemini_state = 'indexed'
+                 AND gemini_store_doc_id IS NOT NULL"""
+        )
+        files_to_reset = [dict(r) for r in await cursor.fetchall()]
+
+        if limit > 0:
+            files_to_reset = files_to_reset[:limit]
+
+        if not files_to_reset:
+            logger.info("No indexed files need FSM reset")
+            return
+
+        logger.info(
+            "Resetting %d indexed files for re-upload (SC3-compliant)",
+            len(files_to_reset),
+        )
+
+        for file_info in files_to_reset:
+            file_path = file_info["file_path"]
+            version = file_info["version"]
+            gemini_store_doc_id = file_info.get("gemini_store_doc_id")
+            gemini_file_id = file_info.get("gemini_file_id")
+
+            try:
+                # Step 1: Write-ahead intent (OCC-guarded, no version increment)
+                await self._state.write_reset_intent(file_path, version)
+
+                # Step 2: Delete store document FIRST (SC3 order)
+                if gemini_store_doc_id:
+                    try:
+                        await self._client.delete_store_document(gemini_store_doc_id)
+                    except Exception as exc:
+                        exc_str = str(exc)
+                        if "404" not in exc_str and "NOT_FOUND" not in exc_str:
+                            raise
+                    await self._state.update_intent_progress(file_path, 1)
+                else:
+                    # Legacy path: gemini_store_doc_id missing, try list+map lookup
+                    if gemini_file_id:
+                        doc_name = await self._client.find_store_document_name(gemini_file_id)
+                        if doc_name:
+                            try:
+                                await self._client.delete_store_document(doc_name)
+                            except Exception as exc:
+                                exc_str = str(exc)
+                                if "404" not in exc_str and "NOT_FOUND" not in exc_str:
+                                    raise
+                    await self._state.update_intent_progress(file_path, 1)
+
+                # Step 3: Delete raw file SECOND
+                if gemini_file_id:
+                    file_name = gemini_file_id
+                    if not file_name.startswith("files/"):
+                        file_name = f"files/{file_name}"
+                    try:
+                        await self._client.delete_file(file_name)
+                    except Exception as exc:
+                        exc_str = str(exc)
+                        if "404" not in exc_str and "NOT_FOUND" not in exc_str:
+                            raise
+                await self._state.update_intent_progress(file_path, 2)
+
+                # Step 4: Finalize (OCC-guarded, increments version)
+                success = await self._state.finalize_reset(file_path, version)
+                if success:
+                    self._reset_count += 1
+                    logger.info("Reset %s (store doc -> raw file -> finalize)", file_path)
+                else:
+                    logger.warning(
+                        "OCC conflict finalizing reset for %s (another writer?)",
+                        file_path,
+                    )
+
+            except OCCConflictError as exc:
+                logger.warning("OCC conflict resetting %s: %s", file_path, exc)
+
+            except Exception as exc:
+                logger.error("Failed to reset %s: %s", file_path, exc)

@@ -719,6 +719,121 @@ class AsyncUploadStateManager:
         rows = await cursor.fetchall()
         return [dict(row) for row in rows]
 
+    # ------------------------------------------------------------------
+    # FSM reset transition methods (Phase 12)
+    # ------------------------------------------------------------------
+
+    async def write_reset_intent(
+        self, file_path: str, expected_version: int
+    ) -> int:
+        """Write a reset intent BEFORE any API deletion calls.
+
+        Per Phase 10 pattern: Txn A writes intent without version
+        increment.  The version guard ensures no concurrent modification
+        has occurred since the caller's read.
+
+        Args:
+            file_path: Primary key of the file.
+            expected_version: OCC version guard.
+
+        Returns:
+            The same expected_version (no increment on intent write).
+
+        Raises:
+            OCCConflictError: If the version has changed since read.
+        """
+        db = self._ensure_connected()
+        now = self._now_iso()
+        cursor = await db.execute(
+            """UPDATE files
+               SET intent_type = 'reset',
+                   intent_started_at = ?,
+                   intent_api_calls_completed = 0
+               WHERE file_path = ?
+                 AND version = ?""",
+            (now, file_path, expected_version),
+        )
+        await db.commit()
+        if cursor.rowcount == 0:
+            raise OCCConflictError(
+                f"Version conflict writing reset intent on {file_path}: "
+                f"expected version {expected_version}"
+            )
+        logger.debug("Wrote reset intent for %s (v%d)", file_path, expected_version)
+        return expected_version
+
+    async def update_intent_progress(
+        self, file_path: str, api_calls_completed: int
+    ) -> None:
+        """Update intent progress counter (no OCC check -- simple marker).
+
+        Args:
+            file_path: Primary key of the file.
+            api_calls_completed: Number of API steps completed (1 or 2).
+        """
+        db = self._ensure_connected()
+        await db.execute(
+            """UPDATE files
+               SET intent_api_calls_completed = ?
+               WHERE file_path = ?""",
+            (api_calls_completed, file_path),
+        )
+        await db.commit()
+        logger.debug(
+            "Updated intent progress for %s: %d calls completed",
+            file_path, api_calls_completed,
+        )
+
+    async def finalize_reset(
+        self, file_path: str, expected_version: int
+    ) -> bool:
+        """Finalize a reset: clear Gemini IDs and intent columns.
+
+        Sets gemini_state='untracked', status='pending', increments
+        version.  OCC-guarded.
+
+        Args:
+            file_path: Primary key of the file.
+            expected_version: OCC version guard.
+
+        Returns:
+            True on success, False on OCC conflict.
+        """
+        db = self._ensure_connected()
+        now = self._now_iso()
+        new_version = expected_version + 1
+        cursor = await db.execute(
+            """UPDATE files
+               SET gemini_state = 'untracked',
+                   status = 'pending',
+                   gemini_file_id = NULL,
+                   gemini_file_uri = NULL,
+                   gemini_store_doc_id = NULL,
+                   upload_timestamp = NULL,
+                   remote_expiration_ts = NULL,
+                   error_message = NULL,
+                   intent_type = NULL,
+                   intent_started_at = NULL,
+                   intent_api_calls_completed = NULL,
+                   gemini_state_updated_at = ?,
+                   version = ?
+               WHERE file_path = ?
+                 AND version = ?""",
+            (now, new_version, file_path, expected_version),
+        )
+        await db.commit()
+        if cursor.rowcount == 0:
+            logger.warning(
+                "OCC conflict finalizing reset on %s: expected v%d",
+                file_path, expected_version,
+            )
+            return False
+        logger.debug(
+            "Finalized reset for %s (v%d->v%d)",
+            file_path, expected_version, new_version,
+        )
+        return True
+
     async def get_file_version(self, file_path: str) -> tuple[str, int]:
         """Return the current (gemini_state, version) for a file.
 
