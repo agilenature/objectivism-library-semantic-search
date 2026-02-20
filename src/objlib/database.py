@@ -478,6 +478,18 @@ ALTER TABLE session_events_v8 RENAME TO session_events;
 CREATE INDEX idx_session_events_session ON session_events(session_id);
 """
 
+# V9: Phase 8 FSM columns (non-destructive ALTER TABLE ADD COLUMN)
+# gemini_store_doc_id  — Gemini store document resource name
+# gemini_state         — FSM lifecycle state (default: 'untracked')
+# gemini_state_updated_at — ISO 8601 timestamp of last state change
+# Note: Actual migration uses ALTER TABLE statements in _setup_schema(),
+# not executescript, because ADD COLUMN must be individual statements.
+MIGRATION_V9_SQL = """-- V9: Phase 8 FSM columns (applied via ALTER TABLE in _setup_schema)
+ALTER TABLE files ADD COLUMN gemini_store_doc_id TEXT;
+ALTER TABLE files ADD COLUMN gemini_state TEXT DEFAULT 'untracked';
+ALTER TABLE files ADD COLUMN gemini_state_updated_at TEXT;
+"""
+
 UPSERT_SQL = """
 INSERT INTO files(file_path, content_hash, filename, file_size,
                   metadata_json, metadata_quality, status)
@@ -542,6 +554,7 @@ class Database:
         - v7: Table rebuild for expanded CHECK constraint (missing/error),
               5 new sync columns, library_config table
         - v8: session_events table rebuild for 'bookmark' event type
+        - v9: gemini_store_doc_id, gemini_state, gemini_state_updated_at columns (Phase 8 FSM)
         """
         self.conn.executescript(SCHEMA_SQL)
 
@@ -597,7 +610,18 @@ class Database:
         if version < 8:
             self.conn.executescript(MIGRATION_V8_SQL)
 
-        self.conn.execute("PRAGMA user_version = 8")
+        if version < 9:
+            for alter_sql in [
+                "ALTER TABLE files ADD COLUMN gemini_store_doc_id TEXT",
+                "ALTER TABLE files ADD COLUMN gemini_state TEXT DEFAULT 'untracked'",
+                "ALTER TABLE files ADD COLUMN gemini_state_updated_at TEXT",
+            ]:
+                try:
+                    self.conn.execute(alter_sql)
+                except sqlite3.OperationalError:
+                    pass  # Column already exists
+
+        self.conn.execute("PRAGMA user_version = 9")
 
     def upsert_file(self, record: FileRecord) -> None:
         """Insert or update a single file record.
