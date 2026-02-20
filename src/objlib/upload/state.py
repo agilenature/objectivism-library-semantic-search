@@ -16,6 +16,8 @@ from datetime import datetime, timedelta, timezone
 
 import aiosqlite
 
+from objlib.upload.exceptions import OCCConflictError
+
 logger = logging.getLogger(__name__)
 
 
@@ -495,3 +497,246 @@ class AsyncUploadStateManager:
                 results.append(file_dict)
 
         return results
+
+    # ------------------------------------------------------------------
+    # FSM-mediated transition methods (Phase 12)
+    # ------------------------------------------------------------------
+    #
+    # Each method:
+    # - Dual-writes gemini_state + status (backward compat per Q1 decision)
+    # - Uses OCC guard: WHERE version = ? (raises OCCConflictError on mismatch)
+    # - Commits immediately (no held transactions across await boundaries)
+    # - Returns the new version (expected_version + 1)
+
+    async def transition_to_uploading(
+        self, file_path: str, expected_version: int
+    ) -> int:
+        """Transition a file from untracked to uploading.
+
+        Args:
+            file_path: Primary key of the file.
+            expected_version: OCC version guard.
+
+        Returns:
+            New version number (expected_version + 1).
+
+        Raises:
+            OCCConflictError: If the version has changed since read.
+        """
+        db = self._ensure_connected()
+        now = self._now_iso()
+        new_version = expected_version + 1
+        cursor = await db.execute(
+            """UPDATE files
+               SET gemini_state = 'uploading',
+                   status = 'uploading',
+                   gemini_state_updated_at = ?,
+                   version = ?
+               WHERE file_path = ?
+                 AND gemini_state = 'untracked'
+                 AND version = ?""",
+            (now, new_version, file_path, expected_version),
+        )
+        await db.commit()
+        if cursor.rowcount == 0:
+            raise OCCConflictError(
+                f"Version conflict on {file_path}: expected version {expected_version}"
+            )
+        logger.debug(
+            "Transitioned %s to uploading (v%d->v%d)", file_path, expected_version, new_version
+        )
+        return new_version
+
+    async def transition_to_processing(
+        self,
+        file_path: str,
+        expected_version: int,
+        gemini_file_id: str,
+        gemini_file_uri: str,
+    ) -> int:
+        """Transition a file from uploading to processing.
+
+        Records the Gemini file identifiers returned by the upload API.
+
+        Args:
+            file_path: Primary key of the file.
+            expected_version: OCC version guard.
+            gemini_file_id: Gemini file resource name (e.g. 'files/abc123').
+            gemini_file_uri: Gemini file URI.
+
+        Returns:
+            New version number (expected_version + 1).
+
+        Raises:
+            OCCConflictError: If the version has changed since read.
+        """
+        db = self._ensure_connected()
+        now = self._now_iso()
+        new_version = expected_version + 1
+        cursor = await db.execute(
+            """UPDATE files
+               SET gemini_state = 'processing',
+                   gemini_file_id = ?,
+                   gemini_file_uri = ?,
+                   upload_timestamp = ?,
+                   gemini_state_updated_at = ?,
+                   version = ?
+               WHERE file_path = ?
+                 AND gemini_state = 'uploading'
+                 AND version = ?""",
+            (gemini_file_id, gemini_file_uri, now, now, new_version, file_path, expected_version),
+        )
+        await db.commit()
+        if cursor.rowcount == 0:
+            raise OCCConflictError(
+                f"Version conflict on {file_path}: expected version {expected_version}"
+            )
+        logger.debug(
+            "Transitioned %s to processing (v%d->v%d)", file_path, expected_version, new_version
+        )
+        return new_version
+
+    async def transition_to_indexed(
+        self,
+        file_path: str,
+        expected_version: int,
+        gemini_store_doc_id: str,
+    ) -> int:
+        """Transition a file from processing to indexed.
+
+        Records the store document ID after successful import.
+
+        Args:
+            file_path: Primary key of the file.
+            expected_version: OCC version guard.
+            gemini_store_doc_id: Gemini store document resource name.
+
+        Returns:
+            New version number (expected_version + 1).
+
+        Raises:
+            OCCConflictError: If the version has changed since read.
+        """
+        db = self._ensure_connected()
+        now = self._now_iso()
+        new_version = expected_version + 1
+        cursor = await db.execute(
+            """UPDATE files
+               SET gemini_state = 'indexed',
+                   gemini_store_doc_id = ?,
+                   status = 'uploaded',
+                   gemini_state_updated_at = ?,
+                   version = ?
+               WHERE file_path = ?
+                 AND gemini_state = 'processing'
+                 AND version = ?""",
+            (gemini_store_doc_id, now, new_version, file_path, expected_version),
+        )
+        await db.commit()
+        if cursor.rowcount == 0:
+            raise OCCConflictError(
+                f"Version conflict on {file_path}: expected version {expected_version}"
+            )
+        logger.debug(
+            "Transitioned %s to indexed (v%d->v%d)", file_path, expected_version, new_version
+        )
+        return new_version
+
+    async def transition_to_failed(
+        self,
+        file_path: str,
+        expected_version: int,
+        error_message: str,
+    ) -> int:
+        """Transition a file to failed state from any in-flight state.
+
+        No gemini_state guard -- failure can come from uploading or
+        processing.
+
+        Args:
+            file_path: Primary key of the file.
+            expected_version: OCC version guard.
+            error_message: Human-readable error description.
+
+        Returns:
+            New version number (expected_version + 1).
+
+        Raises:
+            OCCConflictError: If the version has changed since read.
+        """
+        db = self._ensure_connected()
+        now = self._now_iso()
+        new_version = expected_version + 1
+        cursor = await db.execute(
+            """UPDATE files
+               SET gemini_state = 'failed',
+                   error_message = ?,
+                   status = 'failed',
+                   gemini_state_updated_at = ?,
+                   version = ?
+               WHERE file_path = ?
+                 AND version = ?""",
+            (error_message, now, new_version, file_path, expected_version),
+        )
+        await db.commit()
+        if cursor.rowcount == 0:
+            raise OCCConflictError(
+                f"Version conflict on {file_path}: expected version {expected_version}"
+            )
+        logger.debug(
+            "Transitioned %s to failed (v%d->v%d)", file_path, expected_version, new_version
+        )
+        return new_version
+
+    # ------------------------------------------------------------------
+    # FSM read helpers (Phase 12)
+    # ------------------------------------------------------------------
+
+    async def get_fsm_pending_files(self, limit: int = 50) -> list[dict]:
+        """Return files in untracked gemini_state ready for FSM upload.
+
+        This is the FSM-path equivalent of ``get_pending_files()`` (which
+        uses the legacy ``status='pending'`` column).
+
+        Args:
+            limit: Maximum rows to return.
+
+        Returns:
+            List of dicts with file_path, content_hash, filename,
+            file_size, metadata_json, version, gemini_state.
+        """
+        db = self._ensure_connected()
+        cursor = await db.execute(
+            """SELECT file_path, content_hash, filename, file_size,
+                      metadata_json, version, gemini_state
+               FROM files
+               WHERE gemini_state = 'untracked'
+                 AND filename LIKE '%.txt'
+               ORDER BY file_path
+               LIMIT ?""",
+            (limit,),
+        )
+        rows = await cursor.fetchall()
+        return [dict(row) for row in rows]
+
+    async def get_file_version(self, file_path: str) -> tuple[str, int]:
+        """Return the current (gemini_state, version) for a file.
+
+        Args:
+            file_path: Primary key of the file.
+
+        Returns:
+            Tuple of (gemini_state, version).
+
+        Raises:
+            ValueError: If the file is not found.
+        """
+        db = self._ensure_connected()
+        cursor = await db.execute(
+            "SELECT gemini_state, version FROM files WHERE file_path = ?",
+            (file_path,),
+        )
+        row = await cursor.fetchone()
+        if row is None:
+            raise ValueError(f"File not found: {file_path}")
+        return (row["gemini_state"], row["version"])
