@@ -114,8 +114,8 @@ Plans:
 **Plans**: 2 plans in 2 waves
 
 Plans:
-- [ ] 10-01-PLAN.md -- Extended DB schema, FSM without final states, safe_delete wrappers, ResetTransitionManager, crash point tests
-- [ ] 10-02-PLAN.md -- RecoveryCrawler startup recovery, FAILED escape path, SC3 simplicity measurement, combined evidence harness
+- [x] 10-01-PLAN.md -- Extended DB schema, FSM without final states, safe_delete wrappers, ResetTransitionManager, crash point tests
+- [x] 10-02-PLAN.md -- RecoveryCrawler startup recovery, FAILED escape path, SC3 simplicity measurement, combined evidence harness
 
 ---
 
@@ -257,7 +257,7 @@ Each wave's gate is BLOCKING for the next. If a gate fails, the failing phase mu
 | 7. Interactive TUI | v1.0 | 6/7 | In progress | - |
 | 8. Store Migration | v2.0 | 3/3 | Complete | 2026-02-20 |
 | 9. Async FSM Spike | v2.0 | 2/2 | Complete | 2026-02-20 |
-| 10. Transition Atomicity | v2.0 | 0/2 | Not started | - |
+| 10. Transition Atomicity | v2.0 | 2/2 | Complete | 2026-02-20 |
 | 11. display_name + Import | v2.0 | 0/2 | Not started | - |
 | 12. 50-File FSM Upload | v2.0 | 0/2 | Not started | - |
 | 13. State Column Retirement | v2.0 | 0/2 | Not started | - |
