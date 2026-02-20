@@ -151,21 +151,31 @@ Plans:
   5. `check_stability.py --store objectivism-library` reports STABLE (exit 0) at T=0 after the 50-file upload
   6. `RecoveryCrawler._recover_file()` checks the return value of `finalize_reset()` and raises if it returns False -- the Phase 10 spike (spike/phase10_spike/recovery_crawler.py:65) silently ignores a False return (OCC conflict during recovery), which means a file can remain in partial-intent state while being logged as "Recovered"; the production implementation must not have this defect -- verified by a test that injects an OCC conflict during `finalize_reset()` and confirms the crawler raises rather than silently succeeds
 **Temporal Stability Protocol** (gates within this phase):
-  T=0  -- immediately after upload: check_stability + DB audit + store-sync dry-run + TUI (5 queries)
-  T+4h -- fast drift: check_stability + orphan count (must still be 0)
-  T+24h -- GATE BLOCKER for Phase 13: check_stability + same 5 TUI queries + full bidirectional cross-check
-  T+36h -- confirm T+24h was not a coincidence: check_stability
-  Each temporal check is a separate plan/wave because each requires waiting for real time to pass.
-  "No errors" is not sufficient at any checkpoint -- positive evidence required (HOSTILE posture inherited from Waves 1-3).
+  MANDATORY: Each temporal check (12-02 through 12-05) MUST be executed in a fresh Claude Code
+  session with /clear run before starting. This is not optional ceremony -- it is a core validity
+  requirement. A session that ran the previous checkpoint still holds memory of what it found.
+  Claude's memory of "T=0 was clean" can unconsciously bias the T+4h verdict toward STABLE even
+  when the scripts are the ones that should be producing the verdict. A fresh session has no prior
+  state and must derive its conclusion entirely from script output, DB queries, and API calls.
+  The distrust posture applies to the verifier (Claude) as much as to the system being verified.
+
+  T=0   -- immediately after upload completes: check_stability + DB audit + store-sync dry-run + TUI (5 queries recorded verbatim)
+  T+4h  -- /clear first, fresh session: check_stability + orphan count delta vs T=0 SUMMARY.md
+  T+24h -- /clear first, fresh session: check_stability + same 5 TUI queries + full bidirectional cross-check -- GATE BLOCKER for Phase 13
+  T+36h -- /clear first, fresh session: check_stability exit 0 only -- confirms T+24h was not a transient STABLE
+
+  Each SUMMARY.md records the raw script output verbatim so the next checkpoint's fresh session
+  can compare against it without relying on Claude's memory of the previous session.
+  "No errors" is not sufficient -- positive evidence required (HOSTILE posture inherited from Waves 1-3).
 
 **Plans**: TBD
 
 Plans:
 - [ ] 12-01: FSM integration into upload pipeline (AsyncUploadStateManager as FSM trigger, _reset_existing_files fix, display_name.strip() sanitization, Document.display_name audit)
-- [ ] 12-02: 50-file upload execution + T=0 baseline (upload completes, DB audit, bidirectional store cross-check, TUI 5 queries, record baseline results)
-- [ ] 12-03: T+4h drift check (check_stability, orphan count vs T=0 baseline, flag any delta)
-- [ ] 12-04: T+24h gate -- BLOCKING for Phase 13 (check_stability, same 5 TUI queries as T=0, full bidirectional cross-check of all 50 files)
-- [ ] 12-05: T+36h confirmation (check_stability exit 0 -- confirms T+24h was not a transient STABLE)
+- [ ] 12-02: 50-file upload + T=0 baseline [fresh session] -- record check_stability output, DB counts, store-sync count, and 5 TUI query results verbatim in SUMMARY.md
+- [ ] 12-03: T+4h drift check [fresh session, /clear before starting] -- check_stability, orphan count vs 12-02 SUMMARY.md baseline, flag any delta
+- [ ] 12-04: T+24h gate [fresh session, /clear before starting] -- check_stability, same 5 TUI queries as 12-02, full bidirectional cross-check of all 50 files -- BLOCKING for Phase 13
+- [ ] 12-05: T+36h confirmation [fresh session, /clear before starting] -- check_stability exit 0 only
 
 ---
 
