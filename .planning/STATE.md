@@ -12,8 +12,8 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 
 Phase: 12 of 16 (50-File FSM Upload)
 Plan: 3 of 6 in current phase
-Status: In progress (checkpoint:human-verify pending for 12-03)
-Last activity: 2026-02-20 -- Completed 12-03-PLAN.md (50-file FSM upload + T=0 baseline)
+Status: 12-03 APPROVED (T=0 STABLE). Awaiting T+4h window to execute 12-04.
+Last activity: 2026-02-20 -- 12-03 approved, T=0 baseline locked. T+4h ~23:50 UTC.
 
 Progress: [############] 12/26 v2.0 plans complete
 
@@ -106,10 +106,14 @@ None.
 
 ### Blockers/Concerns
 
-- Store migration is irreversible -- search offline from Phase 8 until Phase 12 completes 50-file upload
+- Store orphan accumulation during FSM retry pass (not yet fixed for upload path, only for reset path) -- run store-sync after any fsm-upload run
+- T+4h check (12-04) must run in fresh session after ~2026-02-20T23:50:00Z
+- T+24h check (12-05) must run in fresh session after ~2026-02-21T19:50:00Z (BLOCKING gate for Phase 13)
 
 ## Session Continuity
 
+
 Last session: 2026-02-20
-Stopped at: Completed 12-03 Tasks 1-2. Checkpoint:human-verify pending for Task 3.
-Resume file: .planning/phases/12-50-file-fsm-upload/12-04-PLAN.md (after 12-03 checkpoint approved)
+Stopped at: 12-03 APPROVED. T=0 baseline locked at 2026-02-20T19:50:16Z. Waiting for T+4h window.
+Resume file: .planning/phases/12-50-file-fsm-upload/12-04-PLAN.md
+Resume instruction: /clear FIRST, fresh session, then /gsd:execute-phase 12 -- will skip 12-01 through 12-03 and start at 12-04
