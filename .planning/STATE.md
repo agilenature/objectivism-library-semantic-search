@@ -11,18 +11,18 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 ## Current Position
 
 Phase: 8 of 16 (Store Migration Precondition)
-Plan: 0 of 3 in current phase
-Status: Ready to plan
-Last activity: 2026-02-19 -- Roadmap created for v2.0 (9 phases, 22 requirements mapped)
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-19 -- Completed 08-01-PLAN.md (DB Schema + State Reset)
 
-Progress: [░░░░░░░░░░] 0/20 v2.0 plans complete
+Progress: [#░░░░░░░░░] 1/20 v2.0 plans complete
 
 Note: Phase 07-07 (TUI integration smoke test from v1.0) deferred to Phase 16, plan 16-03.
   Runs against full live corpus after upload -- more meaningful than running on empty store.
   Plan file: .planning/phases/07-interactive-tui/07-07-PLAN.md
 
 v2.0 Phase Progress:
-Phase 8:  [░░░░░░░░░░] 0/3 plans -- NOT STARTED (Store Migration Precondition)
+Phase 8:  [###░░░░░░░] 1/3 plans -- IN PROGRESS (Store Migration Precondition)
 Phase 9:  [░░░░░░░░░░] 0/2 plans -- BLOCKED by Phase 8 gate (Wave 1: Async FSM Spike)
 Phase 10: [░░░░░░░░░░] 0/2 plans -- BLOCKED by Phase 9 gate (Wave 2: Transition Atomicity)
 Phase 11: [░░░░░░░░░░] 0/2 plans -- BLOCKED by Phase 10 gate (Wave 3: display_name + Import)
@@ -40,9 +40,9 @@ Phase 16: [░░░░░░░░░░] 0/3 plans -- BLOCKED by Phase 15 gate
 - Total execution time: 128 min
 
 **v2.0 Velocity:**
-- Total plans completed: 0
-- Average duration: --
-- Total execution time: --
+- Total plans completed: 1
+- Average duration: 4 min
+- Total execution time: 4 min
 
 *Updated after each plan completion*
 
@@ -59,6 +59,9 @@ Recent decisions affecting current work:
 - [v2.0 init]: Wave gates are BLOCKING -- each phase's success criteria must pass before the next phase begins
 - [v2.0 init]: STALE state and scanner deferred to v3 (STALE-01, STALE-02)
 - [v2.0 init]: Concurrency lock deferred to v3 (CONC-01)
+- [08-01]: V9 migration uses individual ALTER TABLE with try/except (not executescript) for column-exists safety
+- [08-01]: No CHECK constraint on gemini_state -- FSM enforces valid transitions in application code
+- [08-01]: Destructive state reset in standalone script (not auto-migration) -- requires explicit invocation
 
 ### Pending Todos
 
@@ -66,11 +69,10 @@ None.
 
 ### Blockers/Concerns
 
-- Phase 07-07 (TUI integration smoke test) unexecuted from v1.0 -- must run before Phase 8
 - Store migration is irreversible -- search offline from Phase 8 until Phase 12 completes 50-file upload
 
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: v2.0 roadmap created (9 phases, 22 requirements). Ready to execute 07-07 then plan Phase 8.
-Resume file: None
+Stopped at: Completed 08-01 (DB schema V9 + state reset). Ready for 08-02 (store deletion + creation).
+Resume file: .planning/phases/08-store-migration-precondition/08-02-PLAN.md
