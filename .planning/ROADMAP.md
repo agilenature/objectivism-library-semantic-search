@@ -149,6 +149,7 @@ Plans:
   3. `_reset_existing_files()` deletes the store document (via `delete_store_document()`) before deleting the raw file during any reset operation -- confirmed by running a reset on at least 5 files and verifying the store document count decreases accordingly (no orphan accumulation)
   4. `AsyncUploadStateManager` write methods are FSM transition triggers: no gemini-related state mutation (`gemini_state`, `gemini_store_doc_id`, `gemini_file_id`) occurs outside an FSM transition -- verified by grep/audit of all DB write sites
   5. `check_stability.py --store objectivism-library` reports STABLE (exit 0) at T=0 after the 50-file upload
+  6. `RecoveryCrawler._recover_file()` checks the return value of `finalize_reset()` and raises if it returns False -- the Phase 10 spike (spike/phase10_spike/recovery_crawler.py:65) silently ignores a False return (OCC conflict during recovery), which means a file can remain in partial-intent state while being logged as "Recovered"; the production implementation must not have this defect -- verified by a test that injects an OCC conflict during `finalize_reset()` and confirms the crawler raises rather than silently succeeds
 **Plans**: TBD
 
 Plans:
