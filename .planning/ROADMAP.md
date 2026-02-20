@@ -129,11 +129,11 @@ Plans:
   1. `display_name` is confirmed to be set by our code (the `display_name=` parameter in the import call) via inspection of the google-genai SDK source -- not inferred or modified by the API -- with the specific SDK source file and line number documented
   2. Import-to-visible lag is measured empirically across at least 10 test files: the time between `documents.import_()` returning success and the document appearing in `list_store_documents()` is characterized with P50, P95, and P99 latencies -- and the FSM's PROCESSING-to-INDEXED transition strategy accounts for this lag
   3. The PROCESSING-to-INDEXED trigger strategy is decided and documented: either (a) polling `list_store_documents()` until visible, (b) trusting API success with store-sync as eventual consistency check, or (c) a VERIFYING intermediate state -- with the decision justified by the measured lag data
-**Plans**: TBD
+**Plans**: 2 plans in 2 waves
 
 Plans:
-- [ ] 11-01: SDK source inspection for display_name contract + import lag measurement spike
-- [ ] 11-02: PROCESSING-to-INDEXED trigger strategy decision and documentation
+- [ ] 11-01-PLAN.md -- SDK source inspection for display_name contract + round-trip verification + import lag measurement spike
+- [ ] 11-02-PLAN.md -- PROCESSING-to-INDEXED trigger strategy decision and Phase 11 gate documentation
 
 ---
 
