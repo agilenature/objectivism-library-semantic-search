@@ -93,11 +93,11 @@ Plans:
   1. The chosen FSM approach (library or hand-rolled) runs concurrent async transitions (multiple files transitioning simultaneously) inside `asyncio.run()` from a Typer command, with `aiosqlite` DB writes in each transition callback, producing no event loop conflicts, no thread leakage, and no connection-sharing violations -- demonstrated by a reproducible test harness, not just "it ran without errors"
   2. The test harness includes adversarial conditions: concurrent transitions on the same file (guard rejection), error injection during transitions (recovery to known state), and at least 10 simultaneous transition attempts -- each producing the correct, verified outcome
   3. The approach selection is documented with a comparison of candidates tested, the evidence for and against each, and the rationale for the final choice -- committed to the repository before Phase 10 begins
-**Plans**: TBD
+**Plans**: 2 plans in 2 waves
 
 Plans:
-- [ ] 09-01: Candidate evaluation spike (library vs. hand-rolled, async harness, concurrent transition tests)
-- [ ] 09-02: Approach selection, documentation, and integration scaffolding
+- [ ] 09-01-PLAN.md -- Spike infrastructure, Protocol, FSM adapter (library or hand-rolled), full adversarial test harness with all 4 affirmative evidence criteria
+- [ ] 09-02-PLAN.md -- Approach selection documentation with test matrix and evidence, integration scaffold for Phase 10
 
 ---
 
