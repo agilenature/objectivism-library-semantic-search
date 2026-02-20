@@ -328,7 +328,11 @@ def run_schema_step(args: argparse.Namespace) -> int:
 
     # Confirm
     if not args.yes:
-        response = input("\nProceed with schema reset? Type 'yes' to confirm: ")
+        try:
+            response = input("\nProceed with schema reset? Type 'yes' to confirm: ")
+        except EOFError:
+            console.print("[yellow]Aborted (non-interactive environment).[/yellow]")
+            return 0
         if response != "yes":
             console.print("[yellow]Aborted.[/yellow]")
             conn.close()
@@ -466,7 +470,11 @@ def run_store_step(args: argparse.Namespace) -> int:
 
     # f. Confirmation (unless --yes)
     if not args.yes:
-        response = input("Proceed? Type 'yes' to confirm: ")
+        try:
+            response = input("Proceed? Type 'yes' to confirm: ")
+        except EOFError:
+            console.print("[yellow]Aborted (non-interactive environment).[/yellow]")
+            return 0
         if response.strip() != "yes":
             console.print("[yellow]Aborted.[/yellow]")
             return 0
