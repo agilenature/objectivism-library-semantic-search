@@ -19,6 +19,7 @@ from datetime import datetime, timezone
 
 from objlib.models import UploadConfig
 from objlib.upload.client import GeminiFileSearchClient
+from objlib.upload.exceptions import OCCConflictError
 from objlib.upload.state import AsyncUploadStateManager
 
 logger = logging.getLogger(__name__)
@@ -419,3 +420,151 @@ class _OperationProxy:
 
     def __repr__(self) -> str:
         return f"_OperationProxy({self.name!r})"
+
+
+# ---------------------------------------------------------------------------
+# FSM Recovery Crawler (Phase 12)
+# ---------------------------------------------------------------------------
+
+
+class RecoveryCrawler:
+    """Startup recovery for files with pending write-ahead intents.
+
+    Scans for files with ``intent_type IS NOT NULL`` (indicating a crash
+    during a multi-step transition) and recovers each to 'untracked'
+    using linear step resumption.  No retry loops (GA-9).
+
+    SC6: :meth:`_recover_file` raises :class:`OCCConflictError` if
+    :meth:`finalize_reset` returns ``False``.  The outer
+    :meth:`recover_all` catches per-file and continues.
+
+    Args:
+        state: Async SQLite state manager.
+        client: Gemini File Search API client for deletion calls.
+    """
+
+    def __init__(
+        self,
+        state: AsyncUploadStateManager,
+        client: GeminiFileSearchClient,
+    ) -> None:
+        self._state = state
+        self._client = client
+
+    async def recover_all(self) -> tuple[list[str], list[str]]:
+        """Scan for pending intents and recover each file.
+
+        Returns:
+            Tuple of (recovered_paths, occ_failure_paths).
+        """
+        db = self._state._ensure_connected()
+        cursor = await db.execute(
+            """SELECT file_path, intent_type, intent_api_calls_completed,
+                      gemini_store_doc_id, gemini_file_id, version
+               FROM files WHERE intent_type IS NOT NULL
+               ORDER BY intent_started_at ASC"""
+        )
+        rows = [dict(r) for r in await cursor.fetchall()]
+
+        recovered: list[str] = []
+        occ_failures: list[str] = []
+        for row in rows:
+            try:
+                await self._recover_file(row)
+                recovered.append(row["file_path"])
+            except OCCConflictError as exc:
+                logger.error(
+                    "Recovery OCC conflict (file will retry next startup): %s", exc
+                )
+                occ_failures.append(row["file_path"])
+                # Per Q3: catch per-file, continue to next
+            except Exception as exc:
+                logger.error("Failed to recover %s: %s", row["file_path"], exc)
+        return recovered, occ_failures
+
+    async def _recover_file(self, row: dict) -> None:
+        """Linear step resumption from crash point.
+
+        SC6: raises :class:`OCCConflictError` on OCC conflict in
+        :meth:`finalize_reset`.
+        """
+        file_path = row["file_path"]
+        completed = row["intent_api_calls_completed"] or 0
+
+        # Step 1: Delete store document (if not already done)
+        if completed < 1 and row.get("gemini_store_doc_id"):
+            try:
+                await self._client.delete_store_document(row["gemini_store_doc_id"])
+            except Exception as exc:
+                if "404" not in str(exc) and "NOT_FOUND" not in str(exc):
+                    raise
+            await self._state.update_intent_progress(file_path, 1)
+
+        # Step 2: Delete raw file (if not already done)
+        if completed < 2 and row.get("gemini_file_id"):
+            file_name = row["gemini_file_id"]
+            if not file_name.startswith("files/"):
+                file_name = f"files/{file_name}"
+            try:
+                await self._client.delete_file(file_name)
+            except Exception as exc:
+                if "404" not in str(exc) and "NOT_FOUND" not in str(exc):
+                    raise
+            await self._state.update_intent_progress(file_path, 2)
+
+        # Step 3: Finalize (SC6 fix -- check return value and raise)
+        result = await self._state.finalize_reset(file_path, row["version"])
+        if not result:
+            raise OCCConflictError(
+                f"finalize_reset() OCC conflict during recovery: {file_path}"
+            )
+        logger.info(
+            "Recovered %s: intent=%s, resumed_from_step=%d",
+            file_path, row["intent_type"], completed,
+        )
+
+
+# ---------------------------------------------------------------------------
+# Standalone retry helper (Phase 12)
+# ---------------------------------------------------------------------------
+
+
+async def retry_failed_file(
+    state: AsyncUploadStateManager, file_path: str
+) -> bool:
+    """Transition a FAILED file back to UNTRACKED for re-upload.
+
+    This is the production equivalent of the Phase 10 spike's
+    ``retry_failed_file()`` -- a standalone function (not an FSM
+    adapter) for the FAILED->UNTRACKED escape path.
+
+    Args:
+        state: Async SQLite state manager.
+        file_path: Primary key of the file to retry.
+
+    Returns:
+        True if the file was successfully reset, False otherwise.
+    """
+    db = state._ensure_connected()
+    now = state._now_iso()
+    cursor = await db.execute(
+        """UPDATE files
+           SET gemini_state = 'untracked',
+               status = 'pending',
+               gemini_file_id = NULL,
+               gemini_file_uri = NULL,
+               gemini_store_doc_id = NULL,
+               upload_timestamp = NULL,
+               remote_expiration_ts = NULL,
+               intent_type = NULL,
+               intent_started_at = NULL,
+               intent_api_calls_completed = NULL,
+               error_message = NULL,
+               version = version + 1,
+               gemini_state_updated_at = ?
+           WHERE file_path = ?
+             AND gemini_state = 'failed'""",
+        (now, file_path),
+    )
+    await db.commit()
+    return cursor.rowcount == 1

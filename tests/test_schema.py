@@ -86,10 +86,10 @@ class TestSchemaCreation:
             f"Missing triggers: {EXPECTED_TRIGGERS - actual_triggers}"
         )
 
-    def test_user_version_is_9(self, in_memory_db):
-        """PRAGMA user_version returns 9 after schema setup."""
+    def test_user_version_is_10(self, in_memory_db):
+        """PRAGMA user_version returns 10 after schema setup (V10: OCC + intent columns)."""
         version = in_memory_db.conn.execute("PRAGMA user_version").fetchone()[0]
-        assert version == 9
+        assert version == 10
 
 
 class TestTriggers:
