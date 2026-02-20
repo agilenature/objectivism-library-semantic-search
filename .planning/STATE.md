@@ -11,18 +11,18 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 ## Current Position
 
 Phase: 8 of 16 (Store Migration Precondition)
-Plan: 1 of 3 in current phase
+Plan: 3 of 3 in current phase (08-02 running in parallel)
 Status: In progress
-Last activity: 2026-02-19 -- Completed 08-01-PLAN.md (DB Schema + State Reset)
+Last activity: 2026-02-19 -- Completed 08-03-PLAN.md (Stability Instrument v2)
 
-Progress: [#░░░░░░░░░] 1/20 v2.0 plans complete
+Progress: [##░░░░░░░░] 2/20 v2.0 plans complete
 
 Note: Phase 07-07 (TUI integration smoke test from v1.0) deferred to Phase 16, plan 16-03.
   Runs against full live corpus after upload -- more meaningful than running on empty store.
   Plan file: .planning/phases/07-interactive-tui/07-07-PLAN.md
 
 v2.0 Phase Progress:
-Phase 8:  [###░░░░░░░] 1/3 plans -- IN PROGRESS (Store Migration Precondition)
+Phase 8:  [######░░░░] 2/3 plans -- IN PROGRESS (Store Migration Precondition) [08-02 parallel]
 Phase 9:  [░░░░░░░░░░] 0/2 plans -- BLOCKED by Phase 8 gate (Wave 1: Async FSM Spike)
 Phase 10: [░░░░░░░░░░] 0/2 plans -- BLOCKED by Phase 9 gate (Wave 2: Transition Atomicity)
 Phase 11: [░░░░░░░░░░] 0/2 plans -- BLOCKED by Phase 10 gate (Wave 3: display_name + Import)
@@ -40,9 +40,9 @@ Phase 16: [░░░░░░░░░░] 0/3 plans -- BLOCKED by Phase 15 gate
 - Total execution time: 128 min
 
 **v2.0 Velocity:**
-- Total plans completed: 1
-- Average duration: 4 min
-- Total execution time: 4 min
+- Total plans completed: 2
+- Average duration: 3.5 min
+- Total execution time: 7 min
 
 *Updated after each plan completion*
 
@@ -62,6 +62,9 @@ Recent decisions affecting current work:
 - [08-01]: V9 migration uses individual ALTER TABLE with try/except (not executescript) for column-exists safety
 - [08-01]: No CHECK constraint on gemini_state -- FSM enforces valid transitions in application code
 - [08-01]: Destructive state reset in standalone script (not auto-migration) -- requires explicit invocation
+- [08-03]: Stability instrument v2 uses raw genai SDK (no objlib dependency) for independence
+- [08-03]: Prerequisite failures produce exit 2 (error) not exit 1 (unstable) -- distinguishes config from sync
+- [08-03]: Vacuous pass on empty store prevents false negatives during migration window
 
 ### Pending Todos
 
@@ -74,5 +77,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 08-01 (DB schema V9 + state reset). Ready for 08-02 (store deletion + creation).
+Stopped at: Completed 08-03 (stability instrument v2). 08-02 running in parallel (store migration).
 Resume file: .planning/phases/08-store-migration-precondition/08-02-PLAN.md
