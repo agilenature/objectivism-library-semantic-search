@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 ## Current Position
 
 Phase: 10 of 16 (Transition Atomicity Spike)
-Plan: 0 of 2 in current phase
-Status: Phase 9 complete, Phase 10 ready
-Last activity: 2026-02-20 -- Completed 09-02-PLAN.md (approach selection + integration scaffold)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-20 -- Completed 10-01-PLAN.md (write-ahead intent spike)
 
-Progress: [#####░░░░░] 5/20 v2.0 plans complete
+Progress: [######░░░░] 6/20 v2.0 plans complete
 
 Note: Phase 07-07 (TUI integration smoke test from v1.0) deferred to Phase 16, plan 16-03.
   Runs against full live corpus after upload -- more meaningful than running on empty store.
@@ -24,7 +24,7 @@ Note: Phase 07-07 (TUI integration smoke test from v1.0) deferred to Phase 16, p
 v2.0 Phase Progress:
 Phase 8:  [##########] 3/3 plans -- COMPLETE (Store Migration Precondition)
 Phase 9:  [##########] 2/2 plans -- COMPLETE (Wave 1: Async FSM Spike) -- gate PASSED 2026-02-20
-Phase 10: [░░░░░░░░░░] 0/2 plans -- READY (Wave 2: Transition Atomicity)
+Phase 10: [#####░░░░░] 1/2 plans -- IN PROGRESS (Wave 2: Transition Atomicity)
 Phase 11: [░░░░░░░░░░] 0/2 plans -- BLOCKED by Phase 10 gate (Wave 3: display_name + Import)
 Phase 12: [░░░░░░░░░░] 0/2 plans -- BLOCKED by Phase 11 gate (Wave 4: 50-File FSM Upload)
 Phase 13: [░░░░░░░░░░] 0/2 plans -- BLOCKED by Phase 12 gate (Wave 5: State Column Retirement)
@@ -40,9 +40,9 @@ Phase 16: [░░░░░░░░░░] 0/3 plans -- BLOCKED by Phase 15 gate
 - Total execution time: 128 min
 
 **v2.0 Velocity:**
-- Total plans completed: 5
-- Average duration: 4.4 min
-- Total execution time: 25 min
+- Total plans completed: 6
+- Average duration: 4.2 min
+- Total execution time: 28 min
 
 *Updated after each plan completion*
 
@@ -74,6 +74,10 @@ Recent decisions affecting current work:
 - [09-02]: python-statemachine 2.6.0 selected as final FSM approach -- all 9 test criteria pass, documented in APPROACH-SELECTION.md
 - [09-02]: FileTransitionManager is the Phase 10 bridge pattern between AsyncUploadStateManager and StateMachineAdapter
 - [09-02]: Phase 9 BLOCKING gate PASSED -- Phase 10 unblocked
+- [10-01]: Intent columns on files table (not separate table) -- simple schema, no cross-table joins for recovery
+- [10-01]: safe_delete catches ClientError code==404 as success, re-raises all others
+- [10-01]: Txn A writes intent (no version increment), Txn B finalizes (increments version)
+- [10-01]: ResetTransitionManager bypasses StateMachineAdapter -- multi-step transitions need direct DB control
 
 ### Pending Todos
 
@@ -86,5 +90,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Phase 9 complete (2/2 plans). Phase 10 ready to begin.
-Resume file: .planning/phases/10-transition-atomicity/ (plans TBD)
+Stopped at: Phase 10, plan 1 of 2 complete. Plan 10-02 (crash recovery) ready.
+Resume file: .planning/phases/10-transition-atomicity/10-02-PLAN.md
