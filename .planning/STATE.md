@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 
 ## Current Position
 
-Phase: 8 of 16 (Store Migration Precondition)
-Plan: 3 of 3 in current phase
-Status: Phase complete
-Last activity: 2026-02-20 -- Completed 08-02 (store migration: objectivism-library created, objectivism-library-test deleted)
+Phase: 9 of 16 (Async FSM Spike)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-20 -- Completed 09-01-PLAN.md (spike infrastructure + adversarial tests)
 
-Progress: [###░░░░░░░] 3/20 v2.0 plans complete
+Progress: [####░░░░░░] 4/20 v2.0 plans complete
 
 Note: Phase 07-07 (TUI integration smoke test from v1.0) deferred to Phase 16, plan 16-03.
   Runs against full live corpus after upload -- more meaningful than running on empty store.
@@ -23,7 +23,7 @@ Note: Phase 07-07 (TUI integration smoke test from v1.0) deferred to Phase 16, p
 
 v2.0 Phase Progress:
 Phase 8:  [##########] 3/3 plans -- COMPLETE (Store Migration Precondition)
-Phase 9:  [░░░░░░░░░░] 0/2 plans -- READY (Wave 1: Async FSM Spike)
+Phase 9:  [#####░░░░░] 1/2 plans -- IN PROGRESS (Wave 1: Async FSM Spike)
 Phase 10: [░░░░░░░░░░] 0/2 plans -- BLOCKED by Phase 9 gate (Wave 2: Transition Atomicity)
 Phase 11: [░░░░░░░░░░] 0/2 plans -- BLOCKED by Phase 10 gate (Wave 3: display_name + Import)
 Phase 12: [░░░░░░░░░░] 0/2 plans -- BLOCKED by Phase 11 gate (Wave 4: 50-File FSM Upload)
@@ -40,9 +40,9 @@ Phase 16: [░░░░░░░░░░] 0/3 plans -- BLOCKED by Phase 15 gate
 - Total execution time: 128 min
 
 **v2.0 Velocity:**
-- Total plans completed: 3
-- Average duration: 4.3 min
-- Total execution time: 15 min
+- Total plans completed: 4
+- Average duration: 4.8 min
+- Total execution time: 22 min
 
 *Updated after each plan completion*
 
@@ -68,6 +68,9 @@ Recent decisions affecting current work:
 - [08-02]: Create new store before deleting old -- never leaves system without a store
 - [08-02]: force=True required for non-empty store deletion (FAILED_PRECONDITION otherwise)
 - [08-02]: Store resource name persisted to library_config for all future phases
+- [09-01]: python-statemachine 2.6.0 PASSES async guard binary test -- library path confirmed, no pivot to hand-rolled
+- [09-01]: on_enter_state callback params must be optional (None defaults) for activate_initial_state() compatibility
+- [09-01]: All 4 affirmative evidence criteria pass: DB invariants, JSON event log, thread/task leak check, same-file adversarial test
 
 ### Pending Todos
 
@@ -80,5 +83,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Phase 8 complete (all 3 plans done). Phase 9 ready to begin.
-Resume file: .planning/ROADMAP.md (Phase 9)
+Stopped at: Phase 9 Plan 1 complete. Plan 2 (approach selection documentation) ready.
+Resume file: .planning/phases/09-async-fsm-spike/09-02-PLAN.md
