@@ -132,7 +132,7 @@ Plans:
 **Plans**: 2 plans in 2 waves
 
 Plans:
-- [ ] 11-01-PLAN.md -- SDK source inspection for display_name contract + round-trip verification + import lag measurement spike
+- [x] 11-01-PLAN.md -- SDK source inspection for display_name contract + round-trip verification + import lag measurement spike
 - [ ] 11-02-PLAN.md -- PROCESSING-to-INDEXED trigger strategy decision and Phase 11 gate documentation
 
 ---
@@ -259,7 +259,7 @@ Each wave's gate is BLOCKING for the next. If a gate fails, the failing phase mu
 | 8. Store Migration | v2.0 | 3/3 | Complete | 2026-02-20 |
 | 9. Async FSM Spike | v2.0 | 2/2 | Complete | 2026-02-20 |
 | 10. Transition Atomicity | v2.0 | 2/2 | Complete | 2026-02-20 |
-| 11. display_name + Import | v2.0 | 0/2 | Not started | - |
+| 11. display_name + Import | v2.0 | 1/2 | In progress | - |
 | 12. 50-File FSM Upload | v2.0 | 0/2 | Not started | - |
 | 13. State Column Retirement | v2.0 | 0/2 | Not started | - |
 | 14. Batch Performance | v2.0 | 0/2 | Not started | - |

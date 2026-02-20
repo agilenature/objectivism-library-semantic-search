@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 
 ## Current Position
 
-Phase: 10 of 16 (Transition Atomicity Spike) -> COMPLETE
-Plan: 2 of 2 in current phase (BOTH complete)
-Status: Phase 10 complete, Phase 11 unblocked
-Last activity: 2026-02-20 -- Completed 10-02-PLAN.md (crash recovery + Phase 10 gate)
+Phase: 11 of 16 (display_name + Import)
+Plan: 1 of 2 in current phase (Plan 01 complete)
+Status: Phase 11 in progress, Plan 11-02 next
+Last activity: 2026-02-20 -- Completed 11-01-PLAN.md (display_name spike + import lag measurement)
 
-Progress: [#######░░░] 7/20 v2.0 plans complete
+Progress: [########░░] 8/20 v2.0 plans complete
 
 Note: Phase 07-07 (TUI integration smoke test from v1.0) deferred to Phase 16, plan 16-03.
   Runs against full live corpus after upload -- more meaningful than running on empty store.
@@ -25,7 +25,7 @@ v2.0 Phase Progress:
 Phase 8:  [##########] 3/3 plans -- COMPLETE (Store Migration Precondition)
 Phase 9:  [##########] 2/2 plans -- COMPLETE (Wave 1: Async FSM Spike) -- gate PASSED 2026-02-20
 Phase 10: [##########] 2/2 plans -- COMPLETE (Wave 2: Transition Atomicity) -- gate PASSED 2026-02-20
-Phase 11: [░░░░░░░░░░] 0/2 plans -- UNBLOCKED (Wave 3: display_name + Import)
+Phase 11: [#####░░░░░] 1/2 plans -- IN PROGRESS (Wave 3: display_name + Import)
 Phase 12: [░░░░░░░░░░] 0/2 plans -- BLOCKED by Phase 11 gate (Wave 4: 50-File FSM Upload)
 Phase 13: [░░░░░░░░░░] 0/2 plans -- BLOCKED by Phase 12 gate (Wave 5: State Column Retirement)
 Phase 14: [░░░░░░░░░░] 0/2 plans -- BLOCKED by Phase 13 gate (Wave 6: Batch Performance)
@@ -40,9 +40,9 @@ Phase 16: [░░░░░░░░░░] 0/3 plans -- BLOCKED by Phase 15 gate
 - Total execution time: 128 min
 
 **v2.0 Velocity:**
-- Total plans completed: 7
-- Average duration: 4.2 min
-- Total execution time: 32 min
+- Total plans completed: 8
+- Average duration: 6.5 min
+- Total execution time: 54 min
 
 *Updated after each plan completion*
 
@@ -82,6 +82,11 @@ Recent decisions affecting current work:
 - [10-02]: retry_failed_file() is standalone function (not FSM adapter) for FAILED->UNTRACKED escape
 - [10-02]: SC3 measurement: recovery 28 lines <= transition 36 lines, zero while loops
 - [10-02]: Phase 10 BLOCKING gate PASSED -- Phase 11 unblocked
+- [11-01]: File.display_name is 100% caller-controlled -- 13/13 exact round-trip match across special chars, case, spaces, 500-char names
+- [11-01]: Document.display_name = file resource ID, NOT submitted display_name -- 0/13 match. Citation mapping must use file_id -> DB lookup.
+- [11-01]: documents.get() P50=0.243s, documents.list() P50=0.495s -- get() is 2x faster and should be primary visibility check
+- [11-01]: No exponential backoff needed for post-import visibility -- documents visible immediately after import completes
+- [11-01]: Leading whitespace in display_name causes import hang -- defensive strip() recommended
 
 ### Pending Todos
 
@@ -94,5 +99,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Phase 10 COMPLETE (2/2 plans). Phase 11 unblocked.
-Resume file: .planning/phases/11-display-name-import/11-01-PLAN.md
+Stopped at: Phase 11 Plan 01 complete. Plan 11-02 (trigger strategy decision) next.
+Resume file: .planning/phases/11-display-name-import/11-02-PLAN.md
