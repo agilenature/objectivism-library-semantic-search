@@ -1498,8 +1498,13 @@ class FSMUploadOrchestrator(EnrichedUploadOrchestrator):
 
                 # Step 2: Delete store document FIRST (SC3 order)
                 if gemini_store_doc_id:
+                    # Construct full resource name if DB stores only the suffix
+                    doc_resource_name = gemini_store_doc_id
+                    if not doc_resource_name.startswith("fileSearchStores/"):
+                        store_name = self._client.store_name or ""
+                        doc_resource_name = f"{store_name}/documents/{gemini_store_doc_id}"
                     try:
-                        await self._client.delete_store_document(gemini_store_doc_id)
+                        await self._client.delete_store_document(doc_resource_name)
                     except Exception as exc:
                         exc_str = str(exc)
                         if "404" not in exc_str and "NOT_FOUND" not in exc_str:

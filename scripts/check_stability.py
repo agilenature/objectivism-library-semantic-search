@@ -348,8 +348,8 @@ class StabilityChecker:
                 contents=self.sample_query,
                 config=genai_types.GenerateContentConfig(
                     tools=[genai_types.Tool(
-                        file_search=genai_types.ToolFileSearch(
-                            file_search_store=self.store_resource_name
+                        file_search=genai_types.FileSearch(
+                            file_search_store_names=[self.store_resource_name]
                         )
                     )]
                 ),
@@ -459,10 +459,16 @@ class StabilityChecker:
             return 2
 
         store_doc_names: set = set()
+        store_doc_full_names: set = set()
         for doc in docs:
             name = getattr(doc, "name", "") or ""
             if name:
-                store_doc_names.add(name)
+                store_doc_full_names.add(name)
+                # Extract suffix after "documents/" to match DB format
+                # DB stores document_name from operation response (e.g. "xxx-yyy")
+                # Store returns full resource name (e.g. "fileSearchStores/.../documents/xxx-yyy")
+                suffix = name.split("/documents/")[-1] if "/documents/" in name else name
+                store_doc_names.add(suffix)
         self._verbose(f"Store doc names (sample): {sorted(store_doc_names)[:3]}")
 
         # Step 3: Structural checks
