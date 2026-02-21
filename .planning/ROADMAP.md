@@ -282,7 +282,7 @@ Each wave's gate is BLOCKING for the next. If a gate fails, the failing phase mu
 | 9. Async FSM Spike | v2.0 | 2/2 | Complete | 2026-02-20 |
 | 10. Transition Atomicity | v2.0 | 2/2 | Complete | 2026-02-20 |
 | 11. display_name + Import | v2.0 | 2/2 | Complete | 2026-02-20 |
-| 12. 50-File FSM Upload | v2.0 | 0/6 | Ready (Phase 11 gate PASSED) | - |
+| 12. 50-File FSM Upload | v2.0 | 5/6 | In progress | - |
 | 13. State Column Retirement | v2.0 | 0/2 | Not started | - |
 | 14. Batch Performance | v2.0 | 0/2 | Not started | - |
 | 15. Consistency + store-sync | v2.0 | 0/2 | Not started | - |
@@ -291,4 +291,4 @@ Each wave's gate is BLOCKING for the next. If a gate fails, the failing phase mu
 ---
 *Roadmap created: 2026-02-19*
 *Pre-mortem: governance/pre-mortem-gemini-fsm.md*
-*Last updated: 2026-02-20 -- Phase 12 planned (6 plans in 6 waves)*
+*Last updated: 2026-02-21 -- Phase 12 plan 05 complete (T+24h gate PASSED, Phase 13 unblocked)*
