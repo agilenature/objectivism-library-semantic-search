@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 
 ## Current Position
 
-Phase: 14 of 16 (Batch Performance Benchmark) -- COMPLETE (including gap closure)
-Plan: 3 of 3 in current phase (Phase 14 COMPLETE with SC2 gap closed)
-Status: Phase 14 fully complete. VLID-06 gate PASSED. SC2 mitigation tested. Phase 15 UNBLOCKED.
-Last activity: 2026-02-22 -- Completed 14-03-PLAN.md (SC2 gap closure: shared-connection mitigation measured)
+Phase: 15 of 16 (Consistency + store-sync) -- IN PROGRESS
+Plan: 1 of 3 in current phase (15-01 complete: lag measurement)
+Status: Phase 15 Plan 01 complete. Import-to-searchable lag measured (P50=7.3s, P95=10.1s, 5% failure rate).
+Last activity: 2026-02-22 -- Completed 15-01-PLAN.md (import-to-searchable lag measurement)
 
-Progress: [####################] 20/26 v2.0 plans complete
+Progress: [#####################] 21/28 v2.0 plans complete
 
 Note: Phase 07-07 (TUI integration smoke test from v1.0) deferred to Phase 16, plan 16-03.
   Runs against full live corpus after upload -- more meaningful than running on empty store.
@@ -29,8 +29,8 @@ Phase 11: [##########] 2/2 plans -- COMPLETE (Wave 3: display_name + Import) -- 
 Phase 12: [##########] 6/6 plans -- COMPLETE (Wave 4: 50-File FSM Upload) -- gate PASSED 2026-02-22
 Phase 13: [##########] 2/2 plans -- COMPLETE (Wave 5: State Column Retirement) -- gate PASSED 2026-02-22
 Phase 14: [##########] 3/3 plans -- COMPLETE (Wave 6: Batch Performance) -- VLID-06 PASSED + SC2 gap closed 2026-02-22
-Phase 15: [░░░░░░░░░░] 0/2 plans -- UNBLOCKED (Wave 7: Consistency + store-sync)
-Phase 16: [░░░░░░░░░░] 0/3 plans -- BLOCKED by Phase 15 gate (Wave 8: Full Library Upload + 07-07)
+Phase 15: [###░░░░░░░] 1/3 plans -- IN PROGRESS (Wave 7: Consistency + store-sync)
+Phase 16: [░░░░░░░░░░] 0/4 plans -- BLOCKED by Phase 15 gate (Wave 8: Full Library Upload + 07-07)
 
 ## Performance Metrics
 
@@ -40,9 +40,9 @@ Phase 16: [░░░░░░░░░░] 0/3 plans -- BLOCKED by Phase 15 gate
 - Total execution time: 128 min
 
 **v2.0 Velocity:**
-- Total plans completed: 19
-- Average duration: 10.9 min
-- Total execution time: 208 min
+- Total plans completed: 21
+- Average duration: 11.3 min
+- Total execution time: 237 min
 
 *Updated after each plan completion*
 
@@ -117,6 +117,10 @@ Recent decisions affecting current work:
 - [14-02]: Phase 14 BLOCKING gate PASSED -- Phase 15 unblocked
 - [14-03]: Shared connection mitigation eliminates 98% of WAL lock contention (lock_wait P95: 40.65ms -> 0.77ms) -- available as production option
 - [14-03]: SC2 gap closed: mitigation tested with before/after measurements, results saved to results-mitigation-*.json
+- [15-01]: Import-to-searchable lag: P50=7.3s, P95=10.1s, max=10.1s -- meaningful gap between listing (~1.5s) and search visibility (~7s)
+- [15-01]: Silent failure rate 5% (1/20 files never searchable in 300s) -- likely query-specificity issue, not indexing failure
+- [15-01]: Listing visibility fast (~1.5-2s, consistent with Phase 11), but embedding/search indexing adds 5-8s
+- [15-01]: 5% failure rate triggers store-sync escalation consideration per Q7 decision (any failure rate > 0%)
 
 ### Pending Todos
 
@@ -130,6 +134,6 @@ None.
 
 
 Last session: 2026-02-22
-Stopped at: Phase 14 fully complete (including SC2 gap closure). Phase 15 unblocked.
-Resume file: .planning/phases/15-consistency-store-sync/15-01-PLAN.md
-Resume instruction: /gsd:execute-phase 15 plan 01
+Stopped at: Phase 15 Plan 01 complete (import-to-searchable lag measured). Plan 02 next.
+Resume file: .planning/phases/15-consistency-store-sync/15-02-PLAN.md
+Resume instruction: /gsd:execute-phase 15 plan 02
