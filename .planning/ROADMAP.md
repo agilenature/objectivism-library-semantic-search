@@ -194,8 +194,8 @@ Plans:
 **Plans**: 2 plans in 2 waves
 
 Plans:
-- [ ] 13-01-PLAN.md -- Precondition verification (sqlite3 CLI) and status inventory artifact (docs/migrations/phase13-status-inventory.md)
-- [ ] 13-02-PLAN.md -- V11 migration execution, all code rewrites, FileStatus removal, test suite update, full test pass
+- [x] 13-01-PLAN.md -- Precondition verification (sqlite3 CLI) and status inventory artifact (docs/migrations/phase13-status-inventory.md)
+- [x] 13-02-PLAN.md -- V11 migration execution, all code rewrites, FileStatus removal, test suite update, full test pass
 
 ---
 
@@ -283,7 +283,7 @@ Each wave's gate is BLOCKING for the next. If a gate fails, the failing phase mu
 | 10. Transition Atomicity | v2.0 | 2/2 | Complete | 2026-02-20 |
 | 11. display_name + Import | v2.0 | 2/2 | Complete | 2026-02-20 |
 | 12. 50-File FSM Upload | v2.0 | 6/6 | Complete | 2026-02-22 |
-| 13. State Column Retirement | v2.0 | 0/2 | Not started | - |
+| 13. State Column Retirement | v2.0 | 2/2 | Complete | 2026-02-22 |
 | 14. Batch Performance | v2.0 | 0/2 | Not started | - |
 | 15. Consistency + store-sync | v2.0 | 0/2 | Not started | - |
 | 16. Full Library Upload | v2.0 | 0/3 | Not started | - |
@@ -291,4 +291,4 @@ Each wave's gate is BLOCKING for the next. If a gate fails, the failing phase mu
 ---
 *Roadmap created: 2026-02-19*
 *Pre-mortem: governance/pre-mortem-gemini-fsm.md*
-*Last updated: 2026-02-22 -- Phase 13 planned (2 plans in 2 waves)*
+*Last updated: 2026-02-22 -- Phase 13 complete (V11 migration, status column retired, 459 tests passing)*
