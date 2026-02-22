@@ -229,11 +229,11 @@ Plans:
   2. `store-sync`'s ongoing role is explicitly defined as one of: (a) routine automatic step after every upload, (b) scheduled periodic reconciliation, or (c) emergency-only tool -- with the decision justified by the measured lag data and any observed Gemini-side silent failures
   3. The contract between FSM and store-sync is documented: FSM owns state writes, store-sync owns read-verification -- and any case where they could disagree (FSM says INDEXED, store-sync says orphaned) has a defined resolution policy
   4. `check_stability.py --store objectivism-library` reports STABLE at T=0, T+4h, and T+24h after the 50-file corpus has been indexed -- temporal stability confirmed before full upload
-**Plans**: TBD
+**Plans**: 2 plans in 2 waves
 
 Plans:
-- [ ] 15-01: Import-to-searchable lag measurement and Gemini-side failure characterization
-- [ ] 15-02: store-sync contract definition, FSM/store-sync reconciliation policy, temporal stability verification
+- [ ] 15-01-PLAN.md -- Lag measurement script (measure_searchability_lag.py) and 20-file measurement run with targeted per-file queries
+- [ ] 15-02-PLAN.md -- FSM/store-sync contract (governance/store-sync-contract.md), downgrade_to_failed() function, temporal stability (T=0/T+4h/T+24h)
 
 ---
 
@@ -292,4 +292,4 @@ Each wave's gate is BLOCKING for the next. If a gate fails, the failing phase mu
 ---
 *Roadmap created: 2026-02-19*
 *Pre-mortem: governance/pre-mortem-gemini-fsm.md*
-*Last updated: 2026-02-22 -- Phase 14 gap closure: SC2 mitigation test (14-03-PLAN.md)*
+*Last updated: 2026-02-22 -- Phase 15 planned: 2 plans in 2 waves*
