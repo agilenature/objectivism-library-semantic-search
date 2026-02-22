@@ -171,11 +171,11 @@ Plans:
 **Plans**: 6 plans in 6 waves
 
 Plans:
-- [ ] 12-01-PLAN.md -- V10 DB migration + FSM core (FileLifecycleSM, OCCConflictError, transition_to_*() methods)
-- [ ] 12-02-PLAN.md -- FSM orchestrator integration + _reset_existing_files fix + RecoveryCrawler + tests
-- [ ] 12-03-PLAN.md -- 50-file FSM upload + T=0 baseline (check_stability, DB counts, store-sync, SC2, 5 TUI queries)
-- [ ] 12-04-PLAN.md -- T+4h drift check [fresh session, /clear before starting]
-- [ ] 12-05-PLAN.md -- T+24h gate [fresh session, /clear before starting] -- BLOCKING for Phase 13
+- [x] 12-01-PLAN.md -- V10 DB migration + FSM core (FileLifecycleSM, OCCConflictError, transition_to_*() methods)
+- [x] 12-02-PLAN.md -- FSM orchestrator integration + _reset_existing_files fix + RecoveryCrawler + tests
+- [x] 12-03-PLAN.md -- 50-file FSM upload + T=0 baseline (check_stability, DB counts, store-sync, SC2, 5 TUI queries)
+- [x] 12-04-PLAN.md -- T+4h drift check [fresh session, /clear before starting]
+- [x] 12-05-PLAN.md -- T+24h gate [fresh session, /clear before starting] -- BLOCKING for Phase 13
 - [x] 12-06-PLAN.md -- T+36h confirmation [fresh session, /clear before starting]
 
 ---
@@ -191,11 +191,11 @@ Plans:
   2. `gemini_state` persists as a plain string enum (`'untracked'`, `'uploading'`, `'processing'`, `'indexed'`, `'failed'`) stored directly in the DB column -- never serialized through a library's internal format -- confirmed by reading raw DB values with `sqlite3` CLI
   3. The migration window (period where both `status` and `gemini_state` are active) has an explicit defined scope: which operations write to which column, and when `status` will be dropped or made derived -- no open-ended dual-write period
   4. All TUI commands, CLI commands, and tests pass after the `gemini_state` migration with no behavioral change visible to the user
-**Plans**: TBD
+**Plans**: 2 plans in 2 waves
 
 Plans:
-- [ ] 13-01: Legacy status column audit and gemini_state migration mapping
-- [ ] 13-02: Migration execution, dual-write elimination, and full test pass verification
+- [ ] 13-01-PLAN.md -- Precondition verification (sqlite3 CLI) and status inventory artifact (docs/migrations/phase13-status-inventory.md)
+- [ ] 13-02-PLAN.md -- V11 migration execution, all code rewrites, FileStatus removal, test suite update, full test pass
 
 ---
 
@@ -291,4 +291,4 @@ Each wave's gate is BLOCKING for the next. If a gate fails, the failing phase mu
 ---
 *Roadmap created: 2026-02-19*
 *Pre-mortem: governance/pre-mortem-gemini-fsm.md*
-*Last updated: 2026-02-22 -- Phase 12 COMPLETE (T+36h CONFIRMED, 6/6 plans, temporal stability protocol done, Phase 13 unblocked)*
+*Last updated: 2026-02-22 -- Phase 13 planned (2 plans in 2 waves)*
