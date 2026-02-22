@@ -209,11 +209,12 @@ Plans:
   1. FSM transition throughput is measured under a simulated 818-file batch (the full `UNTRACKED -> UPLOADING -> PROCESSING -> INDEXED` cycle for each file): transitions per second, total elapsed time, and P95 per-transition latency are recorded
   2. The bottleneck is identified (guard check read, state write, API call mock latency, or WAL serialization) and at least one mitigation is tested (batch DB writes, async state writes, or reduced guard checks) -- with before/after measurements
   3. An acceptable throughput threshold is defined explicitly (e.g., "full upload completes within X hours") and the current measured throughput either meets it or the tested mitigation brings it within range
-**Plans**: 2 plans in 2 waves
+**Plans**: 3 plans (2 baseline + 1 gap closure)
 
 Plans:
 - [x] 14-01-PLAN.md -- Benchmark harness (yappi + explicit spans), 818-file simulation, 6 configurations (3 concurrency x 2 profiles), baseline measurement, bottleneck identification
 - [x] 14-02-PLAN.md -- VLID-06 gate verdict: PASS (PATH A, baseline passed both thresholds with 337x/66x margin), Phase 15 unblocked
+- [ ] 14-03-PLAN.md -- Gap closure: shared-connection mitigation test with before/after measurements (SC2 requirement)
 
 ---
 
@@ -284,11 +285,11 @@ Each wave's gate is BLOCKING for the next. If a gate fails, the failing phase mu
 | 11. display_name + Import | v2.0 | 2/2 | Complete | 2026-02-20 |
 | 12. 50-File FSM Upload | v2.0 | 6/6 | Complete | 2026-02-22 |
 | 13. State Column Retirement | v2.0 | 2/2 | Complete | 2026-02-22 |
-| 14. Batch Performance | v2.0 | 2/2 | Complete | 2026-02-22 |
+| 14. Batch Performance | v2.0 | 2/3 | Gap closure | - |
 | 15. Consistency + store-sync | v2.0 | 0/2 | Not started | - |
 | 16. Full Library Upload | v2.0 | 0/3 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-19*
 *Pre-mortem: governance/pre-mortem-gemini-fsm.md*
-*Last updated: 2026-02-22 -- Phase 14 COMPLETE (VLID-06 gate PASSED, Phase 15 unblocked)*
+*Last updated: 2026-02-22 -- Phase 14 gap closure: SC2 mitigation test (14-03-PLAN.md)*
