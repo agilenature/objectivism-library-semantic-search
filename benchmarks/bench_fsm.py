@@ -270,17 +270,30 @@ async def run_benchmark(
     profile: str,
     db_path: str,
     realistic_delay: float = 2.0,
+    shared_conn: "aiosqlite.Connection | None" = None,
 ) -> list[dict[str, float]]:
-    """Run 818 files through full lifecycle at given concurrency and profile."""
+    """Run 818 files through full lifecycle at given concurrency and profile.
+
+    If shared_conn is provided, all workers share one aiosqlite connection instead
+    of opening per-file connections. This eliminates cross-connection WAL lock
+    contention -- all writes queue through one connection's internal serialization.
+    Expected effect: significant reduction in lock_wait_ms at c>=10.
+    """
     sem = asyncio.Semaphore(concurrency)
 
     async def worker(file_path: str, version: int) -> dict[str, float]:
         async with sem:
-            async with aiosqlite.connect(db_path) as db:
-                await db.execute("PRAGMA journal_mode=WAL")
-                await db.execute("PRAGMA synchronous=NORMAL")
+            if shared_conn is not None:
+                # Shared connection mitigation: no per-file connect/disconnect overhead,
+                # no cross-connection WAL lock contention
                 mock = MockApiAdapter(profile, realistic_delay=realistic_delay)
-                return await process_file(file_path, version, db, mock)
+                return await process_file(file_path, version, shared_conn, mock)
+            else:
+                async with aiosqlite.connect(db_path) as db:
+                    await db.execute("PRAGMA journal_mode=WAL")
+                    await db.execute("PRAGMA synchronous=NORMAL")
+                    mock = MockApiAdapter(profile, realistic_delay=realistic_delay)
+                    return await process_file(file_path, version, db, mock)
 
     tasks = [
         worker(f"/bench/file_{i:04d}.txt", 0) for i in range(FILE_COUNT)
@@ -500,6 +513,11 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Override realistic profile delay in seconds (default: 2.0, --quick sets 0.05)",
     )
+    parser.add_argument(
+        "--shared-connection",
+        action="store_true",
+        help="Mitigation: share one aiosqlite connection across all workers (reduces WAL lock contention)",
+    )
     return parser.parse_args()
 
 
@@ -521,6 +539,7 @@ async def main() -> None:
     console.print(f"  Profiles: {PROFILES}")
     console.print(f"  Realistic delay: {realistic_delay}s" + (" (quick mode)" if args.quick else ""))
     console.print(f"  Seed: {SEED} (constant delay, seed documented only)")
+    console.print(f"  Shared connection mitigation: {'enabled' if args.shared_connection else 'disabled (use --shared-connection to enable)'}")
     console.print()
 
     # Create temp DB
@@ -684,6 +703,126 @@ async def main() -> None:
             f"{stat.name} ({stat.module}:{stat.lineno})"
         )
         top_count += 1
+
+    # ------------------------------------------------------------------
+    # Mitigation run (if --shared-connection flag was passed)
+    # ------------------------------------------------------------------
+    mitigation_result: dict | None = None
+    if args.shared_connection:
+        console.print()
+        console.rule("[bold yellow]Shared Connection Mitigation Run")
+        console.print("  Running c=10, profile=zero with shared aiosqlite connection...")
+
+        # Reset files to untracked for mitigation run
+        await reset_files(db_path)
+
+        wal_start_m = get_wal_size(db_path)
+
+        # Open one shared connection for all workers
+        async with aiosqlite.connect(db_path) as shared_db:
+            await shared_db.execute("PRAGMA journal_mode=WAL")
+            await shared_db.execute("PRAGMA synchronous=NORMAL")
+
+            bench_start_m = perf_counter()
+            mitigation_timings = await run_benchmark(
+                concurrency=10,
+                profile="zero",
+                db_path=db_path,
+                realistic_delay=realistic_delay,
+                shared_conn=shared_db,
+            )
+            elapsed_m = perf_counter() - bench_start_m
+
+        wal_end_m = get_wal_size(db_path)
+
+        # Verify all reached indexed
+        indexed_m = await verify_all_indexed(db_path)
+        if indexed_m != FILE_COUNT:
+            console.print(f"  [bold red]ERROR: Only {indexed_m}/{FILE_COUNT} files indexed in mitigation run![/bold red]")
+        else:
+            console.print(f"    Done in {elapsed_m:.2f}s ({TOTAL_TRANSITIONS / elapsed_m:.1f} trans/s), indexed={indexed_m}/{FILE_COUNT}")
+
+        # Compute stats for mitigation
+        mit_segments: dict[str, dict[str, float]] = {}
+        for seg_name in REPORT_SEGMENTS:
+            mit_segments[seg_name] = compute_segment_stats(mitigation_timings, seg_name)
+
+        tps_m = TOTAL_TRANSITIONS / elapsed_m
+        p95_lock_m = mit_segments["lock_wait_ms"]["p95"]
+        p95_db_m = mit_segments["db_total_ms"]["p95"]
+        wal_verdict_m = (
+            f"CONTENTION (lock P95={p95_lock_m:.2f}ms > 5% of db P95={p95_db_m:.2f}ms)"
+            if p95_db_m > 0 and p95_lock_m > 0.05 * p95_db_m
+            else "CLEAN"
+        )
+
+        mitigation_result = {
+            "concurrency": 10,
+            "profile": "zero",
+            "mode": "shared_connection",
+            "elapsed_seconds": round(elapsed_m, 4),
+            "transitions_per_second": round(tps_m, 2),
+            "segments": mit_segments,
+            "wal_size_start_bytes": wal_start_m,
+            "wal_size_end_bytes": wal_end_m,
+            "wal_contention_verdict": wal_verdict_m,
+            "indexed_count": indexed_m,
+        }
+
+        # Get baseline from all_configs (c=10 zero)
+        baseline_cfg = next(
+            (c for c in all_configs if c["concurrency"] == 10 and c["profile"] == "zero"),
+            None,
+        )
+
+        if baseline_cfg:
+            # Print before/after comparison table
+            compare_segments = ["db_total_ms", "lock_wait_ms", "fsm_dispatch_ms", "fsm_net_ms"]
+            compare_table = Table(title="Before vs After: Shared Connection Mitigation (c=10, zero profile)")
+            compare_table.add_column("Segment", style="cyan")
+            compare_table.add_column("Baseline P95", justify="right")
+            compare_table.add_column("Mitigation P95", justify="right")
+            compare_table.add_column("Delta", justify="right")
+
+            comparison: dict[str, dict] = {}
+            for seg in compare_segments:
+                b_p95 = baseline_cfg["segments"][seg]["p95"]
+                m_p95 = mit_segments[seg]["p95"]
+                delta_ms = m_p95 - b_p95
+                delta_pct = (delta_ms / b_p95 * 100) if b_p95 > 0 else 0
+
+                delta_style = "green" if delta_ms < 0 else "red" if delta_ms > 0 else "white"
+                delta_str = f"[{delta_style}]{delta_pct:+.1f}% ({delta_ms:+.2f}ms)[/{delta_style}]"
+
+                compare_table.add_row(
+                    seg,
+                    f"{b_p95:.2f} ms",
+                    f"{m_p95:.2f} ms",
+                    delta_str,
+                )
+
+                comparison[seg] = {
+                    "baseline_p95": b_p95,
+                    "mitigation_p95": m_p95,
+                    "delta_ms": round(delta_ms, 4),
+                    "delta_pct": round(delta_pct, 2),
+                }
+
+            console.print()
+            console.print(compare_table)
+
+            # Save mitigation JSON
+            mit_json_path = bench_dir / f"results-mitigation-{timestamp}.json"
+            mit_output = {
+                "timestamp": timestamp,
+                "mitigation": "shared_connection",
+                "description": "Single aiosqlite connection shared across all workers (vs per-worker connections in baseline)",
+                "baseline": baseline_cfg,
+                "mitigation_run": mitigation_result,
+                "comparison": comparison,
+            }
+            mit_json_path.write_text(json.dumps(mit_output, indent=2))
+            console.print(f"  Mitigation results saved to: {mit_json_path}")
 
     # Cleanup
     try:

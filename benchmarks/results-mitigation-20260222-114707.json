@@ -1,0 +1,153 @@
+{
+  "timestamp": "20260222-114707",
+  "mitigation": "shared_connection",
+  "description": "Single aiosqlite connection shared across all workers (vs per-worker connections in baseline)",
+  "baseline": {
+    "concurrency": 10,
+    "profile": "zero",
+    "elapsed_seconds": 0.9954,
+    "transitions_per_second": 3287.07,
+    "segments": {
+      "mock_api_ms": {
+        "p50": 0.0487,
+        "p95": 0.0795,
+        "p99": 0.1981,
+        "mean": 0.0556,
+        "min": 0.0292,
+        "max": 0.2779
+      },
+      "db_total_ms": {
+        "p50": 1.8903,
+        "p95": 40.9487,
+        "p99": 143.5614,
+        "mean": 9.8275,
+        "min": 0.319,
+        "max": 667.5432
+      },
+      "lock_wait_ms": {
+        "p50": 1.6032,
+        "p95": 40.6505,
+        "p99": 143.3086,
+        "mean": 9.5276,
+        "min": 0.1799,
+        "max": 667.091
+      },
+      "fsm_dispatch_ms": {
+        "p50": 0.0723,
+        "p95": 0.085,
+        "p99": 0.0915,
+        "mean": 0.0941,
+        "min": 0.0635,
+        "max": 16.0885
+      },
+      "fsm_net_ms": {
+        "p50": 2.1011,
+        "p95": 41.1659,
+        "p99": 143.752,
+        "mean": 10.0529,
+        "min": 0.522,
+        "max": 667.7832
+      },
+      "total_wall_ms": {
+        "p50": 2.1643,
+        "p95": 41.2031,
+        "p99": 143.7923,
+        "mean": 10.1085,
+        "min": 0.5654,
+        "max": 667.8372
+      }
+    },
+    "wal_size_start_bytes": 0,
+    "wal_size_end_bytes": 0,
+    "wal_contention_verdict": "CONTENTION (lock P95=40.65ms > 5% of db P95=40.95ms)",
+    "indexed_count": 818,
+    "threshold_1_verdict": "PASS"
+  },
+  "mitigation_run": {
+    "concurrency": 10,
+    "profile": "zero",
+    "mode": "shared_connection",
+    "elapsed_seconds": 0.1143,
+    "transitions_per_second": 28637.85,
+    "segments": {
+      "mock_api_ms": {
+        "p50": 0.1142,
+        "p95": 0.1816,
+        "p99": 0.2052,
+        "mean": 0.1125,
+        "min": 0.0207,
+        "max": 0.4112
+      },
+      "db_total_ms": {
+        "p50": 1.0404,
+        "p95": 1.2679,
+        "p99": 3.0949,
+        "mean": 1.052,
+        "min": 0.5786,
+        "max": 3.2791
+      },
+      "lock_wait_ms": {
+        "p50": 0.5874,
+        "p95": 0.7735,
+        "p99": 2.4037,
+        "mean": 0.6079,
+        "min": 0.2997,
+        "max": 2.7268
+      },
+      "fsm_dispatch_ms": {
+        "p50": 0.019,
+        "p95": 0.0252,
+        "p99": 0.0298,
+        "mean": 0.0199,
+        "min": 0.0155,
+        "max": 0.2225
+      },
+      "fsm_net_ms": {
+        "p50": 1.1004,
+        "p95": 1.3367,
+        "p99": 3.1517,
+        "mean": 1.1131,
+        "min": 0.6314,
+        "max": 3.4656
+      },
+      "total_wall_ms": {
+        "p50": 1.2155,
+        "p95": 1.4328,
+        "p99": 3.2275,
+        "mean": 1.2256,
+        "min": 0.7602,
+        "max": 3.5122
+      }
+    },
+    "wal_size_start_bytes": 0,
+    "wal_size_end_bytes": 0,
+    "wal_contention_verdict": "CONTENTION (lock P95=0.77ms > 5% of db P95=1.27ms)",
+    "indexed_count": 818
+  },
+  "comparison": {
+    "db_total_ms": {
+      "baseline_p95": 40.9487,
+      "mitigation_p95": 1.2679,
+      "delta_ms": -39.6808,
+      "delta_pct": -96.9
+    },
+    "lock_wait_ms": {
+      "baseline_p95": 40.6505,
+      "mitigation_p95": 0.7735,
+      "delta_ms": -39.877,
+      "delta_pct": -98.1
+    },
+    "fsm_dispatch_ms": {
+      "baseline_p95": 0.085,
+      "mitigation_p95": 0.0252,
+      "delta_ms": -0.0598,
+      "delta_pct": -70.35
+    },
+    "fsm_net_ms": {
+      "baseline_p95": 41.1659,
+      "mitigation_p95": 1.3367,
+      "delta_ms": -39.8292,
+      "delta_pct": -96.75
+    }
+  }
+}
