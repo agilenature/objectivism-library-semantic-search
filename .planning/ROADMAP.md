@@ -212,7 +212,7 @@ Plans:
 **Plans**: 2 plans in 2 waves
 
 Plans:
-- [ ] 14-01-PLAN.md -- Benchmark harness (yappi + explicit spans), 818-file simulation, 6 configurations (3 concurrency x 2 profiles), baseline measurement, bottleneck identification
+- [x] 14-01-PLAN.md -- Benchmark harness (yappi + explicit spans), 818-file simulation, 6 configurations (3 concurrency x 2 profiles), baseline measurement, bottleneck identification
 - [ ] 14-02-PLAN.md -- Mitigation evaluation (or confirmation if baseline passes), VLID-06 gate verdict, Phase 15 unblock decision
 
 ---
@@ -284,11 +284,11 @@ Each wave's gate is BLOCKING for the next. If a gate fails, the failing phase mu
 | 11. display_name + Import | v2.0 | 2/2 | Complete | 2026-02-20 |
 | 12. 50-File FSM Upload | v2.0 | 6/6 | Complete | 2026-02-22 |
 | 13. State Column Retirement | v2.0 | 2/2 | Complete | 2026-02-22 |
-| 14. Batch Performance | v2.0 | 0/2 | Not started | - |
+| 14. Batch Performance | v2.0 | 1/2 | In progress | - |
 | 15. Consistency + store-sync | v2.0 | 0/2 | Not started | - |
 | 16. Full Library Upload | v2.0 | 0/3 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-19*
 *Pre-mortem: governance/pre-mortem-gemini-fsm.md*
-*Last updated: 2026-02-22 -- Phase 14 planned (2 plans, 2 waves)*
+*Last updated: 2026-02-22 -- Phase 14 plan 01 complete (benchmark harness, bottleneck: db_total_ms/WAL contention)*

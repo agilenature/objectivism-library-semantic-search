@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 ## Current Position
 
 Phase: 14 of 16 (Batch Performance Benchmark)
-Plan: 0 of 2 in current phase
-Status: Phase 13 COMPLETE (2026-02-22, 2/2 plans, V11 migration applied, 459 tests passing). Phase 14 unblocked.
-Last activity: 2026-02-22 -- Phase 13 complete. status column retired, gemini_state CHECK constraint active.
+Plan: 1 of 2 in current phase
+Status: In progress. Plan 14-01 complete (benchmark harness, baseline measurements, bottleneck identified).
+Last activity: 2026-02-22 -- Completed 14-01-PLAN.md (benchmark harness and baseline measurement)
 
-Progress: [#################] 17/26 v2.0 plans complete
+Progress: [##################] 18/26 v2.0 plans complete
 
 Note: Phase 07-07 (TUI integration smoke test from v1.0) deferred to Phase 16, plan 16-03.
   Runs against full live corpus after upload -- more meaningful than running on empty store.
@@ -28,7 +28,7 @@ Phase 10: [##########] 2/2 plans -- COMPLETE (Wave 2: Transition Atomicity) -- g
 Phase 11: [##########] 2/2 plans -- COMPLETE (Wave 3: display_name + Import) -- gate PASSED 2026-02-20
 Phase 12: [##########] 6/6 plans -- COMPLETE (Wave 4: 50-File FSM Upload) -- gate PASSED 2026-02-22
 Phase 13: [##########] 2/2 plans -- COMPLETE (Wave 5: State Column Retirement) -- gate PASSED 2026-02-22
-Phase 14: [░░░░░░░░░░] 0/2 plans -- READY (Wave 6: Batch Performance)
+Phase 14: [#####░░░░░] 1/2 plans -- IN PROGRESS (Wave 6: Batch Performance)
 Phase 15: [░░░░░░░░░░] 0/2 plans -- BLOCKED by Phase 14 gate (Wave 7: Consistency + store-sync)
 Phase 16: [░░░░░░░░░░] 0/3 plans -- BLOCKED by Phase 15 gate (Wave 8: Full Library Upload + 07-07)
 
@@ -40,9 +40,9 @@ Phase 16: [░░░░░░░░░░] 0/3 plans -- BLOCKED by Phase 15 gate
 - Total execution time: 128 min
 
 **v2.0 Velocity:**
-- Total plans completed: 15
+- Total plans completed: 16
 - Average duration: 11.2 min
-- Total execution time: 161 min
+- Total execution time: 179 min
 
 *Updated after each plan completion*
 
@@ -108,6 +108,9 @@ Recent decisions affecting current work:
 - [13-02]: FileStatus enum fully removed; all 84 status references rewritten across 10 src files + 8 test files + 5 scripts
 - [13-02]: Legacy record_upload_intent/record_upload_failure retain gemini_state writes (uploading/failed) for backward compat
 - [13-02]: Phase 13 BLOCKING gate PASSED -- Phase 14 unblocked
+- [14-01]: Bottleneck identified as db_total_ms (WAL lock contention): lock_wait P95=39.88ms is 99.8% of db_total P95=39.95ms at c=10 zero profile
+- [14-01]: Threshold 1 PASS (0.89s vs 300s) and Threshold 2 PASS (8.73s vs 21600s) -- enormous margin
+- [14-01]: FSM dispatch overhead negligible (P95 < 0.15ms) -- python-statemachine 2.6.0 is not the bottleneck
 
 ### Pending Todos
 
@@ -121,6 +124,6 @@ None.
 
 
 Last session: 2026-02-22
-Stopped at: Phase 13 COMPLETE. Both plans done, V11 migration applied, 459 tests passing.
-Resume file: .planning/phases/14-batch-performance/ (to be planned)
-Resume instruction: /gsd:plan-phase 14
+Stopped at: Phase 14, plan 01 complete. Benchmark harness built, baseline measurements taken, bottleneck identified (db_total_ms/WAL contention).
+Resume file: .planning/phases/14-batch-performance/14-02-PLAN.md
+Resume instruction: /gsd:execute-phase 14 plan 02
