@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 
 ## Current Position
 
-Phase: 14 of 16 (Batch Performance Benchmark) -- COMPLETE
-Plan: 2 of 2 in current phase (Phase 14 COMPLETE)
-Status: Phase 14 complete. VLID-06 gate PASSED. Phase 15 UNBLOCKED.
-Last activity: 2026-02-22 -- Completed 14-02-PLAN.md (VLID-06 gate verdict: PASS, Phase 14 complete)
+Phase: 14 of 16 (Batch Performance Benchmark) -- COMPLETE (including gap closure)
+Plan: 3 of 3 in current phase (Phase 14 COMPLETE with SC2 gap closed)
+Status: Phase 14 fully complete. VLID-06 gate PASSED. SC2 mitigation tested. Phase 15 UNBLOCKED.
+Last activity: 2026-02-22 -- Completed 14-03-PLAN.md (SC2 gap closure: shared-connection mitigation measured)
 
-Progress: [###################] 19/26 v2.0 plans complete
+Progress: [####################] 20/26 v2.0 plans complete
 
 Note: Phase 07-07 (TUI integration smoke test from v1.0) deferred to Phase 16, plan 16-03.
   Runs against full live corpus after upload -- more meaningful than running on empty store.
@@ -28,7 +28,7 @@ Phase 10: [##########] 2/2 plans -- COMPLETE (Wave 2: Transition Atomicity) -- g
 Phase 11: [##########] 2/2 plans -- COMPLETE (Wave 3: display_name + Import) -- gate PASSED 2026-02-20
 Phase 12: [##########] 6/6 plans -- COMPLETE (Wave 4: 50-File FSM Upload) -- gate PASSED 2026-02-22
 Phase 13: [##########] 2/2 plans -- COMPLETE (Wave 5: State Column Retirement) -- gate PASSED 2026-02-22
-Phase 14: [##########] 2/2 plans -- COMPLETE (Wave 6: Batch Performance) -- VLID-06 PASSED 2026-02-22
+Phase 14: [##########] 3/3 plans -- COMPLETE (Wave 6: Batch Performance) -- VLID-06 PASSED + SC2 gap closed 2026-02-22
 Phase 15: [░░░░░░░░░░] 0/2 plans -- UNBLOCKED (Wave 7: Consistency + store-sync)
 Phase 16: [░░░░░░░░░░] 0/3 plans -- BLOCKED by Phase 15 gate (Wave 8: Full Library Upload + 07-07)
 
@@ -40,9 +40,9 @@ Phase 16: [░░░░░░░░░░] 0/3 plans -- BLOCKED by Phase 15 gate
 - Total execution time: 128 min
 
 **v2.0 Velocity:**
-- Total plans completed: 18
-- Average duration: 11.2 min
-- Total execution time: 202 min
+- Total plans completed: 19
+- Average duration: 10.9 min
+- Total execution time: 208 min
 
 *Updated after each plan completion*
 
@@ -115,6 +115,8 @@ Recent decisions affecting current work:
 - [14-02]: Production upload recommendation: c=10 concurrency (FSM+DB is 0.17% of total execution time at realistic profile)
 - [14-02]: WAL contention production-irrelevant: super-linear at c>=50 zero profile only, real API latency distributes writes
 - [14-02]: Phase 14 BLOCKING gate PASSED -- Phase 15 unblocked
+- [14-03]: Shared connection mitigation eliminates 98% of WAL lock contention (lock_wait P95: 40.65ms -> 0.77ms) -- available as production option
+- [14-03]: SC2 gap closed: mitigation tested with before/after measurements, results saved to results-mitigation-*.json
 
 ### Pending Todos
 
@@ -128,6 +130,6 @@ None.
 
 
 Last session: 2026-02-22
-Stopped at: Phase 14 complete. VLID-06 gate PASSED. Phase 15 unblocked.
+Stopped at: Phase 14 fully complete (including SC2 gap closure). Phase 15 unblocked.
 Resume file: .planning/phases/15-consistency-store-sync/15-01-PLAN.md
 Resume instruction: /gsd:execute-phase 15 plan 01
