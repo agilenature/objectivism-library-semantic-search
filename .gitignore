@@ -1,0 +1,3 @@
+# Benchmark output (harness scripts are committed, results are not)
+benchmarks/results-*.json
+benchmarks/yappi-*.txt
