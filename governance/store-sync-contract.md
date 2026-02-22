@@ -139,7 +139,7 @@ The resolution mechanism is `downgrade_to_failed()` in
 ```python
 async def downgrade_to_failed(
     db_path: str,
-    file_id: int,
+    file_path: str,
     reason: str = "store-sync detected missing from store"
 ) -> bool:
 ```
@@ -147,6 +147,7 @@ async def downgrade_to_failed(
 This function:
 - Sets `gemini_state = 'failed'` with an OCC guard (`AND gemini_state = 'indexed'`)
 - Clears `gemini_store_doc_id` (the store reference is stale)
+- Stores the reason in `error_message`
 - Updates `gemini_state_updated_at` timestamp
 - Returns `True` if the downgrade succeeded, `False` if the file was not in
   `indexed` state (another process already changed it)
@@ -208,11 +209,11 @@ If either check fails, the file is flagged as INCONSISTENT.
 For each INCONSISTENT file:
 
 ```python
-result = await downgrade_to_failed(db_path, file_id, reason="store-sync: not found in store")
+result = await downgrade_to_failed(db_path, file_path, reason="store-sync: not found in store")
 if result:
-    logger.warning("Downgraded file %d to FAILED: %s", file_id, file_path)
+    logger.warning("Downgraded file %s to FAILED", file_path)
 else:
-    logger.info("File %d already changed state (no downgrade needed)", file_id)
+    logger.info("File %s already changed state (no downgrade needed)", file_path)
 ```
 
 ### 6.3 Re-upload

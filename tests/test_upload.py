@@ -225,15 +225,15 @@ async def async_state(tmp_path: Path):
     # Insert a test file
     db.conn.execute(
         """INSERT INTO files (file_path, content_hash, filename, file_size,
-                              metadata_json, metadata_quality, status)
-           VALUES (?, ?, ?, ?, ?, ?, ?)""",
-        ("/test/file1.txt", "abc123", "file1.txt", 1024, '{"course": "OPAR"}', "complete", "pending"),
+                              metadata_json, metadata_quality)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        ("/test/file1.txt", "abc123", "file1.txt", 1024, '{"course": "OPAR"}', "complete"),
     )
     db.conn.execute(
         """INSERT INTO files (file_path, content_hash, filename, file_size,
-                              metadata_json, metadata_quality, status)
-           VALUES (?, ?, ?, ?, ?, ?, ?)""",
-        ("/test/file2.txt", "def456", "file2.txt", 2048, '{"course": "HWK"}', "partial", "pending"),
+                              metadata_json, metadata_quality)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        ("/test/file2.txt", "def456", "file2.txt", 2048, '{"course": "HWK"}', "partial"),
     )
     db.conn.commit()
     db.close()
@@ -310,11 +310,11 @@ class TestAsyncStateManager:
 
         db = async_state._ensure_connected()
         cursor = await db.execute(
-            "SELECT status, error_message FROM files WHERE file_path = ?",
+            "SELECT gemini_state, error_message FROM files WHERE file_path = ?",
             ("/test/file1.txt",),
         )
         row = await cursor.fetchone()
-        assert row["status"] == "failed"
+        assert row["gemini_state"] == "failed"
         assert row["error_message"] == "Connection timeout"
 
     async def test_lock_acquire_and_release(
@@ -344,7 +344,7 @@ async def recovery_state(tmp_path: Path):
     # File stuck in 'uploading' with no gemini_file_id (interrupted upload)
     db.conn.execute(
         """INSERT INTO files (file_path, content_hash, filename, file_size,
-                              status)
+                              gemini_state)
            VALUES (?, ?, ?, ?, ?)""",
         ("/test/interrupted.txt", "hash1", "interrupted.txt", 1024, "uploading"),
     )
@@ -352,7 +352,7 @@ async def recovery_state(tmp_path: Path):
     # File stuck in 'uploading' WITH a gemini_file_id (upload succeeded, import unknown)
     db.conn.execute(
         """INSERT INTO files (file_path, content_hash, filename, file_size,
-                              status, gemini_file_id, gemini_file_uri,
+                              gemini_state, gemini_file_id, gemini_file_uri,
                               remote_expiration_ts)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
         (
@@ -365,7 +365,7 @@ async def recovery_state(tmp_path: Path):
     # File with pending operation
     db.conn.execute(
         """INSERT INTO files (file_path, content_hash, filename, file_size,
-                              status, gemini_file_id)
+                              gemini_state, gemini_file_id)
            VALUES (?, ?, ?, ?, ?, ?)""",
         ("/test/pending_op.txt", "hash3", "pending_op.txt", 3072, "uploading", "files/def"),
     )
@@ -391,29 +391,29 @@ class TestRecoveryManager:
     async def test_interrupted_upload_without_gemini_id_resets(
         self, recovery_state: AsyncUploadStateManager
     ):
-        """A file in 'uploading' with no gemini_file_id is reset to pending."""
+        """A file in 'uploading' with no gemini_file_id is reset to untracked."""
         mock_client = MagicMock(spec=GeminiFileSearchClient)
         config = UploadConfig(store_name="test-store", recovery_timeout_seconds=30)
 
         recovery = RecoveryManager(mock_client, recovery_state, config)
         result = await recovery.run()
 
-        # interrupted.txt should be reset to pending
+        # interrupted.txt should be reset to untracked (was pending)
         assert result.reset_to_pending >= 1
 
         db = recovery_state._ensure_connected()
         cursor = await db.execute(
-            "SELECT status FROM files WHERE file_path = ?",
+            "SELECT gemini_state FROM files WHERE file_path = ?",
             ("/test/interrupted.txt",),
         )
         row = await cursor.fetchone()
-        assert row["status"] == "pending"
+        assert row["gemini_state"] == "untracked"
 
     async def test_interrupted_upload_with_valid_gemini_id_marked_uploaded(
         self, recovery_state: AsyncUploadStateManager
     ):
         """A file in 'uploading' with a valid (non-expired) gemini_file_id
-        is marked as uploaded."""
+        is marked as indexed."""
         mock_client = MagicMock(spec=GeminiFileSearchClient)
         config = UploadConfig(store_name="test-store", recovery_timeout_seconds=30)
 
@@ -424,11 +424,11 @@ class TestRecoveryManager:
 
         db = recovery_state._ensure_connected()
         cursor = await db.execute(
-            "SELECT status FROM files WHERE file_path = ?",
+            "SELECT gemini_state FROM files WHERE file_path = ?",
             ("/test/partial.txt",),
         )
         row = await cursor.fetchone()
-        assert row["status"] == "uploaded"
+        assert row["gemini_state"] == "indexed"
 
     async def test_recovery_timeout_raises(
         self, recovery_state: AsyncUploadStateManager
@@ -444,3 +444,136 @@ class TestRecoveryManager:
         # since _recover does actual async work
         with pytest.raises(RecoveryTimeoutError):
             await recovery.run()
+
+
+# ======================================================================
+# downgrade_to_failed() Tests (Phase 15 -- store-sync reconciliation)
+# ======================================================================
+
+
+@pytest.fixture
+async def downgrade_db(tmp_path: Path):
+    """Create a temp database with an INDEXED file for downgrade testing."""
+    db_path = tmp_path / "test_downgrade.db"
+    db = Database(db_path)
+
+    # File in INDEXED state (normal successful upload)
+    db.conn.execute(
+        """INSERT INTO files (file_path, content_hash, filename, file_size,
+                              gemini_state, gemini_store_doc_id)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        ("/test/indexed_file.txt", "hash_idx", "indexed_file.txt", 4096,
+         "indexed", "doc_suffix_123"),
+    )
+
+    # File in UNTRACKED state (should not be affected by downgrade)
+    db.conn.execute(
+        """INSERT INTO files (file_path, content_hash, filename, file_size,
+                              gemini_state)
+           VALUES (?, ?, ?, ?, ?)""",
+        ("/test/untracked_file.txt", "hash_unt", "untracked_file.txt", 2048,
+         "untracked"),
+    )
+
+    # File in FAILED state (should not be affected by downgrade)
+    db.conn.execute(
+        """INSERT INTO files (file_path, content_hash, filename, file_size,
+                              gemini_state, error_message)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        ("/test/failed_file.txt", "hash_fail", "failed_file.txt", 1024,
+         "failed", "previous error"),
+    )
+
+    db.conn.commit()
+    db.close()
+
+    return str(db_path)
+
+
+class TestDowngradeToFailed:
+    """Tests for downgrade_to_failed() store-sync reconciliation function."""
+
+    async def test_downgrade_transitions_indexed_file(self, downgrade_db: str):
+        """An INDEXED file is downgraded to FAILED with reason and cleared store doc ID."""
+        from objlib.upload.recovery import downgrade_to_failed
+        import aiosqlite
+
+        # Call downgrade using file_path (the primary key)
+        result = await downgrade_to_failed(downgrade_db, "/test/indexed_file.txt")
+
+        assert result is True
+
+        # Verify state change
+        async with aiosqlite.connect(downgrade_db) as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                "SELECT gemini_state, gemini_store_doc_id, error_message "
+                "FROM files WHERE file_path = ?",
+                ("/test/indexed_file.txt",),
+            )
+            row = await cursor.fetchone()
+            assert row["gemini_state"] == "failed"
+            assert row["gemini_store_doc_id"] is None
+            assert "store-sync" in row["error_message"]
+
+    async def test_downgrade_ignores_non_indexed_file(self, downgrade_db: str):
+        """A file NOT in INDEXED state is not changed -- returns False."""
+        from objlib.upload.recovery import downgrade_to_failed
+
+        # Call downgrade on untracked file -- should return False
+        result = await downgrade_to_failed(downgrade_db, "/test/untracked_file.txt")
+
+        assert result is False
+
+        # Verify state unchanged
+        import aiosqlite
+        async with aiosqlite.connect(downgrade_db) as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                "SELECT gemini_state FROM files WHERE file_path = ?",
+                ("/test/untracked_file.txt",),
+            )
+            row = await cursor.fetchone()
+            assert row["gemini_state"] == "untracked"
+
+    async def test_downgrade_ignores_already_failed_file(self, downgrade_db: str):
+        """A FAILED file is not double-downgraded -- returns False."""
+        from objlib.upload.recovery import downgrade_to_failed
+
+        # Call downgrade on already-failed file -- should return False
+        result = await downgrade_to_failed(downgrade_db, "/test/failed_file.txt")
+
+        assert result is False
+
+        # Verify original error message preserved
+        import aiosqlite
+        async with aiosqlite.connect(downgrade_db) as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                "SELECT gemini_state, error_message FROM files WHERE file_path = ?",
+                ("/test/failed_file.txt",),
+            )
+            row = await cursor.fetchone()
+            assert row["gemini_state"] == "failed"
+            assert row["error_message"] == "previous error"
+
+    async def test_downgrade_custom_reason(self, downgrade_db: str):
+        """Custom reason string is stored in error_message."""
+        from objlib.upload.recovery import downgrade_to_failed
+
+        result = await downgrade_to_failed(
+            downgrade_db, "/test/indexed_file.txt",
+            reason="targeted query timeout after 300s",
+        )
+
+        assert result is True
+
+        import aiosqlite
+        async with aiosqlite.connect(downgrade_db) as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                "SELECT error_message FROM files WHERE file_path = ?",
+                ("/test/indexed_file.txt",),
+            )
+            row = await cursor.fetchone()
+            assert row["error_message"] == "targeted query timeout after 300s"

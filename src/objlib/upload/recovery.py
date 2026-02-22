@@ -181,16 +181,16 @@ class RecoveryManager:
                         result.expired_files += 1
                     else:
                         # File is uploaded and still valid -- mark as
-                        # uploaded (import may have completed but status
+                        # indexed (import may have completed but state
                         # was not updated due to crash)
                         logger.info(
-                            "File %s has valid remote copy, marking uploaded",
+                            "File %s has valid remote copy, marking indexed",
                             file_path,
                         )
                         now = self._state._now_iso()
                         await db.execute(
-                            "UPDATE files SET updated_at = ? "
-                            "WHERE file_path = ?",
+                            "UPDATE files SET gemini_state = 'indexed', "
+                            "updated_at = ? WHERE file_path = ?",
                             (now, file_path),
                         )
                         await db.commit()
@@ -368,7 +368,8 @@ class RecoveryManager:
         if clear_remote:
             await db.execute(
                 """UPDATE files
-                   SET gemini_file_uri = NULL,
+                   SET gemini_state = 'untracked',
+                       gemini_file_uri = NULL,
                        gemini_file_id = NULL,
                        remote_expiration_ts = NULL,
                        upload_timestamp = NULL,
@@ -378,8 +379,8 @@ class RecoveryManager:
             )
         else:
             await db.execute(
-                "UPDATE files SET updated_at = ? "
-                "WHERE file_path = ?",
+                "UPDATE files SET gemini_state = 'untracked', "
+                "updated_at = ? WHERE file_path = ?",
                 (now, file_path),
             )
         await db.commit()
@@ -566,3 +567,61 @@ async def retry_failed_file(
     )
     await db.commit()
     return cursor.rowcount == 1
+
+
+# ---------------------------------------------------------------------------
+# Store-sync downgrade helper (Phase 15)
+# ---------------------------------------------------------------------------
+
+
+async def downgrade_to_failed(
+    db_path: str,
+    file_path: str,
+    reason: str = "store-sync detected missing from store",
+) -> bool:
+    """Downgrade an INDEXED file to FAILED when store-sync detects inconsistency.
+
+    This is the **7th authorized gemini_state write site** (see
+    ``governance/store-sync-contract.md`` Section 5).
+
+    Callers: store-sync reconciliation only.  Not part of the normal upload
+    pipeline -- this is an emergency correction when empirical searchability
+    disagrees with FSM state.
+
+    Uses an OCC guard (``AND gemini_state = 'indexed'``) to prevent
+    overwriting a state that has already been changed by another process.
+
+    Args:
+        db_path: Path to the SQLite database.
+        file_path: Primary key (``files.file_path``) of the file to downgrade.
+        reason: Human-readable reason for the downgrade.
+
+    Returns:
+        True if the file was downgraded (was INDEXED), False if the file
+        was not in INDEXED state (no change made).
+    """
+    import aiosqlite
+
+    async with aiosqlite.connect(db_path) as db:
+        cursor = await db.execute(
+            """UPDATE files
+               SET gemini_state = 'failed',
+                   gemini_store_doc_id = NULL,
+                   error_message = ?,
+                   gemini_state_updated_at = datetime('now')
+               WHERE file_path = ? AND gemini_state = 'indexed'""",
+            (reason, file_path),
+        )
+        await db.commit()
+        downgraded = cursor.rowcount > 0
+
+    if downgraded:
+        logger.warning(
+            "Downgraded file %s to FAILED: %s", file_path, reason
+        )
+    else:
+        logger.info(
+            "File %s not in INDEXED state -- no downgrade needed", file_path
+        )
+
+    return downgraded
