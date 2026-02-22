@@ -176,7 +176,7 @@ Plans:
 - [ ] 12-03-PLAN.md -- 50-file FSM upload + T=0 baseline (check_stability, DB counts, store-sync, SC2, 5 TUI queries)
 - [ ] 12-04-PLAN.md -- T+4h drift check [fresh session, /clear before starting]
 - [ ] 12-05-PLAN.md -- T+24h gate [fresh session, /clear before starting] -- BLOCKING for Phase 13
-- [ ] 12-06-PLAN.md -- T+36h confirmation [fresh session, /clear before starting]
+- [x] 12-06-PLAN.md -- T+36h confirmation [fresh session, /clear before starting]
 
 ---
 
@@ -282,7 +282,7 @@ Each wave's gate is BLOCKING for the next. If a gate fails, the failing phase mu
 | 9. Async FSM Spike | v2.0 | 2/2 | Complete | 2026-02-20 |
 | 10. Transition Atomicity | v2.0 | 2/2 | Complete | 2026-02-20 |
 | 11. display_name + Import | v2.0 | 2/2 | Complete | 2026-02-20 |
-| 12. 50-File FSM Upload | v2.0 | 5/6 | In progress | - |
+| 12. 50-File FSM Upload | v2.0 | 6/6 | Complete | 2026-02-22 |
 | 13. State Column Retirement | v2.0 | 0/2 | Not started | - |
 | 14. Batch Performance | v2.0 | 0/2 | Not started | - |
 | 15. Consistency + store-sync | v2.0 | 0/2 | Not started | - |
@@ -291,4 +291,4 @@ Each wave's gate is BLOCKING for the next. If a gate fails, the failing phase mu
 ---
 *Roadmap created: 2026-02-19*
 *Pre-mortem: governance/pre-mortem-gemini-fsm.md*
-*Last updated: 2026-02-21 -- Phase 12 plan 05 complete (T+24h gate PASSED, Phase 13 unblocked)*
+*Last updated: 2026-02-22 -- Phase 12 COMPLETE (T+36h CONFIRMED, 6/6 plans, temporal stability protocol done, Phase 13 unblocked)*
