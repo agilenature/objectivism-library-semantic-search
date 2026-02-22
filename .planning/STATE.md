@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 ## Current Position
 
 Phase: 13 of 16 (State Column Retirement)
-Plan: 0 of 2 in current phase
-Status: Phase 12 COMPLETE (T+36h CONFIRMED 2026-02-22T08:43Z, 6/6 plans, temporal stability protocol done). Phase 13 unblocked.
-Last activity: 2026-02-22 -- Phase 12 complete. T+36h gate CONFIRMED. Ready for Phase 13.
+Plan: 1 of 2 in current phase
+Status: In progress. Plan 13-01 (audit/inventory) COMPLETE. Plan 13-02 (migration) ready.
+Last activity: 2026-02-22 -- Completed 13-01-PLAN.md (status column inventory + precondition verification)
 
-Progress: [###############] 15/26 v2.0 plans complete
+Progress: [################] 16/26 v2.0 plans complete
 
 Note: Phase 07-07 (TUI integration smoke test from v1.0) deferred to Phase 16, plan 16-03.
   Runs against full live corpus after upload -- more meaningful than running on empty store.
@@ -27,7 +27,7 @@ Phase 9:  [##########] 2/2 plans -- COMPLETE (Wave 1: Async FSM Spike) -- gate P
 Phase 10: [##########] 2/2 plans -- COMPLETE (Wave 2: Transition Atomicity) -- gate PASSED 2026-02-20
 Phase 11: [##########] 2/2 plans -- COMPLETE (Wave 3: display_name + Import) -- gate PASSED 2026-02-20
 Phase 12: [##########] 6/6 plans -- COMPLETE (Wave 4: 50-File FSM Upload) -- gate PASSED 2026-02-22
-Phase 13: [░░░░░░░░░░] 0/2 plans -- READY (Wave 5: State Column Retirement)
+Phase 13: [#####░░░░░] 1/2 plans -- IN PROGRESS (Wave 5: State Column Retirement)
 Phase 14: [░░░░░░░░░░] 0/2 plans -- BLOCKED by Phase 13 gate (Wave 6: Batch Performance)
 Phase 15: [░░░░░░░░░░] 0/2 plans -- BLOCKED by Phase 14 gate (Wave 7: Consistency + store-sync)
 Phase 16: [░░░░░░░░░░] 0/3 plans -- BLOCKED by Phase 15 gate (Wave 8: Full Library Upload + 07-07)
@@ -40,9 +40,9 @@ Phase 16: [░░░░░░░░░░] 0/3 plans -- BLOCKED by Phase 15 gate
 - Total execution time: 128 min
 
 **v2.0 Velocity:**
-- Total plans completed: 13
-- Average duration: 11.6 min
-- Total execution time: 139 min
+- Total plans completed: 14
+- Average duration: 10.8 min
+- Total execution time: 143 min
 
 *Updated after each plan completion*
 
@@ -101,6 +101,9 @@ Recent decisions affecting current work:
 - [12-03]: retry_failed_file() must be called before retry pass in _process_fsm_batch -- stale version in file_info dict causes OCC conflicts
 - [12-05]: T+24h gate PASSED at 21:43:47Z (25h53m elapsed) -- Phase 13 UNBLOCKED. All deltas zero.
 - [12-06]: T+36h CONFIRMED at 08:43:41Z Feb 22 (60h53m elapsed) -- T+24h verdict non-transient. Phase 12 temporal stability protocol COMPLETE. Phase 12 COMPLETE.
+- [13-01]: --set-pending CLI flags will be REMOVED (not repurposed) per locked decision #7
+- [13-01]: Historical V7 migration SQL frozen -- only SCHEMA_SQL (V1 DDL) and new V11 migration modified
+- [13-01]: is_deleted INTEGER NOT NULL DEFAULT 0 replaces status='LOCAL_DELETE' filtering
 
 ### Pending Todos
 
@@ -114,6 +117,6 @@ None.
 
 
 Last session: 2026-02-22
-Stopped at: Phase 12 COMPLETE. T+36h CONFIRMED.
-Resume file: .planning/phases/13-state-column-retirement/ (to be planned)
-Resume instruction: /gsd:plan-phase 13
+Stopped at: Phase 13 plan 01 COMPLETE. Plan 02 ready.
+Resume file: .planning/phases/13-state-column-retirement/13-02-PLAN.md
+Resume instruction: /gsd:execute-phase 13-02
