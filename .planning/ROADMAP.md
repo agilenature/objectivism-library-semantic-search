@@ -209,11 +209,11 @@ Plans:
   1. FSM transition throughput is measured under a simulated 818-file batch (the full `UNTRACKED -> UPLOADING -> PROCESSING -> INDEXED` cycle for each file): transitions per second, total elapsed time, and P95 per-transition latency are recorded
   2. The bottleneck is identified (guard check read, state write, API call mock latency, or WAL serialization) and at least one mitigation is tested (batch DB writes, async state writes, or reduced guard checks) -- with before/after measurements
   3. An acceptable throughput threshold is defined explicitly (e.g., "full upload completes within X hours") and the current measured throughput either meets it or the tested mitigation brings it within range
-**Plans**: TBD
+**Plans**: 2 plans in 2 waves
 
 Plans:
-- [ ] 14-01: Batch performance benchmark harness and bottleneck analysis
-- [ ] 14-02: Mitigation implementation and re-measurement
+- [ ] 14-01-PLAN.md -- Benchmark harness (yappi + explicit spans), 818-file simulation, 6 configurations (3 concurrency x 2 profiles), baseline measurement, bottleneck identification
+- [ ] 14-02-PLAN.md -- Mitigation evaluation (or confirmation if baseline passes), VLID-06 gate verdict, Phase 15 unblock decision
 
 ---
 
@@ -291,4 +291,4 @@ Each wave's gate is BLOCKING for the next. If a gate fails, the failing phase mu
 ---
 *Roadmap created: 2026-02-19*
 *Pre-mortem: governance/pre-mortem-gemini-fsm.md*
-*Last updated: 2026-02-22 -- Phase 13 complete (V11 migration, status column retired, 459 tests passing)*
+*Last updated: 2026-02-22 -- Phase 14 planned (2 plans, 2 waves)*
