@@ -10,8 +10,8 @@ requires:
   - phase: 11-display-name-import
     provides: "Document.display_name = file resource ID discovery [11-01], listing P99=0.253s baseline"
 provides:
-  - "Import-to-searchable lag empirical measurements (P50=7.3s, P95=10.1s, max=10.1s)"
-  - "Silent failure rate baseline (5.0% at n=20)"
+  - "Import-to-searchable lag empirical measurements: Run A P50=7.3s P95=10.1s 5% failure; Run B P50=7.4s P95=44.3s 20% failure"
+  - "Silent failure rate range: 5-20% across two independent runs (n=20 each)"
   - "scripts/measure_searchability_lag.py standalone measurement tool"
 affects: [15-02-store-sync-contract, 15-03-temporal-stability, 16-full-library-upload]
 
@@ -25,8 +25,8 @@ key-files:
   modified: []
 
 key-decisions:
-  - "Import-to-searchable lag P50=7.3s, P95=10.1s, max=10.1s -- confirms meaningful gap between listing and searchability"
-  - "1 silent failure in 20 measurements (5.0%) -- store-sync role may need escalation per Q7 decision"
+  - "Import-to-searchable lag: Run A P50=7.3s P95=10.1s (5% failure); Run B P50=7.4s P95=44.3s (20% failure) -- high variance, tail can reach 44s"
+  - "Silent failure rate 5-20% across two independent 20-file runs -- store-sync must run after each upload batch"
   - "Listing visibility (~1.5-2s) is fast but search visibility adds 3-8s additional delay"
 
 patterns-established:
@@ -39,7 +39,7 @@ completed: 2026-02-22
 
 # Phase 15 Plan 01: Import-to-Searchable Lag Measurement Summary
 
-**Standalone genai SDK script measures P50=7.3s, P95=10.1s import-to-searchable lag across 20 fresh uploads with targeted per-file queries; 5% silent failure rate informs store-sync escalation policy**
+**Two independent 20-file measurement runs: Run A (agent): P50=7.3s P95=10.1s 5% failure; Run B (concurrent background): P50=7.4s P95=44.3s 20% failure. High tail variance (up to 44.3s) and 5-20% failure rate confirm store-sync must run after each upload batch.**
 
 ## Performance
 
@@ -69,6 +69,12 @@ Each task was committed atomically:
 - `scripts/measure_searchability_lag.py` -- standalone lag measurement script (644 lines)
 
 ## Measurement Results
+
+> **Note on two concurrent runs:** Two independent measurement runs occurred during plan execution. Run A was executed by the executor agent (~15:18-15:28 UTC); Run B ran concurrently as a background task starting at 15:07 UTC (different 20 files). Both used the same script and methodology. The SUMMARY records both; Run A data is in SUMMARY.md; Run B data is in the background task output. The governance document (15-02) uses the combined worst-case figures.
+
+### Run A: Agent-executed measurement (15:18–15:28 UTC)
+
+**P50=7.3s, P95=10.1s, max=10.1s, failure_rate=5% (1/20)**
 
 ### Per-File Table (verbatim)
 
@@ -113,11 +119,40 @@ Summary:
   Note: Statistical P99 requires n>=100; empirical max from n=19 is a conservative upper bound.
 ```
 
+### Run B: Background task (15:07–15:28 UTC, different 20 files)
+
+**P50=7.4s, P95=44.3s, max=44.3s, failure_rate=20% (4/20)**
+
+```
+Files measured: 20 (4 silent failures)
+Successful measurements: 16
+Lag min:  5.5s  Lag mean: 10.3s  Lag P50: 7.4s  Lag P95: 44.3s
+Lag P99/max: 44.3s
+
+Silent failures (300s timeout):
+  - The Fountainhead - Lesson 04 - Gail Wynand.txt
+  - The Art of Thinking - Lesson 08 - Question & Answer Session 2.txt
+  - MOTM_2018-11-25_Psycho-teleology-applications.txt
+  - MOTM_2021-10-03_History-of-the-Objectivist-movement-a-personal-account-part.txt
+
+Outlier: MOTM_2019-02-25_Voluntary-financing-of-government.txt → 44.3s lag
+1 upload skipped (ASCII codec error in display_name with em-dash character)
+```
+
+### Combined Evidence
+
+| Metric | Run A | Run B | Interpretation |
+|--------|-------|-------|---------------|
+| P50 | 7.3s | 7.4s | Consistent typical case |
+| P95 | 10.1s | 44.3s | High variance — tail can reach 44s |
+| Failure rate | 5% | 20% | 5-20% range; store-sync mandatory |
+
 ### Interpretation
 
 - **Listing vs. searchability gap confirmed:** Files are listed in ~1.5-2s (consistent with Phase 11 P99=0.253s for documents.get()) but take 5-10s to become searchable via targeted query. The embedding/indexing pipeline adds ~5-8s after listing visibility.
-- **Silent failure at 5%:** File "ITOE - Class 11-01 - Office Hour.txt" was listed in 1.692s but never appeared in search results after 300s of polling. The generic query ("ITOE Class 11 01 Office Hour") may have been too ambiguous to uniquely match this file -- the ITOE course has many similarly-named classes. This is a query-specificity issue rather than a Gemini indexing failure.
-- **Implications for store-sync:** Per Q7 decision, any silent failure rate > 0% triggers escalation consideration. The 5% rate means store-sync should run after each batch upload to verify searchability, not just on a schedule.
+- **High tail variance:** Run A P95=10.1s but Run B P95=44.3s. One outlier in Run B hit 44.3s, suggesting non-deterministic tail behavior in Gemini's indexing pipeline.
+- **Silent failure rate 5-20%:** Between 1-4 files per 20 never become searchable within 300s. This is not explained by query ambiguity alone (Run B failures had varied, specific queries). Store-sync is MANDATORY after each upload batch.
+- **Implications for store-sync:** Both runs confirm escalation is required. The 5-20% silent failure rate means "scheduled periodic only" is insufficient — store-sync must run after every upload session to catch these silent failures.
 
 ## Decisions
 
