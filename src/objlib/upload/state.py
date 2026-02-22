@@ -144,7 +144,7 @@ class AsyncUploadStateManager:
         db = self._ensure_connected()
         now = self._now_iso()
         await db.execute(
-            "UPDATE files SET updated_at = ? WHERE file_path = ?",
+            "UPDATE files SET gemini_state = 'uploading', updated_at = ? WHERE file_path = ?",
             (now, file_path),
         )
         await db.commit()
@@ -215,7 +215,7 @@ class AsyncUploadStateManager:
         now = self._now_iso()
         await db.execute(
             """UPDATE files
-               SET error_message = ?, updated_at = ?
+               SET gemini_state = 'failed', error_message = ?, updated_at = ?
                WHERE file_path = ?""",
             (error_message, now, file_path),
         )
