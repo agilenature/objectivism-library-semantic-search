@@ -7,19 +7,6 @@ from enum import Enum
 from typing import Optional
 
 
-class FileStatus(str, Enum):
-    """Status of a file in the processing pipeline."""
-
-    PENDING = "pending"
-    UPLOADING = "uploading"
-    UPLOADED = "uploaded"
-    FAILED = "failed"
-    SKIPPED = "skipped"
-    LOCAL_DELETE = "LOCAL_DELETE"
-    MISSING = "missing"
-    ERROR = "error"
-
-
 class MetadataQuality(str, Enum):
     """Quality grade for extracted metadata."""
 
@@ -40,13 +27,11 @@ class FileRecord:
     file_size: int
     metadata_json: str | None = None
     metadata_quality: MetadataQuality = MetadataQuality.UNKNOWN
-    status: FileStatus = FileStatus.PENDING
 
     def to_dict(self) -> dict[str, object]:
         """Convert to dictionary with enum values as strings."""
         d = asdict(self)
         d["metadata_quality"] = self.metadata_quality.value
-        d["status"] = self.status.value
         return d
 
 

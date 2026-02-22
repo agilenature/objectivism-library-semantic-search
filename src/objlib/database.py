@@ -10,12 +10,12 @@ import logging
 import sqlite3
 from pathlib import Path
 
-from objlib.models import FileRecord, FileStatus, MetadataQuality
+from objlib.models import FileRecord, MetadataQuality
 
 logger = logging.getLogger(__name__)
 
 SCHEMA_SQL = """
--- Core files table
+-- Core files table (V11 schema -- no legacy status column)
 CREATE TABLE IF NOT EXISTS files (
     file_path TEXT PRIMARY KEY,
     content_hash TEXT NOT NULL,
@@ -27,12 +27,11 @@ CREATE TABLE IF NOT EXISTS files (
     metadata_quality TEXT DEFAULT 'unknown'
         CHECK(metadata_quality IN ('complete', 'partial', 'minimal', 'none', 'unknown')),
 
-    -- State management
-    status TEXT NOT NULL DEFAULT 'pending'
-        CHECK(status IN ('pending', 'uploading', 'uploaded', 'failed', 'skipped', 'LOCAL_DELETE')),
+    -- Soft-delete flag (replaces status='LOCAL_DELETE')
+    is_deleted INTEGER NOT NULL DEFAULT 0,
     error_message TEXT,
 
-    -- API integration (null in Phase 1)
+    -- API integration
     gemini_file_uri TEXT,
     gemini_file_id TEXT,
     upload_timestamp TEXT,
@@ -41,13 +40,45 @@ CREATE TABLE IF NOT EXISTS files (
 
     -- Timestamps (ISO 8601 with milliseconds)
     created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')),
-    updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now'))
+    updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')),
+
+    -- AI metadata (V3)
+    ai_metadata_status TEXT DEFAULT 'pending',
+    ai_confidence_score REAL,
+
+    -- Entity extraction (V4)
+    entity_extraction_version TEXT,
+    entity_extraction_status TEXT DEFAULT 'pending',
+
+    -- Enriched upload (V5)
+    upload_attempt_count INTEGER DEFAULT 0,
+    last_upload_hash TEXT,
+
+    -- Sync columns (V7)
+    mtime REAL,
+    orphaned_gemini_file_id TEXT,
+    missing_since TEXT,
+    upload_hash TEXT,
+    enrichment_version TEXT,
+
+    -- Store document tracking (V9)
+    gemini_store_doc_id TEXT,
+    gemini_state TEXT NOT NULL DEFAULT 'untracked'
+        CHECK(gemini_state IN ('untracked','uploading','processing','indexed','failed')),
+    gemini_state_updated_at TEXT,
+
+    -- OCC + write-ahead intent (V10)
+    version INTEGER NOT NULL DEFAULT 0,
+    intent_type TEXT,
+    intent_started_at TEXT,
+    intent_api_calls_completed INTEGER
 );
 
--- Indexes (content_hash is NOT UNIQUE - allows duplicate content at different paths)
+-- Indexes
 CREATE INDEX IF NOT EXISTS idx_content_hash ON files(content_hash);
-CREATE INDEX IF NOT EXISTS idx_status ON files(status);
 CREATE INDEX IF NOT EXISTS idx_metadata_quality ON files(metadata_quality);
+CREATE INDEX IF NOT EXISTS idx_intent_type ON files(intent_type);
+CREATE INDEX IF NOT EXISTS idx_gemini_state ON files(gemini_state);
 
 -- Auto-update updated_at on any change
 CREATE TRIGGER IF NOT EXISTS update_files_timestamp
@@ -58,7 +89,7 @@ CREATE TRIGGER IF NOT EXISTS update_files_timestamp
         WHERE file_path = NEW.file_path;
     END;
 
--- Status transition audit log
+-- Historical status transition audit log (preserved for historical data)
 CREATE TABLE IF NOT EXISTS _processing_log (
     log_id INTEGER PRIMARY KEY AUTOINCREMENT,
     file_path TEXT NOT NULL,
@@ -68,16 +99,6 @@ CREATE TABLE IF NOT EXISTS _processing_log (
     error_details TEXT,
     FOREIGN KEY (file_path) REFERENCES files(file_path)
 );
-
--- Auto-log status transitions
-CREATE TRIGGER IF NOT EXISTS log_status_change
-    AFTER UPDATE OF status ON files
-    FOR EACH ROW
-    WHEN OLD.status != NEW.status
-    BEGIN
-        INSERT INTO _processing_log(file_path, old_status, new_status)
-        VALUES (NEW.file_path, OLD.status, NEW.status);
-    END;
 
 -- Extraction failures for pattern discovery
 CREATE TABLE IF NOT EXISTS _extraction_failures (
@@ -494,19 +515,113 @@ MIGRATION_V10_SQL = """-- V10: Phase 10 OCC + write-ahead intent columns
 -- Applied via ALTER TABLE in _setup_schema() for column-exists safety
 """
 
+MIGRATION_V11_SQL = """
+-- V11: Retire legacy status column, add CHECK on gemini_state, add is_deleted
+-- Safety: drop partial migration artifact if previous attempt failed
+DROP TABLE IF EXISTS files_v11;
+
+-- Step 1: Create new table WITHOUT status column, WITH gemini_state CHECK
+CREATE TABLE files_v11 (
+    file_path TEXT PRIMARY KEY,
+    content_hash TEXT NOT NULL,
+    filename TEXT NOT NULL,
+    file_size INTEGER NOT NULL,
+    metadata_json TEXT,
+    metadata_quality TEXT DEFAULT 'unknown'
+        CHECK(metadata_quality IN ('complete', 'partial', 'minimal', 'none', 'unknown')),
+    is_deleted INTEGER NOT NULL DEFAULT 0,
+    error_message TEXT,
+    gemini_file_uri TEXT,
+    gemini_file_id TEXT,
+    upload_timestamp TEXT,
+    remote_expiration_ts TEXT,
+    embedding_model_version TEXT,
+    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')),
+    updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')),
+    ai_metadata_status TEXT DEFAULT 'pending',
+    ai_confidence_score REAL,
+    entity_extraction_version TEXT,
+    entity_extraction_status TEXT DEFAULT 'pending',
+    upload_attempt_count INTEGER DEFAULT 0,
+    last_upload_hash TEXT,
+    mtime REAL,
+    orphaned_gemini_file_id TEXT,
+    missing_since TEXT,
+    upload_hash TEXT,
+    enrichment_version TEXT,
+    gemini_store_doc_id TEXT,
+    gemini_state TEXT NOT NULL DEFAULT 'untracked'
+        CHECK(gemini_state IN ('untracked','uploading','processing','indexed','failed')),
+    gemini_state_updated_at TEXT,
+    version INTEGER NOT NULL DEFAULT 0,
+    intent_type TEXT,
+    intent_started_at TEXT,
+    intent_api_calls_completed INTEGER
+);
+
+-- Step 2: Copy all existing data (omit status, derive is_deleted from status)
+INSERT INTO files_v11 (
+    file_path, content_hash, filename, file_size,
+    metadata_json, metadata_quality,
+    is_deleted,
+    error_message,
+    gemini_file_uri, gemini_file_id, upload_timestamp,
+    remote_expiration_ts, embedding_model_version,
+    created_at, updated_at,
+    ai_metadata_status, ai_confidence_score,
+    entity_extraction_version, entity_extraction_status,
+    upload_attempt_count, last_upload_hash,
+    mtime, orphaned_gemini_file_id, missing_since,
+    upload_hash, enrichment_version,
+    gemini_store_doc_id, gemini_state, gemini_state_updated_at,
+    version, intent_type, intent_started_at, intent_api_calls_completed
+)
+SELECT
+    file_path, content_hash, filename, file_size,
+    metadata_json, metadata_quality,
+    CASE WHEN status = 'LOCAL_DELETE' THEN 1 ELSE 0 END,
+    error_message,
+    gemini_file_uri, gemini_file_id, upload_timestamp,
+    remote_expiration_ts, embedding_model_version,
+    created_at, updated_at,
+    ai_metadata_status, ai_confidence_score,
+    entity_extraction_version, entity_extraction_status,
+    upload_attempt_count, last_upload_hash,
+    mtime, orphaned_gemini_file_id, missing_since,
+    upload_hash, enrichment_version,
+    gemini_store_doc_id, gemini_state, gemini_state_updated_at,
+    version, intent_type, intent_started_at, intent_api_calls_completed
+FROM files;
+
+-- Step 3: Drop old table, rename new
+DROP TABLE files;
+ALTER TABLE files_v11 RENAME TO files;
+
+-- Step 4: Recreate indexes (NO idx_status)
+CREATE INDEX idx_content_hash ON files(content_hash);
+CREATE INDEX idx_metadata_quality ON files(metadata_quality);
+CREATE INDEX idx_intent_type ON files(intent_type);
+CREATE INDEX idx_gemini_state ON files(gemini_state);
+
+-- Step 5: Recreate triggers (NO log_status_change)
+CREATE TRIGGER update_files_timestamp
+    AFTER UPDATE ON files
+    FOR EACH ROW
+    BEGIN
+        UPDATE files SET updated_at = strftime('%Y-%m-%dT%H:%M:%f', 'now')
+        WHERE file_path = NEW.file_path;
+    END;
+"""
+
 UPSERT_SQL = """
 INSERT INTO files(file_path, content_hash, filename, file_size,
-                  metadata_json, metadata_quality, status)
-VALUES (?, ?, ?, ?, ?, ?, ?)
+                  metadata_json, metadata_quality)
+VALUES (?, ?, ?, ?, ?, ?)
 ON CONFLICT(file_path) DO UPDATE SET
     content_hash = excluded.content_hash,
     file_size = excluded.file_size,
     metadata_json = excluded.metadata_json,
-    metadata_quality = excluded.metadata_quality,
-    status = CASE
-        WHEN files.content_hash != excluded.content_hash THEN 'pending'
-        ELSE files.status
-    END
+    metadata_quality = excluded.metadata_quality
 """
 
 
@@ -560,10 +675,16 @@ class Database:
         - v8: session_events table rebuild for 'bookmark' event type
         - v9: gemini_store_doc_id, gemini_state, gemini_state_updated_at columns (Phase 8 FSM)
         - v10: OCC version, intent_type, intent_started_at, intent_api_calls_completed columns (Phase 10)
+        - v11: Drop legacy status column, add is_deleted, CHECK on gemini_state (Phase 13)
         """
         self.conn.executescript(SCHEMA_SQL)
 
         version = self.conn.execute("PRAGMA user_version").fetchone()[0]
+
+        # Fresh database: SCHEMA_SQL already has V11 schema, skip all migrations
+        if version == 0:
+            self.conn.execute("PRAGMA user_version = 11")
+            return
 
         if version < 3:
             # Add new columns to files table (use try/except because
@@ -645,14 +766,19 @@ class Database:
                 "CREATE INDEX IF NOT EXISTS idx_gemini_state ON files(gemini_state)"
             )
 
-        self.conn.execute("PRAGMA user_version = 10")
+        if version < 11:
+            # V11: Drop legacy status column, add is_deleted, CHECK on gemini_state
+            self.conn.execute("PRAGMA foreign_keys = OFF")
+            self.conn.executescript(MIGRATION_V11_SQL)
+            self.conn.execute("PRAGMA foreign_keys = ON")
+
+        self.conn.execute("PRAGMA user_version = 11")
 
     def upsert_file(self, record: FileRecord) -> None:
         """Insert or update a single file record.
 
         On conflict (same file_path):
         - Updates content_hash, file_size, metadata_json, metadata_quality
-        - Resets status to 'pending' ONLY if content_hash changed
         - Preserves created_at (updated_at handled by trigger)
 
         Args:
@@ -668,7 +794,6 @@ class Database:
                     record.file_size,
                     record.metadata_json,
                     record.metadata_quality.value,
-                    record.status.value,
                 ),
             )
 
@@ -689,7 +814,6 @@ class Database:
                         r.file_size,
                         r.metadata_json,
                         r.metadata_quality.value,
-                        r.status.value,
                     )
                     for r in records
                 ],
@@ -702,16 +826,14 @@ class Database:
         results against database state.
         """
         rows = self.conn.execute(
-            "SELECT file_path, content_hash, file_size FROM files WHERE status != ?",
-            (FileStatus.LOCAL_DELETE.value,),
+            "SELECT file_path, content_hash, file_size FROM files WHERE NOT is_deleted"
         ).fetchall()
         return {row["file_path"]: (row["content_hash"], row["file_size"]) for row in rows}
 
     def mark_deleted(self, file_paths: set[str]) -> None:
         """Mark files as locally deleted.
 
-        Sets status to LOCAL_DELETE for the given paths. The status change
-        trigger automatically logs this transition to _processing_log.
+        Sets is_deleted = 1 for the given paths.
 
         Args:
             file_paths: Set of file paths to mark as deleted.
@@ -721,20 +843,20 @@ class Database:
         with self.conn:
             for path in file_paths:
                 self.conn.execute(
-                    "UPDATE files SET status = ? WHERE file_path = ?",
-                    (FileStatus.LOCAL_DELETE.value, path),
+                    "UPDATE files SET is_deleted = 1 WHERE file_path = ?",
+                    (path,),
                 )
 
     def get_status_counts(self) -> dict[str, int]:
-        """Return count of files grouped by status.
+        """Return count of files grouped by gemini_state.
 
         Returns:
-            Dictionary mapping status string to count.
+            Dictionary mapping gemini_state string to count.
         """
         rows = self.conn.execute(
-            "SELECT status, COUNT(*) as cnt FROM files GROUP BY status"
+            "SELECT gemini_state, COUNT(*) as cnt FROM files GROUP BY gemini_state"
         ).fetchall()
-        return {row["status"]: row["cnt"] for row in rows}
+        return {row["gemini_state"]: row["cnt"] for row in rows}
 
     def get_quality_counts(self) -> dict[str, int]:
         """Return count of files grouped by metadata quality.
@@ -799,7 +921,7 @@ class Database:
         placeholders = ",".join("?" * len(filenames))
         rows = self.conn.execute(
             f"SELECT filename, file_path, metadata_json FROM files "
-            f"WHERE filename IN ({placeholders}) AND status != 'LOCAL_DELETE'",
+            f"WHERE filename IN ({placeholders}) AND NOT is_deleted",
             filenames,
         ).fetchall()
 
@@ -866,7 +988,7 @@ class Database:
 
         Extracts the last path segment from each ``gemini_file_id`` (e.g.,
         ``"eafkmpzjs39o"`` from ``"files/eafkmpzjs39o"``) for all files with
-        ``status='uploaded'`` and a non-null ``gemini_file_id``.
+        ``gemini_state='indexed'`` and a non-null ``gemini_file_id``.
 
         Used by the ``store-sync`` purge command to identify which store
         documents are canonical vs orphaned.
@@ -875,7 +997,7 @@ class Database:
             Set of bare file ID strings (no ``"files/"`` prefix).
         """
         rows = self.conn.execute(
-            "SELECT gemini_file_id FROM files WHERE status = 'uploaded' AND gemini_file_id IS NOT NULL"
+            "SELECT gemini_file_id FROM files WHERE gemini_state = 'indexed' AND gemini_file_id IS NOT NULL"
         ).fetchall()
         suffixes: set[str] = set()
         for row in rows:
@@ -886,7 +1008,7 @@ class Database:
         return suffixes
 
     def get_pending_files(self, limit: int = 200) -> list[sqlite3.Row]:
-        """Return files with status='pending' for upload processing.
+        """Return files with gemini_state='untracked' for upload processing.
 
         Filters to .txt files only -- other file types are skipped.
 
@@ -900,34 +1022,11 @@ class Database:
         return self.conn.execute(
             """SELECT file_path, content_hash, filename, file_size, metadata_json
                FROM files
-               WHERE status = ? AND filename LIKE '%.txt'
+               WHERE gemini_state = 'untracked' AND filename LIKE '%.txt'
                ORDER BY file_path
                LIMIT ?""",
-            (FileStatus.PENDING.value, limit),
+            (limit,),
         ).fetchall()
-
-    def update_file_status(self, file_path: str, status: FileStatus, **kwargs: object) -> None:
-        """Update a file's status and optional additional columns.
-
-        Args:
-            file_path: Primary key of the file to update.
-            status: New FileStatus value.
-            **kwargs: Additional column=value pairs to set (e.g.,
-                gemini_file_uri, gemini_file_id, upload_timestamp,
-                error_message).
-        """
-        set_parts = ["status = ?"]
-        params: list[object] = [status.value]
-
-        for col, val in kwargs.items():
-            set_parts.append(f"{col} = ?")
-            params.append(val)
-
-        params.append(file_path)
-        sql = f"UPDATE files SET {', '.join(set_parts)} WHERE file_path = ?"
-
-        with self.conn:
-            self.conn.execute(sql, params)
 
     def get_file_count(self) -> int:
         """Return total count of files (all statuses).
@@ -952,7 +1051,7 @@ class Database:
             """SELECT COALESCE(json_extract(metadata_json, '$.category'), 'uncategorized') as category,
                       COUNT(*) as count
                FROM files
-               WHERE metadata_json IS NOT NULL AND status != 'LOCAL_DELETE'
+               WHERE metadata_json IS NOT NULL AND NOT is_deleted
                GROUP BY category
                ORDER BY count DESC"""
         ).fetchall()
@@ -972,7 +1071,7 @@ class Database:
                       COUNT(*) as count
                FROM files
                WHERE json_extract(metadata_json, '$.category') = 'course'
-                 AND status != 'LOCAL_DELETE'
+                 AND NOT is_deleted
                GROUP BY course
                ORDER BY course"""
         ).fetchall()
@@ -1005,7 +1104,7 @@ class Database:
         sql = f"""
             SELECT filename, file_path, metadata_json FROM files
             WHERE json_extract(metadata_json, '$.course') = ?
-              AND status != 'LOCAL_DELETE'
+              AND NOT is_deleted
               {year_clause}
             ORDER BY json_extract(metadata_json, '$.lesson_number'),
                      json_extract(metadata_json, '$.year'),
@@ -1041,7 +1140,7 @@ class Database:
         rows = self.conn.execute(
             """SELECT filename, file_path, metadata_json FROM files
                WHERE json_extract(metadata_json, '$.category') = ?
-                 AND status != 'LOCAL_DELETE'
+                 AND NOT is_deleted
                ORDER BY filename""",
             (category,),
         ).fetchall()
@@ -1079,7 +1178,7 @@ class Database:
         VALID_FIELDS = {"category", "course", "difficulty", "quarter", "date", "year", "week", "quality_score"}
         NUMERIC_FIELDS = {"year", "week", "quality_score"}
 
-        where_parts: list[str] = ["status != 'LOCAL_DELETE'", "metadata_json IS NOT NULL"]
+        where_parts: list[str] = ["NOT is_deleted", "metadata_json IS NOT NULL"]
         params: list = []
 
         for field, value in filters.items():
@@ -1405,7 +1504,7 @@ class Database:
         # Total .txt files
         row = self.conn.execute(
             "SELECT COUNT(*) as cnt FROM files "
-            "WHERE filename LIKE '%.txt' AND status != 'LOCAL_DELETE'"
+            "WHERE filename LIKE '%.txt' AND NOT is_deleted"
         ).fetchone()
         total_txt = row["cnt"] if row else 0
 
@@ -1413,21 +1512,21 @@ class Database:
         done_row = self.conn.execute(
             "SELECT COUNT(*) as cnt FROM files "
             "WHERE entity_extraction_status = 'entities_done' "
-            "AND filename LIKE '%.txt' AND status != 'LOCAL_DELETE'"
+            "AND filename LIKE '%.txt' AND NOT is_deleted"
         ).fetchone()
         entities_done = done_row["cnt"] if done_row else 0
 
         pending_row = self.conn.execute(
             "SELECT COUNT(*) as cnt FROM files "
             "WHERE (entity_extraction_status IS NULL OR entity_extraction_status = 'pending') "
-            "AND filename LIKE '%.txt' AND status != 'LOCAL_DELETE'"
+            "AND filename LIKE '%.txt' AND NOT is_deleted"
         ).fetchone()
         pending = pending_row["cnt"] if pending_row else 0
 
         error_row = self.conn.execute(
             "SELECT COUNT(*) as cnt FROM files "
             "WHERE entity_extraction_status IN ('error', 'blocked_entity_extraction') "
-            "AND filename LIKE '%.txt' AND status != 'LOCAL_DELETE'"
+            "AND filename LIKE '%.txt' AND NOT is_deleted"
         ).fetchone()
         errors = error_row["cnt"] if error_row else 0
 
@@ -1485,25 +1584,25 @@ class Database:
             sql = """SELECT file_path, filename, file_size FROM files
                      WHERE filename LIKE '%.txt'
                        AND (entity_extraction_status IS NULL OR entity_extraction_status = 'pending')
-                       AND status != 'LOCAL_DELETE'
+                       AND NOT is_deleted
                      ORDER BY file_path LIMIT ?"""
         elif mode == "backfill":
             sql = """SELECT file_path, filename, file_size FROM files
                      WHERE filename LIKE '%.txt'
-                       AND status = 'uploaded'
+                       AND gemini_state = 'indexed'
                        AND (entity_extraction_status IS NULL OR entity_extraction_status = 'pending')
                      ORDER BY file_path LIMIT ?"""
         elif mode == "force":
             sql = """SELECT file_path, filename, file_size FROM files
                      WHERE filename LIKE '%.txt'
-                       AND status != 'LOCAL_DELETE'
+                       AND NOT is_deleted
                      ORDER BY file_path LIMIT ?"""
         elif mode == "upgrade":
             sql = """SELECT file_path, filename, file_size FROM files
                      WHERE filename LIKE '%.txt'
                        AND entity_extraction_version != '6.1.0'
                        AND entity_extraction_status = 'entities_done'
-                       AND status != 'LOCAL_DELETE'
+                       AND NOT is_deleted
                      ORDER BY file_path LIMIT ?"""
         else:
             raise ValueError(f"Unknown mode: {mode}. Valid: pending, backfill, force, upgrade")
@@ -1577,10 +1676,10 @@ class Database:
     # ---- Sync methods (Phase 5) ----
 
     def mark_missing(self, file_paths: set[str]) -> None:
-        """Set status='missing' and missing_since=now() for the given paths.
+        """Set missing_since=now() for the given paths.
 
-        Only marks files that aren't already 'missing' to avoid resetting
-        the missing_since timestamp.
+        Only marks files that aren't already missing (missing_since IS NULL)
+        to avoid resetting the missing_since timestamp.
 
         Args:
             file_paths: Set of file paths to mark as missing.
@@ -1593,13 +1692,13 @@ class Database:
         with self.conn:
             for path in file_paths:
                 self.conn.execute(
-                    "UPDATE files SET status = 'missing', missing_since = ? "
-                    "WHERE file_path = ? AND status != 'missing'",
+                    "UPDATE files SET missing_since = ? "
+                    "WHERE file_path = ? AND missing_since IS NULL",
                     (now, path),
                 )
 
     def get_missing_files(self, min_age_days: int | None = None) -> list[dict]:
-        """Return files with status='missing'.
+        """Return files with missing_since IS NOT NULL.
 
         Args:
             min_age_days: If provided, filter to files where missing_since
@@ -1613,7 +1712,7 @@ class Database:
             rows = self.conn.execute(
                 """SELECT file_path, filename, gemini_file_id, missing_since
                    FROM files
-                   WHERE status = 'missing'
+                   WHERE missing_since IS NOT NULL
                      AND missing_since <= strftime('%Y-%m-%dT%H:%M:%f', 'now', ?)
                    ORDER BY missing_since""",
                 (f"-{min_age_days} days",),
@@ -1622,7 +1721,7 @@ class Database:
             rows = self.conn.execute(
                 """SELECT file_path, filename, gemini_file_id, missing_since
                    FROM files
-                   WHERE status = 'missing'
+                   WHERE missing_since IS NOT NULL
                    ORDER BY missing_since"""
             ).fetchall()
         return [
@@ -1706,8 +1805,8 @@ class Database:
     def update_file_sync_columns(self, file_path: str, **kwargs: object) -> None:
         """Update arbitrary sync columns on a file record.
 
-        Uses the same pattern as update_file_status but without changing
-        the status field. Valid columns: mtime, upload_hash,
+        Updates arbitrary sync-related columns on a file record.
+        Valid columns: mtime, upload_hash,
         enrichment_version, orphaned_gemini_file_id, missing_since.
 
         Args:
@@ -1745,11 +1844,11 @@ class Database:
 
         Returns:
             Dict with mtime, content_hash, upload_hash, enrichment_version,
-            gemini_file_id, status keys, or None if not found.
+            gemini_file_id, gemini_state keys, or None if not found.
         """
         row = self.conn.execute(
             """SELECT mtime, content_hash, upload_hash, enrichment_version,
-                      gemini_file_id, status
+                      gemini_file_id, gemini_state
                FROM files
                WHERE file_path = ?""",
             (file_path,),
@@ -1762,7 +1861,7 @@ class Database:
             "upload_hash": row["upload_hash"],
             "enrichment_version": row["enrichment_version"],
             "gemini_file_id": row["gemini_file_id"],
-            "status": row["status"],
+            "gemini_state": row["gemini_state"],
         }
 
     def get_all_active_files_with_mtime(self) -> dict[str, tuple[str, int, float | None]]:
@@ -1776,8 +1875,7 @@ class Database:
         """
         rows = self.conn.execute(
             "SELECT file_path, content_hash, file_size, mtime FROM files "
-            "WHERE status NOT IN (?, ?)",
-            (FileStatus.LOCAL_DELETE.value, FileStatus.MISSING.value),
+            "WHERE NOT is_deleted AND missing_since IS NULL"
         ).fetchall()
         return {
             row["file_path"]: (row["content_hash"], row["file_size"], row["mtime"])

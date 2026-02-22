@@ -18,7 +18,7 @@ from pathlib import Path
 from objlib.config import ScannerConfig
 from objlib.database import Database
 from objlib.metadata import MetadataExtractor
-from objlib.models import FileRecord, FileStatus, MetadataQuality
+from objlib.models import FileRecord, MetadataQuality
 
 logger = logging.getLogger(__name__)
 
@@ -253,7 +253,6 @@ class FileScanner:
                 file_size=file_size,
                 metadata_json=metadata_json,
                 metadata_quality=quality,
-                status=FileStatus.PENDING,
             )
             scan_results[str(file_path)] = record
 

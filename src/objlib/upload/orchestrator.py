@@ -679,11 +679,10 @@ class EnrichedUploadOrchestrator(UploadOrchestrator):
                                 exc,
                             )
 
-                # Reset to pending in database
+                # Reset for re-upload in database
                 await db.execute(
                     """UPDATE files
-                       SET status = 'pending',
-                           error_message = NULL,
+                       SET error_message = NULL,
                            upload_attempt_count = 0,
                            gemini_file_uri = NULL,
                            gemini_file_id = NULL,

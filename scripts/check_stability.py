@@ -10,7 +10,7 @@ breaks by T+24h. The checks are intentionally distrustful — they do not assume
 that a passing state from a previous run implies a passing state now.
 
 v2 changes from v1:
-  - Uses gemini_state='indexed' instead of status='uploaded'
+  - Uses gemini_state='indexed' (legacy status column retired in V11)
   - Uses gemini_store_doc_id instead of gemini_file_id for store matching
   - Prerequisite checks produce exit 2 (not exit 1) for configuration errors
   - Vacuous pass logic for empty stores (0 indexed files)
@@ -187,7 +187,7 @@ class StabilityChecker:
             print(f"ERROR: API error listing stores: {e}", file=sys.stderr)
             return False
 
-    # -- Step 1: DB (uses gemini_state instead of status) ----------------------
+    # -- Step 1: DB (uses gemini_state -- legacy status column retired V11) ----
 
     def _load_db(self) -> tuple[int, set[str], dict[str, int]] | None:
         """

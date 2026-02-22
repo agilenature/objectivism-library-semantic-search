@@ -189,7 +189,7 @@ class RecoveryManager:
                         )
                         now = self._state._now_iso()
                         await db.execute(
-                            "UPDATE files SET status = 'uploaded', updated_at = ? "
+                            "UPDATE files SET updated_at = ? "
                             "WHERE file_path = ?",
                             (now, file_path),
                         )
@@ -294,10 +294,10 @@ class RecoveryManager:
         db = self._state._ensure_connected()
         cursor = await db.execute(
             """SELECT file_path, gemini_file_id, gemini_file_uri,
-                      remote_expiration_ts, status
+                      remote_expiration_ts, gemini_state
                FROM files
                WHERE remote_expiration_ts IS NOT NULL
-                 AND status IN ('uploading', 'uploaded')"""
+                 AND gemini_state IN ('uploading', 'indexed')"""
         )
         rows = await cursor.fetchall()
 
@@ -361,15 +361,14 @@ class RecoveryManager:
     async def _reset_file_to_pending(
         self, file_path: str, *, clear_remote: bool = False
     ) -> None:
-        """Reset a file's status to ``pending``, optionally clearing Gemini IDs."""
+        """Reset a file for re-upload, optionally clearing Gemini IDs."""
         db = self._state._ensure_connected()
         now = self._state._now_iso()
 
         if clear_remote:
             await db.execute(
                 """UPDATE files
-                   SET status = 'pending',
-                       gemini_file_uri = NULL,
+                   SET gemini_file_uri = NULL,
                        gemini_file_id = NULL,
                        remote_expiration_ts = NULL,
                        upload_timestamp = NULL,
@@ -379,7 +378,7 @@ class RecoveryManager:
             )
         else:
             await db.execute(
-                "UPDATE files SET status = 'pending', updated_at = ? "
+                "UPDATE files SET updated_at = ? "
                 "WHERE file_path = ?",
                 (now, file_path),
             )
@@ -550,7 +549,6 @@ async def retry_failed_file(
     cursor = await db.execute(
         """UPDATE files
            SET gemini_state = 'untracked',
-               status = 'pending',
                gemini_file_id = NULL,
                gemini_file_uri = NULL,
                gemini_store_doc_id = NULL,

@@ -53,7 +53,7 @@ def select_test_files(db: "Database", n: int = 20) -> list[dict]:
            FROM files
            WHERE json_extract(metadata_json, '$.category') = 'unknown'
              AND filename LIKE '%.txt'
-             AND status != 'LOCAL_DELETE'
+             AND NOT is_deleted
            ORDER BY file_path""",
     ).fetchall()
 

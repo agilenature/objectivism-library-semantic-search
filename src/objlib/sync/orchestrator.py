@@ -25,7 +25,7 @@ from rich.table import Table
 from objlib.config import ScannerConfig
 from objlib.database import Database
 from objlib.metadata import MetadataExtractor
-from objlib.models import FileRecord, FileStatus, MetadataQuality
+from objlib.models import FileRecord, MetadataQuality
 from objlib.sync.detector import (
     CURRENT_ENRICHMENT_VERSION,
     SyncChangeSet,
@@ -189,7 +189,6 @@ class SyncOrchestrator:
                 metadata_quality=MetadataQuality(
                     file_info.get("metadata_quality", "unknown")
                 ),
-                status=FileStatus.PENDING,
             )
             self.db.upsert_file(record)
 
@@ -209,13 +208,18 @@ class SyncOrchestrator:
 
             if done and not error:
                 # Update DB with Gemini file info
-                self.db.update_file_status(
-                    file_path,
-                    FileStatus.UPLOADED,
-                    gemini_file_uri=getattr(file_obj, "uri", ""),
-                    gemini_file_id=getattr(file_obj, "name", ""),
-                    upload_timestamp=self._now_iso(),
+                self.db.conn.execute(
+                    "UPDATE files SET gemini_file_uri = ?, gemini_file_id = ?, "
+                    "upload_timestamp = ?, gemini_state = 'indexed' "
+                    "WHERE file_path = ?",
+                    (
+                        getattr(file_obj, "uri", ""),
+                        getattr(file_obj, "name", ""),
+                        self._now_iso(),
+                        file_path,
+                    ),
                 )
+                self.db.conn.commit()
                 self.db.update_file_sync_columns(
                     file_path,
                     mtime=file_info.get("mtime"),
@@ -226,16 +230,22 @@ class SyncOrchestrator:
                 logger.info("Uploaded new file: %s", filename)
             else:
                 error_msg = str(error) if error else "Import did not complete"
-                self.db.update_file_status(
-                    file_path, FileStatus.FAILED, error_message=error_msg
+                self.db.conn.execute(
+                    "UPDATE files SET error_message = ?, gemini_state = 'failed' "
+                    "WHERE file_path = ?",
+                    (error_msg, file_path),
                 )
+                self.db.conn.commit()
                 self._errors += 1
                 logger.error("Failed to import %s: %s", filename, error_msg)
 
         except Exception as exc:
-            self.db.update_file_status(
-                file_path, FileStatus.FAILED, error_message=str(exc)
+            self.db.conn.execute(
+                "UPDATE files SET error_message = ?, gemini_state = 'failed' "
+                "WHERE file_path = ?",
+                (str(exc), file_path),
             )
+            self.db.conn.commit()
             self._errors += 1
             logger.error("Failed to upload new file %s: %s", filename, exc)
 
@@ -282,9 +292,12 @@ class SyncOrchestrator:
 
             if not (done and not error):
                 error_msg = str(error) if error else "Import did not complete"
-                self.db.update_file_status(
-                    file_path, FileStatus.FAILED, error_message=error_msg
+                self.db.conn.execute(
+                    "UPDATE files SET error_message = ?, gemini_state = 'failed' "
+                    "WHERE file_path = ?",
+                    (error_msg, file_path),
                 )
+                self.db.conn.commit()
                 self._errors += 1
                 logger.error("Failed to import replacement for %s: %s", filename, error_msg)
                 return
@@ -296,13 +309,18 @@ class SyncOrchestrator:
                 )
 
             # Update with new Gemini file info
-            self.db.update_file_status(
-                file_path,
-                FileStatus.UPLOADED,
-                gemini_file_uri=getattr(file_obj, "uri", ""),
-                gemini_file_id=getattr(file_obj, "name", ""),
-                upload_timestamp=self._now_iso(),
+            self.db.conn.execute(
+                "UPDATE files SET gemini_file_uri = ?, gemini_file_id = ?, "
+                "upload_timestamp = ?, gemini_state = 'indexed' "
+                "WHERE file_path = ?",
+                (
+                    getattr(file_obj, "uri", ""),
+                    getattr(file_obj, "name", ""),
+                    self._now_iso(),
+                    file_path,
+                ),
             )
+            self.db.conn.commit()
             self.db.update_file_sync_columns(
                 file_path,
                 mtime=file_info.get("mtime"),
@@ -436,8 +454,8 @@ class SyncOrchestrator:
             file_path = file_info["file_path"]
             # Check if this file exists in DB as LOCAL_DELETE
             row = self.db.conn.execute(
-                "SELECT status, content_hash, gemini_file_id FROM files "
-                "WHERE file_path = ? AND status = 'LOCAL_DELETE'",
+                "SELECT is_deleted, content_hash, gemini_file_id FROM files "
+                "WHERE file_path = ? AND is_deleted = 1",
                 (file_path,),
             ).fetchone()
             if row is None:
@@ -450,7 +468,7 @@ class SyncOrchestrator:
             if disk_hash == db_hash and gemini_id:
                 # Same content, still has a Gemini ID — just restore status
                 self.db.conn.execute(
-                    "UPDATE files SET status = 'uploaded', error_message = NULL, "
+                    "UPDATE files SET is_deleted = 0, error_message = NULL, "
                     "mtime = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%f', 'now') "
                     "WHERE file_path = ?",
                     (file_info.get("mtime"), file_path),
@@ -533,8 +551,8 @@ class SyncOrchestrator:
                     if doc_name:
                         await self.client.delete_store_document(doc_name)
 
-                # Update status to LOCAL_DELETE
-                self.db.update_file_status(file_path, FileStatus.LOCAL_DELETE)
+                # Mark as deleted
+                self.db.mark_deleted({file_path})
                 self._pruned += 1
                 logger.info("Pruned missing file: %s", file_path)
 

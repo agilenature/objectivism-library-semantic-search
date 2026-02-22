@@ -264,7 +264,7 @@ def scan(
         console.print(f"\n[bold]Total files in database:[/bold] {total}")
 
         if status_counts:
-            console.print("[bold]By status:[/bold]")
+            console.print("[bold]By gemini_state:[/bold]")
             for s, count in sorted(status_counts.items()):
                 console.print(f"  {s}: {count}")
 
@@ -372,10 +372,10 @@ def purge(
         raise typer.Exit(code=1)
 
     with Database(db_path) as db:
-        # Query LOCAL_DELETE records older than N days
+        # Query deleted records older than N days
         rows = db.conn.execute(
             """SELECT file_path FROM files
-               WHERE status = 'LOCAL_DELETE'
+               WHERE is_deleted = 1
                AND updated_at < strftime('%Y-%m-%dT%H:%M:%f',
                    'now', ? || ' days')""",
             (f"-{older_than_days}",),
@@ -385,12 +385,12 @@ def purge(
 
         if count == 0:
             console.print(
-                f"[green]No LOCAL_DELETE records older than {older_than_days} days.[/green]"
+                f"[green]No deleted records older than {older_than_days} days.[/green]"
             )
             return
 
         console.print(
-            f"Found [bold]{count}[/bold] LOCAL_DELETE record(s) "
+            f"Found [bold]{count}[/bold] deleted record(s) "
             f"older than {older_than_days} days."
         )
 
@@ -2044,18 +2044,18 @@ def metadata_show(
     
     with Database(db_path) as db:
         row = db.conn.execute(
-            "SELECT filename, metadata_json, status FROM files WHERE filename = ?",
+            "SELECT filename, metadata_json, gemini_state FROM files WHERE filename = ?",
             [filename],
         ).fetchone()
-        
+
         if not row:
             console.print(f"[red]Error:[/red] File not found: {filename}")
             raise typer.Exit(code=1)
-        
+
         meta = json.loads(row["metadata_json"]) if row["metadata_json"] else {}
-        
+
         # Display metadata in a panel
-        lines = [f"[bold]File:[/bold] {row['filename']}", f"[bold]Status:[/bold] {row['status']}", ""]
+        lines = [f"[bold]File:[/bold] {row['filename']}", f"[bold]State:[/bold] {row['gemini_state']}", ""]
         
         if meta:
             lines.append("[bold]Metadata:[/bold]")
@@ -2099,23 +2099,19 @@ def metadata_update(
         str | None,
         typer.Option("--quarter", help="Update quarter"),
     ] = None,
-    set_pending: Annotated[
-        bool,
-        typer.Option("--set-pending", help="Set status to pending for re-upload"),
-    ] = False,
     db_path: Annotated[
         Path,
         typer.Option("--db", "-d", help="Path to SQLite database"),
     ] = Path("data/library.db"),
 ) -> None:
     """Update metadata fields for a specific file.
-    
+
     Examples:
       objlib metadata update "file.txt" --category course --course OPAR
-      objlib metadata update "file.txt" --difficulty intermediate --set-pending
+      objlib metadata update "file.txt" --difficulty intermediate
     """
     import json
-    
+
     # Collect updates
     updates = {}
     if category is not None:
@@ -2130,8 +2126,8 @@ def metadata_update(
         updates["year"] = year
     if quarter is not None:
         updates["quarter"] = quarter
-    
-    if not updates and not set_pending:
+
+    if not updates:
         console.print("[yellow]No updates specified. Use --category, --course, etc.[/yellow]")
         raise typer.Exit(code=1)
     
@@ -2151,26 +2147,16 @@ def metadata_update(
         meta.update(updates)
         
         # Save back to database
-        update_query = "UPDATE files SET metadata_json = ?"
-        params = [json.dumps(meta)]
-        
-        if set_pending:
-            update_query += ", status = ?"
-            params.append("pending")
-        
-        update_query += " WHERE filename = ?"
-        params.append(filename)
-        
+        update_query = "UPDATE files SET metadata_json = ? WHERE filename = ?"
+        params = [json.dumps(meta), filename]
+
         db.conn.execute(update_query, params)
         db.conn.commit()
-        
+
         # Show what was updated
-        console.print(f"[green]✓[/green] Updated metadata for: {filename}")
+        console.print(f"[green]Updated metadata for: {filename}[/green]")
         for key, value in updates.items():
             console.print(f"  {key}: [bold]{value}[/bold]")
-        
-        if set_pending:
-            console.print("\n[dim]Status set to 'pending' - run 'objlib upload' to sync with Gemini[/dim]")
 
 
 @metadata_app.command("batch-update")
@@ -2191,26 +2177,22 @@ def metadata_batch_update(
         str | None,
         typer.Option("--difficulty", help="Update difficulty for all matches"),
     ] = None,
-    set_pending: Annotated[
-        bool,
-        typer.Option("--set-pending", help="Set status to pending for re-upload"),
-    ] = False,
     db_path: Annotated[
         Path,
         typer.Option("--db", "-d", help="Path to SQLite database"),
     ] = Path("data/library.db"),
 ) -> None:
     """Update metadata for multiple files matching a pattern.
-    
+
     Uses SQL LIKE syntax: % matches any characters, _ matches single character.
-    
+
     Examples:
       objlib metadata batch-update '%Stoicism%' --category philosophy_comparison
-      objlib metadata batch-update '%Q and A%' --category qa_session --set-pending
+      objlib metadata batch-update '%Q and A%' --category qa_session
       objlib metadata batch-update 'Ben Bayer%' --course ARI_Seminars
     """
     import json
-    
+
     # Collect updates
     updates = {}
     if category is not None:
@@ -2219,8 +2201,8 @@ def metadata_batch_update(
         updates["course"] = course
     if difficulty is not None:
         updates["difficulty"] = difficulty
-    
-    if not updates and not set_pending:
+
+    if not updates:
         console.print("[yellow]No updates specified. Use --category, --course, etc.[/yellow]")
         raise typer.Exit(code=1)
     
@@ -2248,28 +2230,18 @@ def metadata_batch_update(
         for row in rows:
             meta = json.loads(row["metadata_json"]) if row["metadata_json"] else {}
             meta.update(updates)
-            
-            update_query = "UPDATE files SET metadata_json = ?"
-            params = [json.dumps(meta)]
-            
-            if set_pending:
-                update_query += ", status = ?"
-                params.append("pending")
-            
-            update_query += " WHERE filename = ?"
-            params.append(row["filename"])
-            
-            db.conn.execute(update_query, params)
-        
+
+            db.conn.execute(
+                "UPDATE files SET metadata_json = ? WHERE filename = ?",
+                [json.dumps(meta), row["filename"]],
+            )
+
         db.conn.commit()
-        
+
         # Show what was updated
-        console.print(f"\n[green]✓[/green] Updated {len(rows)} file(s)")
+        console.print(f"\n[green]Updated {len(rows)} file(s)[/green]")
         for key, value in updates.items():
             console.print(f"  {key}: [bold]{value}[/bold]")
-
-        if set_pending:
-            console.print("\n[dim]Status set to 'pending' - run 'objlib upload' to sync with Gemini[/dim]")
 
 
 @metadata_app.command("extract-wave1")
@@ -2579,10 +2551,6 @@ def extract_production(
         bool,
         typer.Option("--dry-run", help="Show file count and cost estimate without processing"),
     ] = False,
-    set_pending: Annotated[
-        bool,
-        typer.Option("--set-pending", help="Set upload status to pending for re-upload with enriched metadata"),
-    ] = False,
 ) -> None:
     """Run Wave 2 production extraction on remaining unknown files.
 
@@ -2690,18 +2658,6 @@ def extract_production(
         summary_table.add_row("Time Elapsed", f"{elapsed:.1f}s")
 
         console.print(summary_table)
-
-        # Set pending for re-upload if requested
-        if set_pending:
-            with db.conn:
-                cursor = db.conn.execute(
-                    "UPDATE files SET status = 'pending' "
-                    "WHERE ai_metadata_status IN ('extracted', 'approved')"
-                )
-                pending_count = cursor.rowcount
-            console.print(
-                f"\n[green]Set {pending_count} file(s) to pending for re-upload.[/green]"
-            )
 
         console.print(
             "\n[bold]Next steps:[/bold]\n"

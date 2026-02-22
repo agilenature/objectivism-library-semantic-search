@@ -98,7 +98,7 @@ class AsyncUploadStateManager:
         cursor = await db.execute(
             """SELECT file_path, content_hash, filename, file_size, metadata_json
                FROM files
-               WHERE status = 'pending' AND filename LIKE '%.txt'
+               WHERE gemini_state = 'untracked' AND filename LIKE '%.txt'
                ORDER BY file_path
                LIMIT ?""",
             (limit,),
@@ -107,12 +107,12 @@ class AsyncUploadStateManager:
         return [dict(row) for row in rows]
 
     async def get_uploading_files(self) -> list[dict]:
-        """Return files with ``status = 'uploading'`` (crash recovery candidates)."""
+        """Return files with ``gemini_state = 'uploading'`` (crash recovery candidates)."""
         db = self._ensure_connected()
         cursor = await db.execute(
             """SELECT file_path, content_hash, filename, file_size, metadata_json
                FROM files
-               WHERE status = 'uploading'
+               WHERE gemini_state = 'uploading'
                ORDER BY file_path"""
         )
         rows = await cursor.fetchall()
@@ -136,16 +136,15 @@ class AsyncUploadStateManager:
     # ------------------------------------------------------------------
 
     async def record_upload_intent(self, file_path: str) -> None:
-        """Write upload intent BEFORE the API call.
+        """Write upload intent BEFORE the API call (legacy path).
 
-        Sets ``status = 'uploading'``.  If the process crashes between
-        this call and the API response, recovery will find this file in
-        ``uploading`` status and retry.
+        If the process crashes between this call and the API response,
+        recovery will find this file and retry.
         """
         db = self._ensure_connected()
         now = self._now_iso()
         await db.execute(
-            "UPDATE files SET status = 'uploading', updated_at = ? WHERE file_path = ?",
+            "UPDATE files SET updated_at = ? WHERE file_path = ?",
             (now, file_path),
         )
         await db.commit()
@@ -189,7 +188,7 @@ class AsyncUploadStateManager:
         logger.debug("Recorded upload success for %s (op=%s)", file_path, operation_name)
 
     async def record_import_success(self, file_path: str, operation_name: str) -> None:
-        """Mark an import operation as succeeded and the file as uploaded."""
+        """Mark an import operation as succeeded (legacy path)."""
         db = self._ensure_connected()
         now = self._now_iso()
         await db.execute(
@@ -199,7 +198,7 @@ class AsyncUploadStateManager:
             (now, operation_name),
         )
         await db.execute(
-            "UPDATE files SET status = 'uploaded', updated_at = ? WHERE file_path = ?",
+            "UPDATE files SET updated_at = ? WHERE file_path = ?",
             (now, file_path),
         )
         await db.commit()
@@ -216,7 +215,7 @@ class AsyncUploadStateManager:
         now = self._now_iso()
         await db.execute(
             """UPDATE files
-               SET status = 'failed', error_message = ?, updated_at = ?
+               SET error_message = ?, updated_at = ?
                WHERE file_path = ?""",
             (error_message, now, file_path),
         )
@@ -401,7 +400,7 @@ class AsyncUploadStateManager:
                     ON f.file_path = m.file_path AND m.is_current = 1
                 WHERE f.filename LIKE '%.txt'
                   AND f.entity_extraction_status = 'entities_done'
-                  AND f.status = 'pending'
+                  AND f.gemini_state = 'untracked'
                   {status_clause}
                 ORDER BY f.file_path
                 LIMIT ?""",
@@ -447,14 +446,14 @@ class AsyncUploadStateManager:
 
         db = self._ensure_connected()
         cursor = await db.execute(
-            """SELECT f.file_path, f.filename, f.status,
+            """SELECT f.file_path, f.filename, f.gemini_state,
                       f.gemini_file_id, f.last_upload_hash,
                       f.content_hash, f.metadata_json AS phase1_metadata_json,
                       m.metadata_json AS ai_metadata_json
                FROM files f
                JOIN file_metadata_ai m
                    ON f.file_path = m.file_path AND m.is_current = 1
-               WHERE f.status IN ('uploaded', 'failed')
+               WHERE f.gemini_state IN ('indexed', 'failed')
                  AND f.filename LIKE '%.txt'
                  AND f.entity_extraction_status = 'entities_done'
                  AND f.ai_metadata_status IN ('extracted', 'approved', 'needs_review')
@@ -486,7 +485,7 @@ class AsyncUploadStateManager:
             # Always retry failed files (polling timeout, API errors, etc.)
             # For uploaded files, only reset if hash changed
             should_reset = (
-                row["status"] == "failed"  # Always retry failures
+                row["gemini_state"] == "failed"  # Always retry failures
                 or row["last_upload_hash"] is None  # Never uploaded with enriched metadata
                 or row["last_upload_hash"] != current_hash  # Metadata changed
             )
@@ -529,7 +528,6 @@ class AsyncUploadStateManager:
         cursor = await db.execute(
             """UPDATE files
                SET gemini_state = 'uploading',
-                   status = 'uploading',
                    gemini_state_updated_at = ?,
                    version = ?
                WHERE file_path = ?
@@ -624,7 +622,6 @@ class AsyncUploadStateManager:
             """UPDATE files
                SET gemini_state = 'indexed',
                    gemini_store_doc_id = ?,
-                   status = 'uploaded',
                    gemini_state_updated_at = ?,
                    version = ?
                WHERE file_path = ?
@@ -671,7 +668,6 @@ class AsyncUploadStateManager:
             """UPDATE files
                SET gemini_state = 'failed',
                    error_message = ?,
-                   status = 'failed',
                    gemini_state_updated_at = ?,
                    version = ?
                WHERE file_path = ?
@@ -805,7 +801,6 @@ class AsyncUploadStateManager:
         cursor = await db.execute(
             """UPDATE files
                SET gemini_state = 'untracked',
-                   status = 'pending',
                    gemini_file_id = NULL,
                    gemini_file_uri = NULL,
                    gemini_store_doc_id = NULL,

@@ -15,7 +15,7 @@ while true; do
         ai_metadata_status,
         COUNT(*) as count
     FROM files
-    WHERE status = 'uploaded'
+    WHERE gemini_state = 'indexed'
     GROUP BY ai_metadata_status
     ORDER BY count DESC;
     "
