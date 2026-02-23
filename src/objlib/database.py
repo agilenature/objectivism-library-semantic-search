@@ -157,6 +157,13 @@ CREATE TABLE IF NOT EXISTS upload_locks (
     acquired_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now')),
     last_heartbeat TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now'))
 );
+
+-- Library config key-value store (V7)
+CREATE TABLE IF NOT EXISTS library_config (
+    key TEXT PRIMARY KEY,
+    value TEXT,
+    updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%f', 'now'))
+);
 """
 
 MIGRATION_V3_SQL = """
@@ -681,10 +688,11 @@ class Database:
 
         version = self.conn.execute("PRAGMA user_version").fetchone()[0]
 
-        # Fresh database: SCHEMA_SQL already has V11 schema, skip all migrations
-        if version == 0:
-            self.conn.execute("PRAGMA user_version = 11")
-            return
+        # Fresh database: SCHEMA_SQL already has V11 files table schema.
+        # Still need to run migration scripts that create OTHER tables
+        # (person, passages, sessions, etc.) but skip table-rebuild migrations
+        # (V7 and V11) that assume a status column exists.
+        fresh_db = version == 0
 
         if version < 3:
             # Add new columns to files table (use try/except because
@@ -726,7 +734,7 @@ class Database:
         if version < 6:
             self.conn.executescript(MIGRATION_V6_SQL)
 
-        if version < 7:
+        if version < 7 and not fresh_db:
             # Temporarily disable FK checks for table rebuild
             # (other tables have FK references to files)
             self.conn.execute("PRAGMA foreign_keys = OFF")
@@ -766,7 +774,7 @@ class Database:
                 "CREATE INDEX IF NOT EXISTS idx_gemini_state ON files(gemini_state)"
             )
 
-        if version < 11:
+        if version < 11 and not fresh_db:
             # V11: Drop legacy status column, add is_deleted, CHECK on gemini_state
             self.conn.execute("PRAGMA foreign_keys = OFF")
             self.conn.executescript(MIGRATION_V11_SQL)
@@ -1005,6 +1013,29 @@ class Database:
             suffix = gid.split("/")[-1]
             if suffix:
                 suffixes.add(suffix)
+        return suffixes
+
+    def get_canonical_store_doc_suffixes(self) -> set[str]:
+        """Return the store document ID suffixes for all canonical indexed files.
+
+        Used by ``store-sync`` as a secondary matching criterion when
+        ``gemini_file_id`` has been cleared (e.g., after raw file expiration)
+        but ``gemini_store_doc_id`` remains valid.
+
+        Returns:
+            Set of store document ID suffix strings.
+        """
+        rows = self.conn.execute(
+            "SELECT gemini_store_doc_id FROM files "
+            "WHERE gemini_state = 'indexed' "
+            "AND gemini_store_doc_id IS NOT NULL "
+            "AND gemini_store_doc_id != ''"
+        ).fetchall()
+        suffixes: set[str] = set()
+        for row in rows:
+            doc_id = row["gemini_store_doc_id"] or ""
+            if doc_id:
+                suffixes.add(doc_id)
         return suffixes
 
     def get_pending_files(self, limit: int = 200) -> list[sqlite3.Row]:

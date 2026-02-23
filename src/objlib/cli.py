@@ -467,11 +467,13 @@ def store_sync(
         console.print(f"[red]{e}[/red]")
         raise typer.Exit(code=1)
 
-    # Step 1: Get canonical file ID suffixes from DB
+    # Step 1: Get canonical file ID suffixes AND store doc suffixes from DB
     with Database(db_path) as db:
         canonical_suffixes = db.get_canonical_gemini_file_id_suffixes()
+        canonical_store_doc_suffixes = db.get_canonical_store_doc_suffixes()
 
     console.print(f"[dim]Canonical uploaded file IDs in DB:[/dim] {len(canonical_suffixes)}")
+    console.print(f"[dim]Canonical store doc IDs in DB:[/dim] {len(canonical_store_doc_suffixes)}")
 
     # Step 2: Initialize Gemini upload client
     from objlib.upload.circuit_breaker import RollingWindowCircuitBreaker
@@ -501,8 +503,12 @@ def store_sync(
             # import time. The document resource name suffix is a compound key
             # (e.g. "eafkmpzjs39o-<chunkId>") and does NOT match DB file IDs.
             display_name = getattr(doc, "display_name", "") or ""
+            # Extract store doc suffix from resource name for secondary matching
+            doc_suffix = doc_name.rsplit("/", 1)[-1] if doc_name else ""
 
             if display_name in canonical_suffixes:
+                canonical_count += 1
+            elif doc_suffix in canonical_store_doc_suffixes:
                 canonical_count += 1
             else:
                 orphaned.append((doc, display_name, display_name))
@@ -1086,15 +1092,32 @@ def fsm_upload(
         rate_limit_tier="tier1",
     )
 
-    # Get count of FSM pending files for pre-flight display
-    async def _get_pending_count() -> int:
+    # Reset FAILED files to UNTRACKED before counting pending files
+    # This enables remediation re-runs: fsm-upload picks up reset files
+    async def _reset_failed_and_count() -> int:
+        from objlib.upload.recovery import retry_failed_file
+
         async with AsyncUploadStateManager(str(db_path)) as state:
+            # Find all failed .txt files and reset them to untracked
+            cursor = await state._db.execute(
+                "SELECT file_path FROM files "
+                "WHERE filename LIKE '%.txt' AND gemini_state = 'failed'"
+            )
+            failed_files = await cursor.fetchall()
+            reset_count = 0
+            for row in failed_files:
+                if await retry_failed_file(state, row["file_path"]):
+                    reset_count += 1
+            if reset_count:
+                console.print(
+                    f"[cyan]Pre-flight: {reset_count} failed files reset to untracked[/cyan]"
+                )
             pending = await state.get_fsm_pending_files(
                 limit=limit if limit > 0 else 10000,
             )
             return len(pending)
 
-    pending_count = asyncio.run(_get_pending_count())
+    pending_count = asyncio.run(_reset_failed_and_count())
 
     if pending_count == 0 and not reset_existing:
         console.print(

@@ -235,10 +235,10 @@ class RecoveryManager:
                     timeout=65,  # slightly longer than poll timeout
                 )
 
-                done = getattr(completed, "done", False)
+                done = getattr(completed, "done", None)
                 error = getattr(completed, "error", None)
 
-                if done and not error:
+                if done is True and not error:
                     await self._state.record_import_success(
                         file_path, op_name
                     )
@@ -246,7 +246,7 @@ class RecoveryManager:
                     logger.info(
                         "Operation %s completed successfully", op_name
                     )
-                elif done and error:
+                elif done is True and error:
                     await self._state.update_operation_state(
                         op_name, "failed", str(error)
                     )
@@ -330,15 +330,39 @@ class RecoveryManager:
                 hours_remaining = (expiration - now).total_seconds() / 3600
 
                 if hours_remaining <= 0:
-                    # Expired: reset everything
-                    logger.warning(
-                        "File %s has EXPIRED (%.1f hours past deadline)",
-                        file_path,
-                        abs(hours_remaining),
-                    )
-                    await self._reset_file_to_pending(file_path, clear_remote=True)
-                    result.expired_files += 1
-                    result.reset_to_pending += 1
+                    current_state = row["gemini_state"]
+                    if current_state == "indexed":
+                        # Indexed files: raw file expired but store doc is
+                        # permanent. Just clear stale raw-file fields.
+                        logger.debug(
+                            "File %s raw file expired (%.1fh past) but "
+                            "indexed -- clearing raw fields only",
+                            file_path,
+                            abs(hours_remaining),
+                        )
+                        db_inner = self._state._ensure_connected()
+                        now_iso = self._state._now_iso()
+                        await db_inner.execute(
+                            """UPDATE files
+                               SET gemini_file_uri = NULL,
+                                   gemini_file_id = NULL,
+                                   remote_expiration_ts = NULL,
+                                   updated_at = ?
+                               WHERE file_path = ?""",
+                            (now_iso, file_path),
+                        )
+                        await db_inner.commit()
+                        result.expired_files += 1
+                    else:
+                        # Non-indexed (uploading): truly stuck, reset
+                        logger.warning(
+                            "File %s has EXPIRED (%.1f hours past deadline)",
+                            file_path,
+                            abs(hours_remaining),
+                        )
+                        await self._reset_file_to_pending(file_path, clear_remote=True)
+                        result.expired_files += 1
+                        result.reset_to_pending += 1
 
                 elif hours_remaining <= 8:
                     # Danger zone: log warning
@@ -567,6 +591,348 @@ async def retry_failed_file(
     )
     await db.commit()
     return cursor.rowcount == 1
+
+
+async def cleanup_and_reset_failed_files(
+    state: AsyncUploadStateManager,
+    client: GeminiFileSearchClient,
+) -> tuple[int, int]:
+    """Reconcile FAILED files against actual Gemini state.
+
+    Called at fsm-upload startup (after RecoveryCrawler) to resolve files whose
+    DB state diverged from Gemini reality due to the ``done`` attribute polling bug.
+
+    Discovery findings (2026-02-23):
+    - 20/20 sampled FAILED files are Class B: raw file ACTIVE, store doc STATE_ACTIVE.
+    - The ``done`` default mismatch caused a false FAILED label -- imports succeeded.
+    - ``DocumentState`` has 4 values: STATE_ACTIVE, STATE_PENDING, STATE_FAILED,
+      STATE_UNSPECIFIED.  Presence in the store alone is NOT sufficient for upgrade --
+      the state must be explicitly STATE_ACTIVE (HOSTILE distrust principle, Phase 9).
+
+    Classification by (store_doc_state, store_doc_present):
+        STATE_ACTIVE   → upgrade ``failed`` → ``indexed``, set ``gemini_store_doc_id``
+        STATE_PENDING  → leave as ``failed``; import in progress, pick up next startup
+        STATE_FAILED   → delete store doc + raw file, reset ``failed`` → ``untracked``
+        not in store   → delete raw file (if any), reset ``failed`` → ``untracked``
+
+    Args:
+        state: Async SQLite state manager.
+        client: Gemini client for store document listing.
+
+    Returns:
+        Tuple of (upgraded_to_indexed, reset_to_untracked) counts.
+    """
+    from google.genai.types import DocumentState
+
+    db = state._ensure_connected()
+
+    rows = await db.execute_fetchall(
+        """SELECT file_path, gemini_file_id
+           FROM files
+           WHERE gemini_state = 'failed'""",
+    )
+
+    if not rows:
+        return (0, 0)
+
+    # Build store-doc lookup once: normalised file_id -> (doc_name_suffix, doc_state, full_name).
+    # doc.display_name == file resource ID (Phase 11 finding).
+    # gemini_store_doc_id stores only the suffix (Phase 12-03 decision).
+    # doc.state is checked for STATE_ACTIVE before upgrading (HOSTILE distrust principle).
+    store_doc_by_file_id: dict[str, tuple[str, object, str]] = {}
+    try:
+        store_docs = await client.list_store_documents()
+        for doc in store_docs:
+            display_name = getattr(doc, "display_name", None)
+            full_name = getattr(doc, "name", None)
+            doc_state = getattr(doc, "state", None)
+            if display_name and full_name:
+                key = display_name if display_name.startswith("files/") else f"files/{display_name}"
+                doc_suffix = full_name.rsplit("/", 1)[-1]
+                store_doc_by_file_id[key] = (doc_suffix, doc_state, full_name)
+    except Exception:
+        logger.warning(
+            "cleanup_and_reset_failed_files: could not list store documents; "
+            "resetting all failed files to untracked without upgrade"
+        )
+        reset_count = 0
+        for row in rows:
+            if await retry_failed_file(state, row["file_path"]):
+                reset_count += 1
+        return (0, reset_count)
+
+    upgraded = 0
+    reset = 0
+    now = state._now_iso()
+
+    for row in rows:
+        file_path = row["file_path"]
+        gemini_file_id = row["gemini_file_id"]
+
+        file_id_key = (
+            gemini_file_id
+            if (gemini_file_id or "").startswith("files/")
+            else f"files/{gemini_file_id}"
+        ) if gemini_file_id else None
+
+        store_entry = store_doc_by_file_id.get(file_id_key) if file_id_key else None
+
+        if store_entry is not None:
+            doc_suffix, doc_state, full_doc_name = store_entry
+
+            if doc_state == DocumentState.STATE_ACTIVE:
+                # Affirmative evidence: import succeeded, doc is searchable.
+                # Upgrade to indexed (8th authorized gemini_state write site).
+                cursor = await db.execute(
+                    """UPDATE files
+                       SET gemini_state          = 'indexed',
+                           gemini_store_doc_id   = ?,
+                           error_message         = NULL,
+                           intent_type           = NULL,
+                           intent_started_at     = NULL,
+                           intent_api_calls_completed = NULL,
+                           version               = version + 1,
+                           gemini_state_updated_at = ?
+                       WHERE file_path = ?
+                         AND gemini_state = 'failed'""",
+                    (doc_suffix, now, file_path),
+                )
+                await db.commit()
+                if cursor.rowcount == 1:
+                    upgraded += 1
+                    logger.debug(
+                        "cleanup_and_reset_failed_files: upgraded %s -> indexed (doc=%s)",
+                        file_path, doc_suffix,
+                    )
+
+            elif doc_state == DocumentState.STATE_PENDING:
+                # Import still in progress -- leave as 'failed'; will be resolved
+                # by the next startup invocation once Gemini finishes indexing.
+                logger.debug(
+                    "cleanup_and_reset_failed_files: %s store doc STATE_PENDING, leaving as failed",
+                    file_path,
+                )
+
+            else:
+                # STATE_FAILED or STATE_UNSPECIFIED: Gemini store indexing failed.
+                # Delete the failed store doc and raw file; reset to untracked.
+                try:
+                    await client.delete_store_document(full_doc_name)
+                    logger.debug(
+                        "cleanup_and_reset_failed_files: deleted STATE_FAILED store doc %s for %s",
+                        doc_suffix, file_path,
+                    )
+                except Exception as exc:
+                    logger.warning(
+                        "cleanup_and_reset_failed_files: could not delete store doc for %s: %s",
+                        file_path, exc,
+                    )
+                if gemini_file_id:
+                    raw_name = (
+                        gemini_file_id if gemini_file_id.startswith("files/")
+                        else f"files/{gemini_file_id}"
+                    )
+                    try:
+                        await client.delete_file(raw_name)
+                    except Exception:
+                        pass
+                did_reset = await retry_failed_file(state, file_path)
+                if did_reset:
+                    reset += 1
+
+        else:
+            # Not in store at all -- raw file only or nothing.
+            # Clean up raw file (may already be expired) and reset to untracked.
+            if gemini_file_id:
+                file_name = (
+                    gemini_file_id
+                    if gemini_file_id.startswith("files/")
+                    else f"files/{gemini_file_id}"
+                )
+                try:
+                    await client.delete_file(file_name)
+                    logger.debug(
+                        "cleanup_and_reset_failed_files: deleted raw file %s for %s",
+                        file_name, file_path,
+                    )
+                except Exception as exc:
+                    logger.debug(
+                        "cleanup_and_reset_failed_files: raw file deletion skipped for %s: %s",
+                        file_path, exc,
+                    )
+
+            did_reset = await retry_failed_file(state, file_path)
+            if did_reset:
+                reset += 1
+                logger.debug(
+                    "cleanup_and_reset_failed_files: reset %s -> untracked", file_path
+                )
+
+    logger.info(
+        "cleanup_and_reset_failed_files: upgraded %d to indexed, reset %d to untracked",
+        upgraded, reset,
+    )
+    return (upgraded, reset)
+
+
+# ---------------------------------------------------------------------------
+# Untracked-with-store-doc recovery (Phase 16)
+# ---------------------------------------------------------------------------
+
+
+async def recover_untracked_with_store_doc(
+    state: AsyncUploadStateManager,
+    client: GeminiFileSearchClient,
+) -> tuple[int, int]:
+    """Recover untracked files that already have valid store documents.
+
+    Called when the RecoveryManager incorrectly reset indexed files to
+    untracked due to raw file expiration (the ``remote_expiration_ts`` bug in
+    ``_check_expiration_deadlines`` which checked ``gemini_state = 'indexed'``).
+
+    These files have ``gemini_store_doc_id`` set (the reset preserved it) but
+    ``gemini_file_id`` cleared.  We look up each doc suffix in the live store
+    and restore the file to ``indexed`` iff the doc is ``STATE_ACTIVE``.
+
+    Classification by doc state in live store:
+        STATE_ACTIVE   → restore ``untracked`` → ``indexed``
+        STATE_PENDING  → leave as ``untracked`` (import still completing)
+        STATE_FAILED   → delete store doc, clear ``gemini_store_doc_id``
+        not in store   → clear ``gemini_store_doc_id``, re-upload cleanly
+
+    Args:
+        state: Async SQLite state manager.
+        client: Gemini client for store document listing.
+
+    Returns:
+        Tuple of (restored_to_indexed, cleared_store_doc_id) counts.
+    """
+    from google.genai.types import DocumentState
+
+    db = state._ensure_connected()
+
+    rows = await db.execute_fetchall(
+        """SELECT file_path, gemini_store_doc_id
+           FROM files
+           WHERE gemini_state = 'untracked'
+             AND gemini_store_doc_id IS NOT NULL
+             AND gemini_store_doc_id != ''""",
+    )
+
+    if not rows:
+        return (0, 0)
+
+    logger.info(
+        "recover_untracked_with_store_doc: found %d untracked files with store doc IDs",
+        len(rows),
+    )
+
+    # Build store-doc lookup once: doc_name_suffix -> (doc_state, full_name).
+    store_doc_by_suffix: dict[str, tuple[object, str]] = {}
+    try:
+        store_docs = await client.list_store_documents()
+        for doc in store_docs:
+            full_name = getattr(doc, "name", None)
+            doc_state = getattr(doc, "state", None)
+            if full_name:
+                suffix = full_name.rsplit("/", 1)[-1]
+                store_doc_by_suffix[suffix] = (doc_state, full_name)
+    except Exception as exc:
+        logger.warning(
+            "recover_untracked_with_store_doc: could not list store documents: %s; "
+            "clearing all store doc IDs so files re-upload cleanly",
+            exc,
+        )
+        now = state._now_iso()
+        cleared = 0
+        for row in rows:
+            await db.execute(
+                "UPDATE files SET gemini_store_doc_id = NULL, updated_at = ? WHERE file_path = ?",
+                (now, row["file_path"]),
+            )
+            cleared += 1
+        await db.commit()
+        return (0, cleared)
+
+    restored = 0
+    cleared = 0
+    now = state._now_iso()
+
+    for row in rows:
+        file_path = row["file_path"]
+        doc_suffix = row["gemini_store_doc_id"]
+        store_entry = store_doc_by_suffix.get(doc_suffix)
+
+        if store_entry is not None:
+            doc_state, full_doc_name = store_entry
+
+            if doc_state == DocumentState.STATE_ACTIVE:
+                # Affirmative evidence: store doc searchable.  Restore to indexed.
+                cursor = await db.execute(
+                    """UPDATE files
+                       SET gemini_state          = 'indexed',
+                           remote_expiration_ts  = NULL,
+                           version               = version + 1,
+                           gemini_state_updated_at = ?
+                       WHERE file_path = ?
+                         AND gemini_state = 'untracked'""",
+                    (now, file_path),
+                )
+                await db.commit()
+                if cursor.rowcount == 1:
+                    restored += 1
+                    logger.debug(
+                        "recover_untracked_with_store_doc: restored %s -> indexed (doc=%s)",
+                        file_path, doc_suffix,
+                    )
+
+            elif doc_state == DocumentState.STATE_PENDING:
+                # Import still completing -- leave as untracked; re-checked next startup.
+                logger.debug(
+                    "recover_untracked_with_store_doc: %s doc STATE_PENDING, leaving",
+                    file_path,
+                )
+
+            else:
+                # STATE_FAILED or STATE_UNSPECIFIED: delete and clear for re-upload.
+                try:
+                    await client.delete_store_document(full_doc_name)
+                    logger.debug(
+                        "recover_untracked_with_store_doc: deleted STATE_FAILED doc %s for %s",
+                        doc_suffix, file_path,
+                    )
+                except Exception as exc:
+                    logger.warning(
+                        "recover_untracked_with_store_doc: could not delete doc %s: %s",
+                        doc_suffix, exc,
+                    )
+                cursor = await db.execute(
+                    "UPDATE files SET gemini_store_doc_id = NULL, updated_at = ? WHERE file_path = ?",
+                    (now, file_path),
+                )
+                await db.commit()
+                if cursor.rowcount == 1:
+                    cleared += 1
+
+        else:
+            # Not in store: clear store doc ID so file re-uploads cleanly.
+            cursor = await db.execute(
+                "UPDATE files SET gemini_store_doc_id = NULL, updated_at = ? WHERE file_path = ?",
+                (now, file_path),
+            )
+            await db.commit()
+            if cursor.rowcount == 1:
+                cleared += 1
+                logger.debug(
+                    "recover_untracked_with_store_doc: %s doc %s not found, cleared",
+                    file_path, doc_suffix,
+                )
+
+    logger.info(
+        "recover_untracked_with_store_doc: restored %d to indexed, cleared %d store doc IDs",
+        restored, cleared,
+    )
+    return (restored, cleared)
 
 
 # ---------------------------------------------------------------------------
