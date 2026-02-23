@@ -241,7 +241,7 @@ Plans:
 ### Phase 16: Wave 8 -- Full Library Upload
 **Goal**: All ~1,748 files are uploaded through the FSM-managed pipeline and `[Unresolved file #N]` never appears in any TUI search result -- the definition of done for v2.0
 **Depends on**: Phase 15 gate passed (consistency and store-sync contract established), STAB-04 temporal stability protocol (T+24h STABLE from Phase 15)
-**Requirements**: PIPE-01, PIPE-02
+**Requirements**: PIPE-01, PIPE-02, TUI-09
 **Distrust**: SKEPTICAL
 **Gate**: DEFINITION OF DONE for milestone v2.0
 **Success Criteria** (what must be TRUE):
@@ -252,13 +252,13 @@ Plans:
   5. The 50-file proxy assumption (A11) is validated: no failure modes appeared at full scale that were absent at 50-file scale -- or if they did, they are documented and resolved
   6. Phase 07-07 (TUI integration smoke test, deferred from v1.0) executes successfully against the live `objectivism-library` store with the full ~1,748-file corpus -- Canon.json updated to reflect TUI module
   7. TUI search results display citation count, per-citation rank position, and scroll hints (TUI-09); search client requests `top_k=20` by default; `--top-k N` CLI flag is available
-**Plans**: 4 plans
+**Plans**: 4 plans in 2 waves
 
 Plans:
-- [ ] 16-01: Full library upload execution and monitoring
-- [ ] 16-02: Temporal stability protocol (T+4h, T+24h, T+36h checks) and TUI acceptance testing
-- [ ] 16-03: Phase 07-07 execution (TUI integration smoke test against full corpus)
-- [ ] 16-04: Search quality + TUI citation experience (TUI-09): top_k=20 in search client, --top-k CLI flag, citation count display, rank position per citation, scroll discoverability hints
+- [ ] 16-01-PLAN.md -- Bug fixes (limit cap, RecoveryCrawler, 429 retry, store name defaults) + full library upload execution + post-upload remediation + T=0 stability check
+- [ ] 16-02-PLAN.md -- Temporal stability protocol (T+4h, T+24h BLOCKING gate, T+36h confirmation) with fresh sessions per checkpoint
+- [ ] 16-03-PLAN.md -- Phase 07-07 TUI integration smoke test (structured manual walkthrough, 5+ queries, Canon.json update)
+- [ ] 16-04-PLAN.md -- TUI-09: top_k=20 in search client, --top-k CLI flag, citation count banner, rank display per citation, scroll hints
 
 ---
 
@@ -328,4 +328,4 @@ Each wave's gate is BLOCKING for the next. If a gate fails, the failing phase mu
 ---
 *Roadmap created: 2026-02-19*
 *Pre-mortem: governance/pre-mortem-gemini-fsm.md*
-*Last updated: 2026-02-22 -- Phase 17 added: RxPY reactive observable pipeline for TUI, validated by pre/post UATs*
+*Last updated: 2026-02-23 -- Phase 16 plans created: 4 plans in 2 waves*
