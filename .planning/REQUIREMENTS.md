@@ -54,6 +54,15 @@ The AI-enriched metadata (categories, difficulty, topics, aspects, semantic desc
 - [ ] **PIPE-01**: `[Unresolved file #N]` does not appear in any TUI search result after the full ~1,748-file upload — the sole definition of done for this milestone
 - [ ] **PIPE-02**: `check_stability.py --store objectivism-library` reports STABLE (exit 0) at T=0, T+4h, T+24h, and T+36h after the full library upload
 
+### TUI Search Usability (TUI — v2.0 addition)
+
+- [ ] **TUI-09**: Search quality and citation display improvements, delivered as a complete experience:
+  1. **`top_k` retrieval**: `GeminiFileSearchClient.query()` requests `top_k=20` chunks by default (confirmed SDK parameter); a `--top-k N` CLI flag allows override. Default 20 retrieves up to 4× more results than the previous server default of ~5.
+  2. **Citation count**: TUI search results panel displays the total retrieved count (e.g., "20 citations retrieved") so users always know the full result set size.
+  3. **Rank position**: Each citation shows its retrieval rank (e.g., "1 / 20") — `grounding_chunks` is ordered by relevance (index 0 = most relevant), so rank communicates importance.
+  4. **Scroll discoverability**: Keyboard scroll hints (e.g., "↑/↓ to scroll") appear whenever citations extend beyond the visible area — the TUI already uses `VerticalScroll` but gives no affordance that more results exist below.
+  Note: All four items are best tested at full corpus scale (1,748 files) and are therefore gated on Phase 16 upload completion.
+
 ---
 
 ## v3 Requirements (deferred)
@@ -108,10 +117,11 @@ The AI-enriched metadata (categories, difficulty, topics, aspects, semantic desc
 | VLID-07 | Phase 15 | Pending |
 | PIPE-01 | Phase 16 | Pending |
 | PIPE-02 | Phase 16 | Pending |
+| TUI-09 | Phase 16 | Pending |
 
 **Coverage:**
-- v2.0 requirements: 22 total
-- Mapped to phases: 22
+- v2.0 requirements: 23 total
+- Mapped to phases: 23
 - Unmapped: 0 ✓
 
 ---

@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 
 from objlib.database import Database
-from objlib.models import FileRecord, FileStatus, MetadataQuality
+from objlib.models import FileRecord, MetadataQuality
 
 
 def _make_record(
@@ -19,7 +19,6 @@ def _make_record(
     content_hash: str = "abc123",
     file_size: int = 2048,
     quality: MetadataQuality = MetadataQuality.COMPLETE,
-    status: FileStatus = FileStatus.PENDING,
 ) -> FileRecord:
     """Helper to create a FileRecord with defaults."""
     return FileRecord(
@@ -29,7 +28,6 @@ def _make_record(
         file_size=file_size,
         metadata_json=json.dumps({"course": "Test"}),
         metadata_quality=quality,
-        status=status,
     )
 
 
@@ -67,7 +65,7 @@ def test_insert_and_retrieve(tmp_db: Database) -> None:
     assert row["filename"] == record.filename
     assert row["file_size"] == record.file_size
     assert row["metadata_quality"] == "complete"
-    assert row["status"] == "pending"
+    assert row["gemini_state"] == "untracked"
 
 
 def test_upsert_idempotent(tmp_db: Database) -> None:
@@ -81,81 +79,65 @@ def test_upsert_idempotent(tmp_db: Database) -> None:
 
 
 def test_upsert_updates_on_hash_change(tmp_db: Database) -> None:
-    """When content_hash changes, UPSERT updates hash and resets status to pending."""
-    record = _make_record(status=FileStatus.UPLOADED)
+    """When content_hash changes, UPSERT updates hash."""
+    record = _make_record()
     tmp_db.upsert_file(record)
+
+    # Set gemini_state to indexed manually
+    tmp_db.conn.execute(
+        "UPDATE files SET gemini_state = 'indexed' WHERE file_path = ?",
+        (record.file_path,),
+    )
+    tmp_db.conn.commit()
 
     # Change the hash
     modified = _make_record(content_hash="new_hash_456")
     tmp_db.upsert_file(modified)
 
     row = tmp_db.conn.execute(
-        "SELECT content_hash, status FROM files WHERE file_path = ?",
+        "SELECT content_hash FROM files WHERE file_path = ?",
         (record.file_path,),
     ).fetchone()
 
     assert row["content_hash"] == "new_hash_456"
-    assert row["status"] == "pending"  # Reset due to hash change
 
 
-def test_upsert_preserves_status_on_same_hash(tmp_db: Database) -> None:
-    """When content_hash is unchanged, UPSERT preserves existing status."""
+def test_upsert_preserves_gemini_state_on_same_hash(tmp_db: Database) -> None:
+    """When content_hash is unchanged, UPSERT preserves existing gemini_state."""
     record = _make_record()
     tmp_db.upsert_file(record)
 
-    # Manually update status to 'uploaded'
+    # Manually update gemini_state to 'indexed'
     with tmp_db.conn:
         tmp_db.conn.execute(
-            "UPDATE files SET status = ? WHERE file_path = ?",
-            (FileStatus.UPLOADED.value, record.file_path),
+            "UPDATE files SET gemini_state = 'indexed' WHERE file_path = ?",
+            (record.file_path,),
         )
 
     # Re-upsert with same hash
     tmp_db.upsert_file(record)
 
     row = tmp_db.conn.execute(
-        "SELECT status FROM files WHERE file_path = ?",
+        "SELECT gemini_state FROM files WHERE file_path = ?",
         (record.file_path,),
     ).fetchone()
 
-    assert row["status"] == "uploaded"  # Preserved
+    assert row["gemini_state"] == "indexed"  # Preserved
 
 
 def test_mark_deleted(tmp_db: Database) -> None:
-    """mark_deleted sets status to LOCAL_DELETE."""
+    """mark_deleted sets is_deleted to 1."""
     record = _make_record()
     tmp_db.upsert_file(record)
 
     tmp_db.mark_deleted({record.file_path})
 
     row = tmp_db.conn.execute(
-        "SELECT status FROM files WHERE file_path = ?",
+        "SELECT is_deleted FROM files WHERE file_path = ?",
         (record.file_path,),
     ).fetchone()
 
-    assert row["status"] == "LOCAL_DELETE"
-
-
-def test_status_transition_logged(tmp_db: Database) -> None:
-    """FOUN-09: Status changes are logged to _processing_log via trigger."""
-    record = _make_record()
-    tmp_db.upsert_file(record)
-
-    # Change status
-    with tmp_db.conn:
-        tmp_db.conn.execute(
-            "UPDATE files SET status = ? WHERE file_path = ?",
-            (FileStatus.UPLOADED.value, record.file_path),
-        )
-
-    logs = tmp_db.conn.execute(
-        "SELECT * FROM _processing_log WHERE file_path = ?",
-        (record.file_path,),
-    ).fetchall()
-
-    assert len(logs) >= 1
-    assert logs[0]["old_status"] == "pending"
-    assert logs[0]["new_status"] == "uploaded"
+    assert row["is_deleted"] == 1
 
 
 def test_batch_upsert(tmp_db: Database) -> None:
@@ -186,7 +168,7 @@ def test_content_hash_not_unique(tmp_db: Database) -> None:
 
 
 def test_status_counts(tmp_db: Database) -> None:
-    """get_status_counts returns correct counts for each status."""
+    """get_status_counts returns correct counts for each gemini_state."""
     records = [
         _make_record(path="/pending/1.txt", content_hash="h1"),
         _make_record(path="/pending/2.txt", content_hash="h2"),
@@ -194,16 +176,16 @@ def test_status_counts(tmp_db: Database) -> None:
     ]
     tmp_db.upsert_files(records)
 
-    # Mark one as uploaded
+    # Mark one as indexed
     with tmp_db.conn:
         tmp_db.conn.execute(
-            "UPDATE files SET status = ? WHERE file_path = ?",
-            (FileStatus.UPLOADED.value, "/pending/1.txt"),
+            "UPDATE files SET gemini_state = 'indexed' WHERE file_path = ?",
+            ("/pending/1.txt",),
         )
 
     counts = tmp_db.get_status_counts()
-    assert counts.get("pending") == 2
-    assert counts.get("uploaded") == 1
+    assert counts.get("untracked") == 2
+    assert counts.get("indexed") == 1
 
 
 def test_get_all_active_files_excludes_deleted(tmp_db: Database) -> None:

@@ -21,7 +21,7 @@ import pytest
 
 from objlib.config import ScannerConfig
 from objlib.metadata import MetadataExtractor
-from objlib.models import FileRecord, FileStatus, MetadataQuality
+from objlib.models import FileRecord, MetadataQuality
 from objlib.scanner import ChangeSet, FileScanner
 
 

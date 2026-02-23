@@ -16,7 +16,7 @@ import pytest
 from objlib.config import ScannerConfig
 from objlib.database import Database
 from objlib.metadata import MetadataExtractor
-from objlib.models import FileRecord, FileStatus, MetadataQuality
+from objlib.models import FileRecord, MetadataQuality
 from objlib.sync.detector import SyncDetector
 from objlib.sync.disk import check_disk_availability
 
@@ -60,8 +60,12 @@ def _insert_file(db: Database, file_path: str, content_hash: str,
         file_size=file_size,
     )
     db.upsert_file(record)
-    # Mark as uploaded so it counts as "active" (not pending-only edge case)
-    db.update_file_status(file_path, FileStatus.UPLOADED)
+    # Mark as indexed so it counts as "active"
+    db.conn.execute(
+        "UPDATE files SET gemini_state = 'indexed' WHERE file_path = ?",
+        (file_path,),
+    )
+    db.conn.commit()
     if mtime is not None:
         db.update_file_sync_columns(file_path, mtime=mtime)
 

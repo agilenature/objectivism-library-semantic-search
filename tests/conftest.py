@@ -16,7 +16,7 @@ import pytest
 from objlib.config import ScannerConfig
 from objlib.database import Database
 from objlib.metadata import MetadataExtractor
-from objlib.models import FileRecord, FileStatus, MetadataQuality
+from objlib.models import FileRecord, MetadataQuality
 
 
 @pytest.fixture
@@ -114,18 +114,19 @@ def in_memory_db():
 
 @pytest.fixture
 def populated_db(in_memory_db):
-    """In-memory database pre-populated with 5 test files and known metadata.
+    """In-memory database pre-populated with 5 test files and known gemini_state.
 
-    Inserts files with different statuses and metadata for testing queries.
+    Inserts files with different gemini_states for testing queries.
+    gemini_state mapping: 'untracked' (was pending), 'indexed' (was uploaded), 'failed'.
     """
     test_files = [
-        ("/library/Courses/OPAR/OPAR - Lesson 01 - Metaphysics.txt", "hash_a", 5000, "pending"),
-        ("/library/Courses/OPAR/OPAR - Lesson 02 - Epistemology.txt", "hash_b", 6000, "uploaded"),
-        ("/library/Courses/ITOE/ITOE - Lesson 01 - Concepts.txt", "hash_c", 4000, "uploaded"),
-        ("/library/Courses/HOP/HOP - Lesson 01 - Ancient Greece.txt", "hash_d", 7000, "pending"),
+        ("/library/Courses/OPAR/OPAR - Lesson 01 - Metaphysics.txt", "hash_a", 5000, "untracked"),
+        ("/library/Courses/OPAR/OPAR - Lesson 02 - Epistemology.txt", "hash_b", 6000, "indexed"),
+        ("/library/Courses/ITOE/ITOE - Lesson 01 - Concepts.txt", "hash_c", 4000, "indexed"),
+        ("/library/Courses/HOP/HOP - Lesson 01 - Ancient Greece.txt", "hash_d", 7000, "untracked"),
         ("/library/Courses/Ethics/Ethics - Lesson 01 - Virtue.txt", "hash_e", 3000, "failed"),
     ]
-    for file_path, content_hash, size, status in test_files:
+    for file_path, content_hash, size, gemini_state in test_files:
         record = FileRecord(
             file_path=file_path,
             content_hash=content_hash,
@@ -133,8 +134,12 @@ def populated_db(in_memory_db):
             file_size=size,
         )
         in_memory_db.upsert_file(record)
-        if status != "pending":
-            in_memory_db.update_file_status(file_path, FileStatus(status))
+        if gemini_state != "untracked":
+            in_memory_db.conn.execute(
+                "UPDATE files SET gemini_state = ? WHERE file_path = ?",
+                (gemini_state, file_path),
+            )
+    in_memory_db.conn.commit()
     yield in_memory_db
 
 

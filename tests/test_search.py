@@ -164,11 +164,12 @@ def _make_test_db():
             file_size INTEGER NOT NULL,
             metadata_json TEXT,
             metadata_quality TEXT DEFAULT 'unknown',
-            status TEXT NOT NULL DEFAULT 'pending'
+            is_deleted INTEGER NOT NULL DEFAULT 0,
+            gemini_state TEXT NOT NULL DEFAULT 'untracked'
         )
     """)
     conn.execute(
-        "INSERT INTO files (file_path, filename, content_hash, file_size, metadata_json, status) "
+        "INSERT INTO files (file_path, filename, content_hash, file_size, metadata_json, gemini_state) "
         "VALUES (?, ?, ?, ?, ?, ?)",
         (
             "/lib/OPAR-Lecture-1.txt",
@@ -176,7 +177,7 @@ def _make_test_db():
             "abc123",
             1024,
             json.dumps({"course": "OPAR", "year": 2023, "difficulty": "advanced"}),
-            "uploaded",
+            "indexed",
         ),
     )
     conn.commit()
@@ -195,7 +196,7 @@ class _FakeDB:
         placeholders = ",".join("?" * len(filenames))
         rows = self.conn.execute(
             f"SELECT filename, file_path, metadata_json FROM files "
-            f"WHERE filename IN ({placeholders}) AND status != 'LOCAL_DELETE'",
+            f"WHERE filename IN ({placeholders}) AND NOT is_deleted",
             filenames,
         ).fetchall()
         result = {}

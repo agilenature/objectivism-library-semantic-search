@@ -36,7 +36,7 @@ EXPECTED_TABLES = {
     "library_config",
 }
 
-EXPECTED_TRIGGERS = {"update_files_timestamp", "log_status_change"}
+EXPECTED_TRIGGERS = {"update_files_timestamp"}
 
 
 class TestSchemaCreation:
@@ -86,10 +86,10 @@ class TestSchemaCreation:
             f"Missing triggers: {EXPECTED_TRIGGERS - actual_triggers}"
         )
 
-    def test_user_version_is_10(self, in_memory_db):
-        """PRAGMA user_version returns 10 after schema setup (V10: OCC + intent columns)."""
+    def test_user_version_is_11(self, in_memory_db):
+        """PRAGMA user_version returns 11 after schema setup (V11: status column retired)."""
         version = in_memory_db.conn.execute("PRAGMA user_version").fetchone()[0]
-        assert version == 10
+        assert version == 11
 
 
 class TestTriggers:
@@ -97,7 +97,7 @@ class TestTriggers:
 
     def test_trigger_update_files_timestamp(self, in_memory_db):
         """Updating a file row changes its updated_at via trigger."""
-        from objlib.models import FileRecord, FileStatus
+        from objlib.models import FileRecord
 
         record = FileRecord(
             file_path="/test/trigger_ts.txt",
@@ -112,8 +112,12 @@ class TestTriggers:
             ("/test/trigger_ts.txt",),
         ).fetchone()["updated_at"]
 
-        # Update status to force trigger
-        in_memory_db.update_file_status("/test/trigger_ts.txt", FileStatus.UPLOADED)
+        # Update gemini_state to force trigger
+        in_memory_db.conn.execute(
+            "UPDATE files SET gemini_state = 'indexed' WHERE file_path = ?",
+            ("/test/trigger_ts.txt",),
+        )
+        in_memory_db.conn.commit()
 
         updated = in_memory_db.conn.execute(
             "SELECT updated_at FROM files WHERE file_path = ?",
@@ -121,32 +125,7 @@ class TestTriggers:
         ).fetchone()["updated_at"]
 
         # The trigger should have updated updated_at
-        # (timestamps may be same if fast, but the trigger fired -- check log too)
         assert updated is not None
-
-    def test_trigger_log_status_change(self, in_memory_db):
-        """Changing file status logs to _processing_log via trigger."""
-        from objlib.models import FileRecord, FileStatus
-
-        record = FileRecord(
-            file_path="/test/trigger_log.txt",
-            content_hash="def456",
-            filename="trigger_log.txt",
-            file_size=200,
-        )
-        in_memory_db.upsert_file(record)
-
-        # Change status from pending -> uploaded
-        in_memory_db.update_file_status("/test/trigger_log.txt", FileStatus.UPLOADED)
-
-        log_row = in_memory_db.conn.execute(
-            "SELECT old_status, new_status FROM _processing_log WHERE file_path = ?",
-            ("/test/trigger_log.txt",),
-        ).fetchone()
-
-        assert log_row is not None
-        assert log_row["old_status"] == "pending"
-        assert log_row["new_status"] == "uploaded"
 
 
 class TestForeignKeys:

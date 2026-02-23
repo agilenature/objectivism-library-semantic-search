@@ -51,22 +51,21 @@ async def _insert_test_file(
     gemini_store_doc_id: str | None = None,
     intent_type: str | None = None,
     intent_api_calls_completed: int | None = None,
-    status: str = "pending",
 ) -> None:
     """Insert a test file row into the database."""
     db = state._ensure_connected()
     await db.execute(
         """INSERT INTO files (
                file_path, content_hash, filename, file_size,
-               status, gemini_state, version,
+               gemini_state, version,
                gemini_file_id, gemini_store_doc_id,
                intent_type, intent_api_calls_completed
            ) VALUES (?, 'hash123', 'file.txt', 1000,
-                     ?, ?, ?,
+                     ?, ?,
                      ?, ?,
                      ?, ?)""",
         (
-            file_path, status, gemini_state, version,
+            file_path, gemini_state, version,
             gemini_file_id, gemini_store_doc_id,
             intent_type, intent_api_calls_completed,
         ),
@@ -252,7 +251,6 @@ class TestRecoveryCrawlerSC6:
             gemini_store_doc_id="fileSearchStores/s1/documents/d1",
             intent_type="reset",
             intent_api_calls_completed=0,
-            status="uploaded",
         )
 
         mock_client = MagicMock()
@@ -293,7 +291,6 @@ class TestRecoveryCrawlerSC6:
             gemini_store_doc_id="fileSearchStores/s1/documents/d1",
             intent_type="reset",
             intent_api_calls_completed=0,
-            status="uploaded",
         )
         # File 2: will recover successfully
         await _insert_test_file(
@@ -305,7 +302,6 @@ class TestRecoveryCrawlerSC6:
             gemini_store_doc_id="fileSearchStores/s1/documents/d2",
             intent_type="reset",
             intent_api_calls_completed=0,
-            status="uploaded",
         )
 
         mock_client = MagicMock()
@@ -363,7 +359,6 @@ class TestSC3DeleteOrder:
             version=2,
             gemini_file_id="files/xyz789",
             gemini_store_doc_id="fileSearchStores/s1/documents/doc1",
-            status="uploaded",
         )
 
         # Track call order
@@ -432,7 +427,6 @@ class TestRetryFailedFile:
             file_path="/test/failed.txt",
             gemini_state="failed",
             version=3,
-            status="failed",
         )
 
         result = await retry_failed_file(fsm_state, "/test/failed.txt")
@@ -450,7 +444,6 @@ class TestRetryFailedFile:
             file_path="/test/indexed.txt",
             gemini_state="indexed",
             version=3,
-            status="uploaded",
         )
 
         result = await retry_failed_file(fsm_state, "/test/indexed.txt")
@@ -473,7 +466,6 @@ class TestResetIntentMethods:
             file_path="/test/intent.txt",
             gemini_state="indexed",
             version=2,
-            status="uploaded",
         )
 
         result_version = await fsm_state.write_reset_intent("/test/intent.txt", 2)
@@ -500,7 +492,6 @@ class TestResetIntentMethods:
             gemini_store_doc_id="store/doc1",
             intent_type="reset",
             intent_api_calls_completed=2,
-            status="uploaded",
         )
 
         success = await fsm_state.finalize_reset("/test/finalize.txt", 2)
@@ -531,7 +522,6 @@ class TestResetIntentMethods:
             file_path="/test/conflict.txt",
             gemini_state="indexed",
             version=2,
-            status="uploaded",
         )
 
         # Pass wrong expected_version

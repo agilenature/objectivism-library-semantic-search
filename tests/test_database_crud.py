@@ -11,7 +11,7 @@ import json
 import pytest
 
 from objlib.database import Database
-from objlib.models import FileRecord, FileStatus, MetadataQuality
+from objlib.models import FileRecord, MetadataQuality
 
 
 def _make_record(
@@ -36,59 +36,59 @@ class TestUpsertFile:
     """Tests for upsert_file and upsert_files methods."""
 
     def test_upsert_file_insert(self, in_memory_db):
-        """upsert_file with a new path inserts a row with status='pending'."""
+        """upsert_file with a new path inserts a row with gemini_state='untracked'."""
         record = _make_record("/test/new_file.txt", "hash1", 5000)
         in_memory_db.upsert_file(record)
 
         row = in_memory_db.conn.execute(
-            "SELECT file_path, content_hash, file_size, status FROM files WHERE file_path = ?",
+            "SELECT file_path, content_hash, file_size, gemini_state FROM files WHERE file_path = ?",
             ("/test/new_file.txt",),
         ).fetchone()
 
         assert row is not None
         assert row["content_hash"] == "hash1"
         assert row["file_size"] == 5000
-        assert row["status"] == "pending"
+        assert row["gemini_state"] == "untracked"
 
     def test_upsert_file_update_changed_hash(self, in_memory_db):
-        """upsert_file with different hash resets status to 'pending'."""
+        """upsert_file with different hash updates content_hash."""
         record1 = _make_record("/test/changing.txt", "hash_v1", 1000)
         in_memory_db.upsert_file(record1)
-        in_memory_db.update_file_status("/test/changing.txt", FileStatus.UPLOADED)
-
-        # Verify uploaded
-        row = in_memory_db.conn.execute(
-            "SELECT status FROM files WHERE file_path = ?",
+        in_memory_db.conn.execute(
+            "UPDATE files SET gemini_state = 'indexed' WHERE file_path = ?",
             ("/test/changing.txt",),
-        ).fetchone()
-        assert row["status"] == "uploaded"
+        )
+        in_memory_db.conn.commit()
 
         # Upsert with changed hash
         record2 = _make_record("/test/changing.txt", "hash_v2", 1100)
         in_memory_db.upsert_file(record2)
 
         row = in_memory_db.conn.execute(
-            "SELECT status, content_hash FROM files WHERE file_path = ?",
+            "SELECT content_hash FROM files WHERE file_path = ?",
             ("/test/changing.txt",),
         ).fetchone()
-        assert row["status"] == "pending"
         assert row["content_hash"] == "hash_v2"
 
     def test_upsert_file_unchanged_hash(self, in_memory_db):
-        """upsert_file with same hash preserves existing status."""
+        """upsert_file with same hash preserves existing gemini_state."""
         record = _make_record("/test/stable.txt", "same_hash", 2000)
         in_memory_db.upsert_file(record)
-        in_memory_db.update_file_status("/test/stable.txt", FileStatus.UPLOADED)
+        in_memory_db.conn.execute(
+            "UPDATE files SET gemini_state = 'indexed' WHERE file_path = ?",
+            ("/test/stable.txt",),
+        )
+        in_memory_db.conn.commit()
 
         # Re-upsert with same hash
         record_again = _make_record("/test/stable.txt", "same_hash", 2000)
         in_memory_db.upsert_file(record_again)
 
         row = in_memory_db.conn.execute(
-            "SELECT status FROM files WHERE file_path = ?",
+            "SELECT gemini_state FROM files WHERE file_path = ?",
             ("/test/stable.txt",),
         ).fetchone()
-        assert row["status"] == "uploaded"
+        assert row["gemini_state"] == "indexed"
 
     def test_upsert_files_batch(self, in_memory_db):
         """upsert_files inserts multiple records in a single transaction."""
@@ -123,37 +123,24 @@ class TestFileQueries:
         assert first_path not in active
 
     def test_get_status_counts(self, populated_db):
-        """Status counts match: pending=2, uploaded=2, failed=1."""
+        """Status counts match: untracked=2, indexed=2, failed=1."""
         counts = populated_db.get_status_counts()
-        assert counts.get("pending", 0) == 2
-        assert counts.get("uploaded", 0) == 2
+        assert counts.get("untracked", 0) == 2
+        assert counts.get("indexed", 0) == 2
         assert counts.get("failed", 0) == 1
 
     def test_get_pending_files(self, populated_db):
-        """Returns only the 2 pending .txt files."""
+        """Returns only the 2 untracked .txt files."""
         pending = populated_db.get_pending_files()
         assert len(pending) == 2
-        statuses = set()
+        states = set()
         for row in pending:
-            status_row = populated_db.conn.execute(
-                "SELECT status FROM files WHERE file_path = ?",
+            state_row = populated_db.conn.execute(
+                "SELECT gemini_state FROM files WHERE file_path = ?",
                 (row["file_path"],),
             ).fetchone()
-            statuses.add(status_row["status"])
-        assert statuses == {"pending"}
-
-    def test_update_file_status(self, in_memory_db):
-        """update_file_status changes the file's status."""
-        record = _make_record("/test/status.txt")
-        in_memory_db.upsert_file(record)
-
-        in_memory_db.update_file_status("/test/status.txt", FileStatus.UPLOADED)
-
-        row = in_memory_db.conn.execute(
-            "SELECT status FROM files WHERE file_path = ?",
-            ("/test/status.txt",),
-        ).fetchone()
-        assert row["status"] == "uploaded"
+            states.add(state_row["gemini_state"])
+        assert states == {"untracked"}
 
 
 class TestSkippedAndFailures:
@@ -350,7 +337,7 @@ class TestMissingAndOrphaned:
     """Tests for sync-related methods: missing files and orphaned Gemini IDs."""
 
     def test_mark_missing_and_get_missing(self, in_memory_db):
-        """mark_missing sets status, get_missing_files retrieves it."""
+        """mark_missing sets missing_since, get_missing_files retrieves it."""
         record = _make_record("/test/missing.txt")
         in_memory_db.upsert_file(record)
 

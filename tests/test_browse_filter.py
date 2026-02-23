@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 
 from objlib.database import Database
-from objlib.models import FileRecord, FileStatus, MetadataQuality
+from objlib.models import FileRecord, MetadataQuality
 
 
 @pytest.fixture
@@ -79,7 +79,7 @@ def browse_db(tmp_path: Path) -> Database:
             }),
             metadata_quality=MetadataQuality.COMPLETE,
         ),
-        # OPAR deleted file (should never appear)
+        # OPAR deleted file (should never appear) -- marked deleted after upsert
         FileRecord(
             file_path="/courses/opar/deleted.txt",
             content_hash="opar_del",
@@ -92,7 +92,6 @@ def browse_db(tmp_path: Path) -> Database:
                 "lesson_number": 99,
             }),
             metadata_quality=MetadataQuality.COMPLETE,
-            status=FileStatus.LOCAL_DELETE,
         ),
         # ITOE course files (2)
         FileRecord(
@@ -176,6 +175,8 @@ def browse_db(tmp_path: Path) -> Database:
     ]
 
     db.upsert_files(records)
+    # Mark the deleted file after upsert (is_deleted replaces status=LOCAL_DELETE)
+    db.mark_deleted({"/courses/opar/deleted.txt"})
     yield db
     db.close()
 
