@@ -258,7 +258,7 @@ Plans:
 - [ ] 16-01-PLAN.md -- Bug fixes (limit cap, RecoveryCrawler, 429 retry, store name defaults) + full library upload execution + post-upload remediation + T=0 stability check
 - [ ] 16-02-PLAN.md -- Temporal stability protocol (T+4h, T+24h BLOCKING gate, T+36h confirmation) with fresh sessions per checkpoint
 - [ ] 16-03-PLAN.md -- Phase 07-07 TUI integration smoke test (structured manual walkthrough, 5+ queries, Canon.json update)
-- [ ] 16-04-PLAN.md -- TUI-09: top_k=20 in search client, --top-k CLI flag, citation count banner, rank display per citation, scroll hints
+- [x] 16-04-PLAN.md -- TUI-09: top_k=20 in search client, --top-k CLI flag, citation count banner, rank display per citation, scroll hints
 
 ---
 

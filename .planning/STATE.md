@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 
 ## Current Position
 
-Phase: 15 of 16 (Consistency + store-sync) -- COMPLETE (all 3 plans done, gate PASSED 2026-02-23)
-Plan: 3 of 3 complete; Phase 15 FULLY COMPLETE
-Status: Phase 16 UNBLOCKED. VLID-07 gate PASSED. Phase 15 all plans done. check_stability.py upgraded to 7 assertions.
-Last activity: 2026-02-23 -- Plan 15-03 COMPLETE. Assertion 7 (per-file searchability) added to check_stability.py.
+Phase: 16 of 17 (Full Library Upload) -- IN PROGRESS (Wave 1: 16-01 and 16-04 executing in parallel)
+Plan: 16-04 complete (1 of 4 in Phase 16)
+Status: Phase 16 Wave 1 executing. Plan 16-04 (TUI-09) COMPLETE. Plan 16-01 (retry/store-name) executing in parallel.
+Last activity: 2026-02-23 -- Plan 16-04 COMPLETE. TUI-09: top_k=20, rank display, citation count, scroll hints.
 
-Progress: [#######################] 23/32 v2.0 plans complete
+Progress: [########################] 24/32 v2.0 plans complete
 
 Note: Phase 07-07 (TUI integration smoke test from v1.0) deferred to Phase 16, plan 16-03.
   Runs against full live corpus after upload -- more meaningful than running on empty store.
@@ -30,7 +30,7 @@ Phase 12: [##########] 6/6 plans -- COMPLETE (Wave 4: 50-File FSM Upload) -- gat
 Phase 13: [##########] 2/2 plans -- COMPLETE (Wave 5: State Column Retirement) -- gate PASSED 2026-02-22
 Phase 14: [##########] 3/3 plans -- COMPLETE (Wave 6: Batch Performance) -- VLID-06 PASSED + SC2 gap closed 2026-02-22
 Phase 15: [##########] 3/3 plans -- COMPLETE (Wave 7: Consistency + store-sync) -- gate PASSED 2026-02-23
-Phase 16: [░░░░░░░░░░] 0/4 plans -- UNBLOCKED (Phase 15 VLID-07 gate PASSED) (Wave 8: Full Library Upload + 07-07)
+Phase 16: [##░░░░░░░░] 1/4 plans -- IN PROGRESS (16-04 COMPLETE, Wave 1) (Wave 8: Full Library Upload + 07-07)
 Phase 17: [░░░░░░░░░░] 0/4 plans -- BLOCKED by Phase 16 gate (RxPY TUI reactive pipeline)
 
 ## Performance Metrics
@@ -41,9 +41,9 @@ Phase 17: [░░░░░░░░░░] 0/4 plans -- BLOCKED by Phase 16 gate
 - Total execution time: 128 min
 
 **v2.0 Velocity:**
-- Total plans completed: 22
-- Average duration: 11.1 min
-- Total execution time: 245 min
+- Total plans completed: 23
+- Average duration: 10.9 min
+- Total execution time: 251 min
 
 *Updated after each plan completion*
 
@@ -129,6 +129,8 @@ Recent decisions affecting current work:
 - [15-03]: check_stability.py upgraded to 7 assertions; Assertion 7 samples 5 random indexed files via targeted per-file queries; --sample-count flag controls sample size (0=skip)
 - [15-03]: Matching by gemini_file_id (primary), tolerance of max(1, N//5) misses for known 5-20% query-specificity gap
 - [15-03]: Phase 15 FULLY COMPLETE -- all 3 plans done; VLID-07 gate: see 15-02-SUMMARY.md (15-03 adds coverage, does not re-gate)
+- [16-04]: top_k=20 default across search pipeline (client, service, CLI, TUI); flat chunk list per locked decision #3; rank = "[N / total]" in bold cyan
+- [16-04]: Scroll hints shown when result count > 3; ResultItem rank/total parameters optional for backward compatibility
 
 ### Roadmap Evolution
 
@@ -145,7 +147,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Phase 15 FULLY COMPLETE (all 3 plans done). check_stability.py upgraded to 7 assertions. Phase 16 ready to plan/execute.
+Stopped at: Plan 16-04 COMPLETE (TUI-09: top_k, rank, citation count, scroll hints). Phase 16 Wave 1 in progress.
 
 Temporal stability log:
 - T=0  (2026-02-22 ~16:04 UTC): STABLE -- 90 indexed, 6/6 pass, 0 orphans
@@ -154,4 +156,4 @@ Temporal stability log:
 - Post-upgrade (2026-02-23 13:05 UTC): STABLE -- 90 indexed, 7/7 pass (Assertion 7: 4/5 found, 1 within tolerance)
 
 Resume file: .planning/phases/16-full-library-upload/ (Phase 16 plans)
-Resume instruction: Phase 15 fully complete. Phase 16 UNBLOCKED. Ready for full-library upload planning/execution.
+Resume instruction: Plan 16-04 done. Plan 16-01 may be done (parallel). Next: 16-02 (Wave 2), then 16-03 (Wave 3).
