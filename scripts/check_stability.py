@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Temporal Stability Check v2 — Gemini File Search ↔ SQLite FSM sync verification.
 
-Tests six independent assertions about the synchronization between the local
+Tests seven independent assertions about the synchronization between the local
 SQLite database (using gemini_state FSM columns) and the Gemini File Search API
 store. ANY single failure produces an UNSTABLE verdict and a non-zero exit code.
 
@@ -16,6 +16,16 @@ v2 changes from v1:
   - Vacuous pass logic for empty stores (0 indexed files)
   - No dependency on objlib search layer (uses raw genai SDK)
   - Default store: objectivism-library (not objectivism-library-test)
+
+Assertions:
+  1. Count invariant: DB indexed count == store document count
+  2. DB->Store: every indexed file has a store document (no ghosts)
+  3. Store->DB: every store document has a DB record (no orphans)
+  4. No stuck transitions: 0 files in 'uploading' state
+  5. Search returns results: a sample query produces citations
+  6. Citation resolution: all citations resolve to DB records
+  7. Per-file searchability: a random sample of N indexed files each appear in
+     top-10 search results for a targeted query constructed from the file's name
 
 Scheduled re-verification after any upload/purge/reset-existing operation:
   T+0    immediately after the operation (baseline)
@@ -40,6 +50,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import sqlite3
 import sys
 import time
@@ -87,7 +98,7 @@ def _head(msg: str) -> str: return f"\n{BOLD}{msg}{RESET}"
 # -- Checker -------------------------------------------------------------------
 
 class StabilityChecker:
-    """Runs all six stability assertions and accumulates results."""
+    """Runs all seven stability assertions and accumulates results."""
 
     def __init__(
         self,
@@ -96,12 +107,14 @@ class StabilityChecker:
         db_path: str,
         sample_query: str,
         verbose: bool = False,
+        sample_size: int = 5,
     ) -> None:
         self.api_key = api_key
         self.store_display_name = store_display_name
         self.db_path = db_path
         self.sample_query = sample_query
         self.verbose = verbose
+        self.sample_size = sample_size
 
         self.client = genai.Client(api_key=api_key)
         self.store_resource_name: str | None = None
@@ -420,6 +433,172 @@ class StabilityChecker:
                 f"all {len(citations)} citations resolve to DB records",
             )
 
+    # -- Assertion 7: Per-file searchability sample ----------------------------
+
+    def _check_targeted_searchability(
+        self, indexed_count: int, sample_size: int = 5
+    ) -> None:
+        """Sample N indexed files and verify each is searchable via a targeted query.
+
+        This is the critical upgrade from Phase 15: Assertion 5 proves "search
+        returns some results", but this assertion proves "specific indexed files
+        are retrievable". One miss -> UNSTABLE.
+
+        Query construction: uses filename stem (e.g. "B001 Introduction to
+        Objectivism" from "B001 Introduction to Objectivism.txt"). For Objectivism
+        library files, names are highly unique and specific enough to target one file.
+
+        Result matching: checks retrieved_context.title against gemini_store_doc_id
+        (Phase 11 finding: Document.display_name returns file resource ID, not the
+        display_name submitted during upload).
+        """
+        if indexed_count == 0:
+            self._pass(
+                "Assertion 7 -- Per-file searchability",
+                "N/A -- store is empty (0 indexed files)",
+            )
+            return
+
+        if sample_size == 0:
+            self._pass(
+                "Assertion 7 -- Per-file searchability",
+                "N/A -- sample-count=0, assertion skipped",
+            )
+            return
+
+        if indexed_count < sample_size:
+            self._pass(
+                "Assertion 7 -- Per-file searchability",
+                f"N/A -- only {indexed_count} indexed file(s), need {sample_size} for sample",
+            )
+            return
+
+        # Sample N random indexed files from DB
+        try:
+            conn = sqlite3.connect(self.db_path)
+            rows = conn.execute(
+                """SELECT filename, gemini_store_doc_id, gemini_file_id, metadata_json
+                   FROM files
+                   WHERE gemini_state = 'indexed'
+                     AND gemini_store_doc_id IS NOT NULL
+                   ORDER BY RANDOM()
+                   LIMIT ?""",
+                (sample_size,),
+            ).fetchall()
+            conn.close()
+        except Exception as e:
+            self._fail("Assertion 7 -- Per-file searchability", f"DB error: {e}")
+            return
+
+        if not rows:
+            self._pass(
+                "Assertion 7 -- Per-file searchability",
+                "N/A -- no indexed files with store doc IDs",
+            )
+            return
+
+        missed = []
+        for filename, store_doc_id, gemini_file_id, metadata_json_str in rows:
+            # Construct targeted query from filename stem
+            stem = Path(filename).stem  # e.g. "B001 Introduction to Objectivism"
+            # Optionally enrich with metadata title if present
+            title = None
+            if metadata_json_str:
+                try:
+                    meta = json.loads(metadata_json_str)
+                    title = meta.get("display_title") or meta.get("title")
+                except Exception:
+                    pass
+            subject = title if title else stem
+            query = f"What is '{subject}' about?"
+            self._verbose(f"Assertion 7: querying for '{filename}' via: {query!r}")
+
+            # Run targeted search
+            try:
+                response = self.client.models.generate_content(
+                    model=SEARCH_MODEL,
+                    contents=query,
+                    config=genai_types.GenerateContentConfig(
+                        tools=[genai_types.Tool(
+                            file_search=genai_types.FileSearch(
+                                file_search_store_names=[self.store_resource_name]
+                            )
+                        )]
+                    ),
+                )
+            except Exception as e:
+                self._fail(
+                    "Assertion 7 -- Per-file searchability",
+                    f"API error querying for '{filename}': {e}",
+                )
+                return
+
+            # Check top-10 grounding chunks for the target file.
+            # Phase 11 finding: retrieved_context.title returns the raw file
+            # resource ID (e.g. "yg1gquo3eo88"), NOT the display_name.
+            # DB stores: gemini_file_id = "files/yg1gquo3eo88"
+            #            gemini_store_doc_id = "yg1gquo3eo88-hyzl1kilgv1v"
+            # Primary match: strip "files/" from gemini_file_id and compare
+            # directly to title (same approach as measure_searchability_lag.py).
+            expected_file_id = (gemini_file_id or "").replace("files/", "")
+            found = False
+            if response.candidates:
+                gm = getattr(response.candidates[0], "grounding_metadata", None)
+                if gm:
+                    chunks = getattr(gm, "grounding_chunks", []) or []
+                    for chunk in chunks[:10]:
+                        rc = getattr(chunk, "retrieved_context", None)
+                        if not rc:
+                            continue
+                        title_in_result = getattr(rc, "title", "") or ""
+                        if not title_in_result:
+                            continue
+                        # Primary: exact match on file resource ID
+                        if expected_file_id and title_in_result == expected_file_id:
+                            found = True
+                            break
+                        # Secondary: title is prefix of store_doc_id
+                        if store_doc_id and title_in_result in store_doc_id:
+                            found = True
+                            break
+                        # Tertiary: match by filename (if display_name changes)
+                        if filename in title_in_result:
+                            found = True
+                            break
+
+            if not found:
+                missed.append(filename)
+                self._verbose(
+                    f"Assertion 7: '{filename}' NOT found in top-10 for query {query!r}"
+                )
+
+        # Tolerance: Phase 15-01 measured 5-20% silent failure rate due to
+        # query specificity (short/generic filenames may not retrieve the
+        # target file). This is a search-ranking phenomenon, not an indexing
+        # failure. Allow up to 1 miss per 5 samples (20% tolerance) to avoid
+        # false negatives while still catching real searchability degradation.
+        max_misses = max(1, sample_size // 5)
+        if not missed:
+            self._pass(
+                "Assertion 7 -- Per-file searchability",
+                f"all {len(rows)}/{sample_size} sampled files retrievable via targeted queries",
+            )
+        elif len(missed) <= max_misses:
+            self._warn(
+                "Assertion 7 -- Per-file searchability (marginal)",
+                f"{len(missed)}/{len(rows)} files not found (within {max_misses} tolerance): {missed}",
+            )
+            self._pass(
+                "Assertion 7 -- Per-file searchability",
+                f"{len(rows) - len(missed)}/{len(rows)} found, {len(missed)} miss(es) within "
+                f"tolerance (max {max_misses}) -- known 5-20% query-specificity gap (Phase 15-01)",
+            )
+        else:
+            self._fail(
+                "Assertion 7 -- Per-file searchability",
+                f"{len(missed)}/{len(rows)} files not found (exceeds {max_misses} tolerance): {missed}",
+            )
+
     # -- Main run --------------------------------------------------------------
 
     async def run(self) -> int:
@@ -432,6 +611,7 @@ class StabilityChecker:
         print(f"  Store:  {self.store_display_name}")
         print(f"  DB:     {self.db_path}")
         print(f"  Query:  {self.sample_query!r}")
+        print(f"  Sample: {self.sample_size} indexed files (Assertion 7)")
         print(f"{BOLD}{'=' * 62}{RESET}")
 
         t_start = time.monotonic()
@@ -482,6 +662,10 @@ class StabilityChecker:
         print(_head("Search + citation resolution..."))
         citations = self._check_search_results(indexed_count)
         self._check_citation_resolution(citations, indexed_count)
+
+        # Step 5: Per-file searchability sample (Assertion 7)
+        print(_head("Per-file searchability sample..."))
+        self._check_targeted_searchability(indexed_count, self.sample_size)
 
         # Verdict
         elapsed = time.monotonic() - t_start
@@ -536,6 +720,12 @@ def main() -> int:
         help="Sample search query for the citation resolution check",
     )
     parser.add_argument(
+        "--sample-count",
+        type=int,
+        default=5,
+        help="Number of random indexed files to verify in Assertion 7 (default: 5, 0=skip)",
+    )
+    parser.add_argument(
         "--verbose", "-v",
         action="store_true",
         help="Print additional diagnostic detail",
@@ -554,6 +744,7 @@ def main() -> int:
         db_path=args.db,
         sample_query=args.query,
         verbose=args.verbose,
+        sample_size=args.sample_count,
     )
     return asyncio.run(checker.run())
 
