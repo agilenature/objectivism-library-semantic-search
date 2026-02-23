@@ -244,7 +244,7 @@ class ObjlibApp(App):
             with self.telemetry.span("tui.search") as span:
                 span.set_attribute("search.query", query)
                 span.set_attribute("search.has_filters", filters is not None)
-                result = await self.search_service.search(query, filters=filters)
+                result = await self.search_service.search(query, filters=filters, top_k=20)
                 self.results = result.citations if hasattr(result, "citations") else []
                 span.set_attribute("search.result_count", len(self.results))
 
@@ -257,7 +257,7 @@ class ObjlibApp(App):
             count = len(self.results)
             truncated_query = query[:30]
             self.query_one("#status-bar", Static).update(
-                f"{count} results | {truncated_query} | Ctrl+P: Commands"
+                f"{count} citations retrieved | {truncated_query} | Ctrl+P: Commands"
             )
             self.telemetry.log.info(f"search completed query={query!r} result_count={count}")
 
