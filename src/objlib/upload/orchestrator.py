@@ -16,6 +16,7 @@ import asyncio
 import json
 import logging
 import os
+import random
 import signal
 import uuid
 from typing import Any
@@ -27,10 +28,15 @@ from objlib.upload.content_preparer import cleanup_temp_file, prepare_enriched_c
 from objlib.upload.exceptions import OCCConflictError
 from objlib.upload.fsm import create_fsm
 from objlib.upload.metadata_builder import build_enriched_metadata, compute_upload_hash
-from objlib.upload.recovery import RecoveryManager, retry_failed_file
+from objlib.upload.recovery import RecoveryCrawler, RecoveryManager, retry_failed_file
 from objlib.upload.state import AsyncUploadStateManager
 
 logger = logging.getLogger(__name__)
+
+# 429 in-place retry constants for FSM upload
+MAX_429_RETRIES = 5
+BASE_DELAY = 1.0
+MAX_DELAY = 60.0
 
 
 class UploadOrchestrator:
@@ -1026,6 +1032,24 @@ class FSMUploadOrchestrator(EnrichedUploadOrchestrator):
         """
         self.setup_signal_handlers()
 
+        # Step 0: Run crash recovery (RecoveryManager + RecoveryCrawler)
+        recovery = RecoveryManager(self._client, self._state, self._config)
+        recovery_result = await recovery.run()
+        if recovery_result.recovered_operations > 0 or recovery_result.reset_to_pending > 0:
+            logger.info(
+                "Recovery: %d ops recovered, %d files reset to pending",
+                recovery_result.recovered_operations,
+                recovery_result.reset_to_pending,
+            )
+
+        # RecoveryCrawler for FSM-specific write-ahead intents
+        crawler = RecoveryCrawler(self._state, self._client)
+        recovered, occ_failures = await crawler.recover_all()
+        if recovered:
+            logger.info("RecoveryCrawler recovered %d files", len(recovered))
+        if occ_failures:
+            logger.warning("RecoveryCrawler OCC failures: %d files (will retry next startup)", len(occ_failures))
+
         # Step 1: Ensure store exists
         logger.info("Ensuring store '%s' exists...", store_display_name)
         await self._client.get_or_create_store(store_display_name)
@@ -1042,7 +1066,7 @@ class FSMUploadOrchestrator(EnrichedUploadOrchestrator):
                 await self._reset_existing_files_fsm(limit=self._file_limit)
 
             # Step 4: Get FSM pending files (untracked)
-            limit = self._file_limit if self._file_limit > 0 else 50
+            limit = self._file_limit if self._file_limit > 0 else 10000
             pending = await self._state.get_fsm_pending_files(limit=limit)
             self._total = len(pending)
 
@@ -1318,11 +1342,30 @@ class FSMUploadOrchestrator(EnrichedUploadOrchestrator):
                     upload_path = temp_path
 
             try:
-                # Upload with semaphore-limited concurrency
-                async with self._upload_semaphore:
-                    file_obj, operation = await self._client.upload_and_import(
-                        upload_path, display_name, custom_metadata
-                    )
+                # Upload with 429 in-place retry (locked decision #1)
+                file_obj = None
+                operation = None
+                for attempt in range(MAX_429_RETRIES):
+                    try:
+                        async with self._upload_semaphore:
+                            file_obj, operation = await self._client.upload_and_import(
+                                upload_path, display_name, custom_metadata
+                            )
+                        break  # Success -- exit retry loop
+                    except RateLimitError as exc:
+                        if attempt == MAX_429_RETRIES - 1:
+                            logger.error(
+                                "429 retry budget exhausted for %s after %d attempts: %s",
+                                file_path, MAX_429_RETRIES, exc,
+                            )
+                            raise  # Will be caught by the Exception handler below
+                        delay = min(BASE_DELAY * (2 ** attempt), MAX_DELAY)
+                        jittered = random.random() * delay  # full jitter
+                        logger.warning(
+                            "429 rate limit on %s (attempt %d/%d), retrying in %.1fs",
+                            file_path, attempt + 1, MAX_429_RETRIES, jittered,
+                        )
+                        await asyncio.sleep(jittered)
             finally:
                 cleanup_temp_file(temp_path)
 
@@ -1342,17 +1385,6 @@ class FSMUploadOrchestrator(EnrichedUploadOrchestrator):
         except OCCConflictError as exc:
             logger.warning("OCC conflict uploading %s: %s", file_path, exc)
             self._skipped += 1
-            return None
-
-        except RateLimitError as exc:
-            logger.warning("Rate limited uploading %s: %s", file_path, exc)
-            try:
-                await self._state.transition_to_failed(file_path, version, str(exc))
-            except OCCConflictError:
-                pass
-            self._failed += 1
-            if self._progress is not None:
-                self._progress.file_rate_limited(file_path)
             return None
 
         except Exception as exc:

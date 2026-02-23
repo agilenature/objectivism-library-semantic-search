@@ -58,7 +58,7 @@ def app_callback(
     store: Annotated[
         str,
         typer.Option("--store", "-s", help="Gemini File Search store display name"),
-    ] = "objectivism-library-v1",
+    ] = "objectivism-library",
     db_path: Annotated[
         Path,
         typer.Option("--db", "-d", help="Path to SQLite database"),
@@ -416,7 +416,7 @@ def store_sync(
     store_name: Annotated[
         str,
         typer.Option("--store", "-s", help="Gemini File Search store display name"),
-    ] = "objectivism-library-test",
+    ] = "objectivism-library",
     db_path: Annotated[
         Path,
         typer.Option("--db", "-d", help="Path to SQLite database file"),
@@ -568,7 +568,7 @@ def upload(
     store_name: Annotated[
         str,
         typer.Option("--store", "-s", help="Gemini File Search store display name"),
-    ] = "objectivism-library-v1",
+    ] = "objectivism-library",
     db_path: Annotated[
         Path,
         typer.Option("--db", "-d", help="Path to SQLite database file"),
@@ -756,7 +756,7 @@ def enriched_upload(
     store_name: Annotated[
         str,
         typer.Option("--store", "-s", help="Gemini File Search store display name"),
-    ] = "objectivism-library-test",
+    ] = "objectivism-library",
     db_path: Annotated[
         Path,
         typer.Option("--db", "-d", help="Path to SQLite database file"),
@@ -1170,7 +1170,7 @@ def sync(
     store_name: Annotated[
         str,
         typer.Option("--store", "-s", help="Gemini File Search store display name"),
-    ] = "objectivism-library-test",
+    ] = "objectivism-library",
     db_path: Annotated[
         Path,
         typer.Option("--db", "-d", help="Path to SQLite database file"),
@@ -1343,6 +1343,9 @@ def search(
     mode: Annotated[
         str, typer.Option("--mode", help="Result ordering: 'learn' (intro-first) or 'research' (pure relevance)")
     ] = "learn",
+    top_k: Annotated[
+        int, typer.Option("--top-k", help="Max citation chunks to retrieve (default: 20)")
+    ] = 20,
     debug: Annotated[
         bool, typer.Option("--debug", help="Write debug log to ~/.objlib/debug.log")
     ] = False,
@@ -1398,7 +1401,7 @@ def search(
     search_client = GeminiSearchClient(state.gemini_client, state.store_resource_name)
     try:
         response = search_client.query_with_retry(
-            search_query, metadata_filter=metadata_filter, model=model
+            search_query, metadata_filter=metadata_filter, top_k=top_k, model=model
         )
     except Exception as e:
         console.print(f"[red]Search failed after retries:[/red] {e}")
@@ -1528,7 +1531,7 @@ def view(
     store: Annotated[
         str,
         typer.Option("--store", "-s", help="Gemini File Search store display name"),
-    ] = "objectivism-library-v1",
+    ] = "objectivism-library",
 ) -> None:
     """View detailed information about a document by filename.
 

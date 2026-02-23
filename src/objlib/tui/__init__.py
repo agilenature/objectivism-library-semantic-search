@@ -8,7 +8,7 @@ views, and session management.
 from __future__ import annotations
 
 DEFAULT_DB_PATH = "data/library.db"
-DEFAULT_STORE_NAME = "objectivism-library-test"
+DEFAULT_STORE_NAME = "objectivism-library"
 
 
 def run_tui(
