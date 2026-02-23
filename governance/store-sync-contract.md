@@ -264,6 +264,69 @@ new API client -- to verify that:
 
 **T+24h is the VLID-07 gate blocker for Phase 16.**
 
+### T=0 Result (2026-02-22 ~16:04 UTC)
+
+STABLE — 6/6 assertions passed, 90 indexed files, 90 store docs, 0 orphans.
+(Recorded in STATE.md session continuity; stability script not saved to disk at that checkpoint.)
+
+### T+4h Result (2026-02-22 22:12:16 UTC)
+
+```
+=============================================================
+  TEMPORAL STABILITY CHECK v2
+=============================================================
+  Time:   2026-02-22 22:12:16 UTC
+  Store:  objectivism-library
+  DB:     data/library.db
+  Query:  'Ayn Rand theory of individual rights and capitalism'
+=============================================================
+
+PASS  Assertion 1 -- Count invariant: DB indexed=90, store docs=90
+PASS  Assertion 2 -- DB->Store (no ghosts): all 90 indexed files present in store
+PASS  Assertion 3 -- Store->DB (no orphans): all 90 store docs match DB records
+PASS  Assertion 4 -- No stuck transitions: 0 files in 'uploading' state
+PASS  Assertion 5 -- Search returns results: 5 citations returned
+PASS  Assertion 6 -- Citation resolution: all 5 citations resolve to DB records
+
+  Passed: 6 / Failed: 0 / Warnings: 0 / Elapsed: 9.2s
+
+VERDICT: STABLE
+```
+
+store-sync orphan check: 0 orphans, store clean.
+
+### T+24h Result (2026-02-23 12:54:49 UTC, ~20h50m elapsed)
+
+Run by user at ~20h50m (slightly early of 24h target, per explicit request).
+
+```
+==============================================================
+  TEMPORAL STABILITY CHECK v2
+==============================================================
+  Time:   2026-02-23 12:54:49 UTC
+  Store:  objectivism-library
+  DB:     data/library.db
+  Query:  'Ayn Rand theory of individual rights and capitalism'
+==============================================================
+
+PASS  Assertion 1 -- Count invariant: DB indexed=90, store docs=90
+PASS  Assertion 2 -- DB->Store (no ghosts): all 90 indexed files present in store
+PASS  Assertion 3 -- Store->DB (no orphans): all 90 store docs match DB records
+PASS  Assertion 4 -- No stuck transitions: 0 files in 'uploading' state
+PASS  Assertion 5 -- Search returns results: 5 citations returned
+PASS  Assertion 6 -- Citation resolution: all 5 citations resolve to DB records
+
+  Passed: 6 / Failed: 0 / Warnings: 0 / Elapsed: 8.1s
+
+VERDICT: STABLE
+```
+
+store-sync orphan check: 0 orphans, store clean.
+
+**Temporal stability verdict: CONFIRMED — no drift observed between T=0 and T+24h.**
+All three checkpoints (T=0, T+4h, T+24h) show identical state: 90 indexed, 90 store docs, 0 orphans.
+VLID-07 gate: **PASS**. Phase 16 is UNBLOCKED.
+
 ---
 
 *This contract is the authoritative reference for FSM/store-sync interaction.

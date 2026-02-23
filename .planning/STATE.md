@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 
 ## Current Position
 
-Phase: 15 of 16 (Consistency + store-sync) -- IN PROGRESS
-Plan: 2 of 3 in current phase (Plan 01 complete, Plan 02 at temporal checkpoint)
-Status: Phase 15 Plans 01-02 executing. Awaiting T+4h and T+24h stability checks before 15-02 can close.
-Last activity: 2026-02-22 -- Completed 15-01 (lag measurement), 15-02 partial (governance/store-sync-contract.md + downgrade_to_failed(), T=0 STABLE at 16:04 UTC)
+Phase: 15 of 16 (Consistency + store-sync) -- COMPLETE (gate PASSED 2026-02-23)
+Plan: 2 of 3 complete; Plan 03 (Assertion 7 upgrade) ready to execute
+Status: Phase 16 UNBLOCKED. VLID-07 gate PASSED. Phase 15 Plans 01-02 complete. Plan 03 next.
+Last activity: 2026-02-23 -- T+24h STABLE (12:54 UTC, ~20h50m). VLID-07 PASS. 15-02-SUMMARY.md written.
 
-Progress: [#####################] 21/28 v2.0 plans complete
+Progress: [######################] 22/32 v2.0 plans complete
 
 Note: Phase 07-07 (TUI integration smoke test from v1.0) deferred to Phase 16, plan 16-03.
   Runs against full live corpus after upload -- more meaningful than running on empty store.
@@ -29,8 +29,9 @@ Phase 11: [##########] 2/2 plans -- COMPLETE (Wave 3: display_name + Import) -- 
 Phase 12: [##########] 6/6 plans -- COMPLETE (Wave 4: 50-File FSM Upload) -- gate PASSED 2026-02-22
 Phase 13: [##########] 2/2 plans -- COMPLETE (Wave 5: State Column Retirement) -- gate PASSED 2026-02-22
 Phase 14: [##########] 3/3 plans -- COMPLETE (Wave 6: Batch Performance) -- VLID-06 PASSED + SC2 gap closed 2026-02-22
-Phase 15: [###░░░░░░░] 1/3 plans -- IN PROGRESS (Wave 7: Consistency + store-sync)
-Phase 16: [░░░░░░░░░░] 0/4 plans -- BLOCKED by Phase 15 gate (Wave 8: Full Library Upload + 07-07)
+Phase 15: [#######░░░] 2/3 plans -- IN PROGRESS (Wave 7: Consistency + store-sync) -- gate PASSED 2026-02-23
+Phase 16: [░░░░░░░░░░] 0/4 plans -- UNBLOCKED (Phase 15 VLID-07 gate PASSED) (Wave 8: Full Library Upload + 07-07)
+Phase 17: [░░░░░░░░░░] 0/4 plans -- BLOCKED by Phase 16 gate (RxPY TUI reactive pipeline)
 
 ## Performance Metrics
 
@@ -121,6 +122,14 @@ Recent decisions affecting current work:
 - [15-01]: Silent failure rate 5% (1/20 files never searchable in 300s) -- likely query-specificity issue, not indexing failure
 - [15-01]: Listing visibility fast (~1.5-2s, consistent with Phase 11), but embedding/search indexing adds 5-8s
 - [15-01]: 5% failure rate triggers store-sync escalation consideration per Q7 decision (any failure rate > 0%)
+- [15-02]: downgrade_to_failed() is 7th authorized gemini_state write site: indexed -> failed, OCC-guarded, store-sync only
+- [15-02]: store-sync role = scheduled + targeted post-run (escalated from scheduled-only by 5-20% silent failure rate)
+- [15-02]: VLID-07 gate PASSED -- T=0 STABLE, T+4h STABLE, T+24h STABLE (90 indexed, 0 orphans across all checks)
+- [15-02]: Phase 15 COMPLETE -- Phase 16 UNBLOCKED
+
+### Roadmap Evolution
+
+- Phase 17 added (2026-02-22): RxPY reactive observable pipeline for TUI event streams, validated by pre/post UATs. Replaces manual debounce/generation-tracking, @work(exclusive=True), and scattered filter-refire logic. 4 plans: spike → pre-UAT → impl → post-UAT.
 
 ### Pending Todos
 
@@ -132,10 +141,13 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-22
-Stopped at: Phase 15 Plan 02 -- at temporal stability checkpoint. T=0 STABLE (16:04 UTC). Awaiting T+4h (19:37 UTC) and T+24h (2026-02-23 15:37 UTC) checks.
+Last session: 2026-02-23
+Stopped at: Phase 15 Plan 02 COMPLETE. VLID-07 PASS. 15-02-SUMMARY.md written. Ready for Plan 15-03 (Assertion 7 upgrade to check_stability.py).
 
-Resume file: .planning/phases/15-consistency-store-sync/15-02-PLAN.md
-Resume instruction: Phase 15 Plan 02 temporal checkpoint. T=0 was STABLE at 16:04 UTC 2026-02-22 (90 indexed files, all 6 assertions passed, 0 orphans). Paste T+4h or T+24h check_stability.py output to continue.
-Resume file: .planning/phases/15-consistency-store-sync/15-02-PLAN.md
-Resume instruction: /gsd:execute-phase 15 plan 02
+Temporal stability log:
+- T=0  (2026-02-22 ~16:04 UTC): STABLE — 90 indexed, 6/6 pass, 0 orphans
+- T+4h (2026-02-22  22:12 UTC): STABLE — 90 indexed, 6/6 pass, 0 orphans
+- T+24h (2026-02-23 12:54 UTC): STABLE — 90 indexed, 6/6 pass, 0 orphans (~20h50m elapsed)
+
+Resume file: .planning/phases/15-consistency-store-sync/15-03-PLAN.md
+Resume instruction: Plan 15-03 ready. Add Assertion 7 (per-file searchability sample) to check_stability.py. Then Phase 15 fully complete and Phase 16 ready to plan.
