@@ -74,6 +74,7 @@ class SearchService:
         expand: bool = True,
         rerank: bool = True,
         mode: str = "learn",
+        top_k: int = 20,
     ) -> SearchResult:
         """Execute a search query against the Gemini File Search store.
 
@@ -83,6 +84,7 @@ class SearchService:
             expand: Whether to expand the query with glossary synonyms.
             rerank: Whether to rerank results with Gemini Flash.
             mode: "learn" for difficulty ordering, "research" for pure relevance.
+            top_k: Maximum number of citation chunks to retrieve (default 20).
 
         Returns:
             SearchResult with response text, enriched citations, query, and filter.
@@ -102,6 +104,7 @@ class SearchService:
             self._search_client.query_with_retry,
             search_query,
             metadata_filter=metadata_filter,
+            top_k=top_k,
         )
 
         # Extract citations from grounding metadata

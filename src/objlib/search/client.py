@@ -52,6 +52,7 @@ class GeminiSearchClient:
         self,
         query: str,
         metadata_filter: str | None = None,
+        top_k: int = 20,
         model: str = "gemini-2.5-flash",
     ) -> Any:
         """Query the File Search store via generate_content.
@@ -59,6 +60,7 @@ class GeminiSearchClient:
         Args:
             query: Natural language search query.
             metadata_filter: Optional AIP-160 filter string.
+            top_k: Maximum number of citation chunks to retrieve (default 20).
             model: Gemini model to use.
 
         Returns:
@@ -70,6 +72,7 @@ class GeminiSearchClient:
                     file_search=types.FileSearch(
                         file_search_store_names=[self._store_resource_name],
                         metadata_filter=metadata_filter,
+                        top_k=top_k,
                     )
                 )
             ],
@@ -91,6 +94,7 @@ class GeminiSearchClient:
         self,
         query: str,
         metadata_filter: str | None = None,
+        top_k: int = 20,
         model: str = "gemini-2.5-flash",
     ) -> Any:
         """Query with automatic retry (3 attempts, exponential backoff + jitter).
@@ -101,6 +105,7 @@ class GeminiSearchClient:
         Args:
             query: Natural language search query.
             metadata_filter: Optional AIP-160 filter string.
+            top_k: Maximum number of citation chunks to retrieve (default 20).
             model: Gemini model to use.
 
         Returns:
@@ -109,7 +114,7 @@ class GeminiSearchClient:
         Raises:
             Exception: After 3 failed attempts, the last exception is reraised.
         """
-        return self.query(query, metadata_filter=metadata_filter, model=model)
+        return self.query(query, metadata_filter=metadata_filter, top_k=top_k, model=model)
 
     @staticmethod
     def resolve_store_name(client: genai.Client, display_name: str) -> str:
