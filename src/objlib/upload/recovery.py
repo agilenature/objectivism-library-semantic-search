@@ -627,7 +627,7 @@ async def cleanup_and_reset_failed_files(
     db = state._ensure_connected()
 
     rows = await db.execute_fetchall(
-        """SELECT file_path, gemini_file_id
+        """SELECT file_path, gemini_file_id, gemini_store_doc_id
            FROM files
            WHERE gemini_state = 'failed'""",
     )
@@ -657,6 +657,12 @@ async def cleanup_and_reset_failed_files(
         )
         reset_count = 0
         for row in rows:
+            db_store_doc = row["gemini_store_doc_id"]
+            if db_store_doc:
+                try:
+                    await client.delete_store_document(db_store_doc)
+                except Exception:
+                    pass
             if await retry_failed_file(state, row["file_path"]):
                 reset_count += 1
         return (0, reset_count)
@@ -741,7 +747,8 @@ async def cleanup_and_reset_failed_files(
                     reset += 1
 
         else:
-            # Not in store at all -- raw file only or nothing.
+            # Not found in store via file_id lookup -- raw file only, nothing,
+            # or stale gemini_store_doc_id with gemini_file_id=NULL.
             # Clean up raw file (may already be expired) and reset to untracked.
             if gemini_file_id:
                 file_name = (
@@ -759,6 +766,25 @@ async def cleanup_and_reset_failed_files(
                     logger.debug(
                         "cleanup_and_reset_failed_files: raw file deletion skipped for %s: %s",
                         file_path, exc,
+                    )
+
+            # Defensive: if DB has a store doc recorded but file_id lookup couldn't
+            # find it (e.g. gemini_file_id=NULL), attempt deletion by the DB suffix
+            # to avoid orphan accumulation.
+            db_store_doc = row["gemini_store_doc_id"]
+            if db_store_doc:
+                try:
+                    await client.delete_store_document(db_store_doc)
+                    logger.warning(
+                        "cleanup_and_reset_failed_files: deleted stale store doc %s "
+                        "(file_id=NULL) for %s",
+                        db_store_doc, file_path,
+                    )
+                except Exception as exc:
+                    logger.warning(
+                        "cleanup_and_reset_failed_files: could not delete stale store doc %s "
+                        "for %s: %s",
+                        db_store_doc, file_path, exc,
                     )
 
             did_reset = await retry_failed_file(state, file_path)
