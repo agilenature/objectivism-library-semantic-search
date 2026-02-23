@@ -229,11 +229,12 @@ Plans:
   2. `store-sync`'s ongoing role is explicitly defined as one of: (a) routine automatic step after every upload, (b) scheduled periodic reconciliation, or (c) emergency-only tool -- with the decision justified by the measured lag data and any observed Gemini-side silent failures
   3. The contract between FSM and store-sync is documented: FSM owns state writes, store-sync owns read-verification -- and any case where they could disagree (FSM says INDEXED, store-sync says orphaned) has a defined resolution policy
   4. `check_stability.py --store objectivism-library` reports STABLE at T=0, T+4h, and T+24h after the 50-file corpus has been indexed -- temporal stability confirmed before full upload
-**Plans**: 2 plans in 2 waves
+**Plans**: 3 plans in 3 waves
 
 Plans:
-- [ ] 15-01-PLAN.md -- Lag measurement script (measure_searchability_lag.py) and 20-file measurement run with targeted per-file queries
-- [ ] 15-02-PLAN.md -- FSM/store-sync contract (governance/store-sync-contract.md), downgrade_to_failed() function, temporal stability (T=0/T+4h/T+24h)
+- [x] 15-01-PLAN.md -- Lag measurement script (measure_searchability_lag.py) and 20-file measurement run with targeted per-file queries
+- [x] 15-02-PLAN.md -- FSM/store-sync contract (governance/store-sync-contract.md), downgrade_to_failed() function, temporal stability (T=0/T+4h/T+24h)
+- [x] 15-03-PLAN.md -- check_stability.py Assertion 7: per-file searchability sample (5 random indexed files verified via targeted queries; upgrades STAB-04 gate from "search works" to "specific files are searchable")
 
 ---
 
@@ -250,12 +251,46 @@ Plans:
   4. `[Unresolved file #N]` does not appear in any TUI search result -- verified by running at least 5 diverse search queries in the TUI and confirming every citation displays a real file name
   5. The 50-file proxy assumption (A11) is validated: no failure modes appeared at full scale that were absent at 50-file scale -- or if they did, they are documented and resolved
   6. Phase 07-07 (TUI integration smoke test, deferred from v1.0) executes successfully against the live `objectivism-library` store with the full ~1,748-file corpus -- Canon.json updated to reflect TUI module
-**Plans**: TBD
+  7. TUI search results display citation count, per-citation rank position, and scroll hints (TUI-09); search client requests `top_k=20` by default; `--top-k N` CLI flag is available
+**Plans**: 4 plans
 
 Plans:
 - [ ] 16-01: Full library upload execution and monitoring
 - [ ] 16-02: Temporal stability protocol (T+4h, T+24h, T+36h checks) and TUI acceptance testing
 - [ ] 16-03: Phase 07-07 execution (TUI integration smoke test against full corpus)
+- [ ] 16-04: Search quality + TUI citation experience (TUI-09): top_k=20 in search client, --top-k CLI flag, citation count display, rank position per citation, scroll discoverability hints
+
+---
+
+### Phase 17: RxPY Reactive Observable Pipeline for TUI Event Streams
+**Goal**: Replace the TUI's manual debounce timer, generation-tracking, `@work(exclusive=True)` pattern, and scattered filter-refire logic with a composable RxPY observable pipeline — producing identical user-visible behavior, validated by automated UATs executed before and after implementation
+**Depends on**: Phase 16 (full library indexed, TUI smoke test complete — UATs run against live corpus)
+**Requirements**: TUI-RX-01 (observable pipeline), TUI-RX-02 (behavioral parity), TUI-RX-03 (UAT gate)
+**Distrust**: HOSTILE for the spike (RxPY + asyncio + Textual scheduler integration is non-obvious); SKEPTICAL for implementation
+**Gate**: Pre-UAT assertions ≡ Post-UAT assertions (identical behavior, not just "no crash")
+**Success Criteria** (what must be TRUE):
+  1. RxPY integrates cleanly with Textual's asyncio event loop via `AsyncIOScheduler` — confirmed by a spike harness that runs concurrent observable streams inside a Textual App with no event loop conflicts, no scheduler leaks, and no thread violations
+  2. The manual debounce timer + generation-tracking in `SearchBar` (`_debounce_timer`, `_debounce_gen`, `set_timer`) is replaced by a `Subject | debounce_with_timeout | distinct_until_changed` pipeline — with identical 300ms debounce behavior confirmed by UAT assertion 1
+  3. `@work(exclusive=True)` in `_run_search` is replaced by `switch_map` (flat_map_latest) — ensuring stale API responses are automatically discarded when a new query supersedes the previous one — confirmed by UAT assertion 3
+  4. The two separate `_run_search` call sites (from `on_search_requested` and `on_filter_changed`) are unified into a single `combine_latest(query$, filters$) | debounce | switch_map(search_api$)` pipeline — confirmed by UAT assertion 4
+  5. Pre-UAT behavioral assertions (7 behavioral invariants) are captured before any RxPY changes; post-UAT assertions run the identical suite and all 7 pass — behavioral parity is the gate, not test coverage
+  6. No new `gemini_state` write sites introduced; no database schema changes; RxPY is a TUI-layer concern only
+
+**Behavioral invariants (UAT suite — must pass identically before and after):**
+  1. Debounce: rapid typing (< 300ms between keystrokes) fires exactly 1 search, after a 300ms pause
+  2. Enter: fires search immediately, cancels any in-flight debounce timer
+  3. Stale cancellation: if search A is in-flight and query B is submitted, search A's results never appear in the results pane
+  4. Filter trigger: changing a filter dropdown re-runs the search with the current query
+  5. History navigation: Up/Down arrows cycle through past queries in order; Down past the end clears the input
+  6. Empty query: clears results immediately (no debounce)
+  7. Error containment: a search API error shows a notification but does not crash the TUI or leave `is_searching=True`
+
+**Plans**: 4 plans
+Plans:
+- [ ] 17-01: RxPY + asyncio + Textual spike — confirm `AsyncIOScheduler` integrates cleanly; test concurrent observables inside Textual App; document approach (HOSTILE gate)
+- [ ] 17-02: Pre-implementation UAT baseline — automated scripts capturing all 7 behavioral assertions against live TUI + real corpus; record verbatim outputs as the contract
+- [ ] 17-03: RxPY pipeline implementation — replace `SearchBar` debounce, `_run_search @work`, and `on_filter_changed` re-fire with unified observable pipeline
+- [ ] 17-04: Post-implementation UAT validation — same 7 assertions re-run; gate: all pass with outputs matching pre-UAT contract
 
 ---
 
@@ -286,10 +321,11 @@ Each wave's gate is BLOCKING for the next. If a gate fails, the failing phase mu
 | 12. 50-File FSM Upload | v2.0 | 6/6 | Complete | 2026-02-22 |
 | 13. State Column Retirement | v2.0 | 2/2 | Complete | 2026-02-22 |
 | 14. Batch Performance | v2.0 | 3/3 | Complete | 2026-02-22 |
-| 15. Consistency + store-sync | v2.0 | 0/2 | Not started | - |
-| 16. Full Library Upload | v2.0 | 0/3 | Not started | - |
+| 15. Consistency + store-sync | v2.0 | 3/3 | Complete | 2026-02-23 |
+| 16. Full Library Upload | v2.0 | 0/4 | Not started | - |
+| 17. RxPY TUI Reactive Pipeline | v2.0 | 0/4 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-19*
 *Pre-mortem: governance/pre-mortem-gemini-fsm.md*
-*Last updated: 2026-02-22 -- Phase 15 planned: 2 plans in 2 waves*
+*Last updated: 2026-02-22 -- Phase 17 added: RxPY reactive observable pipeline for TUI, validated by pre/post UATs*
