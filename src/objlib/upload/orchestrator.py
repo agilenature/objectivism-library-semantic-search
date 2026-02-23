@@ -28,7 +28,13 @@ from objlib.upload.content_preparer import cleanup_temp_file, prepare_enriched_c
 from objlib.upload.exceptions import OCCConflictError
 from objlib.upload.fsm import create_fsm
 from objlib.upload.metadata_builder import build_enriched_metadata, compute_upload_hash
-from objlib.upload.recovery import RecoveryCrawler, RecoveryManager, retry_failed_file
+from objlib.upload.recovery import (
+    RecoveryCrawler,
+    RecoveryManager,
+    cleanup_and_reset_failed_files,
+    recover_untracked_with_store_doc,
+    retry_failed_file,
+)
 from objlib.upload.state import AsyncUploadStateManager
 
 logger = logging.getLogger(__name__)
@@ -390,10 +396,10 @@ class UploadOrchestrator:
                 )
 
             # Check if operation completed successfully
-            done = getattr(completed, "done", False)
+            done = getattr(completed, "done", None)
             error = getattr(completed, "error", None)
 
-            if done and not error:
+            if done is True and not error:
                 op_name = getattr(operation, "name", "")
                 await self._state.record_import_success(file_path, op_name)
                 self._succeeded += 1
@@ -1050,6 +1056,29 @@ class FSMUploadOrchestrator(EnrichedUploadOrchestrator):
         if occ_failures:
             logger.warning("RecoveryCrawler OCC failures: %d files (will retry next startup)", len(occ_failures))
 
+        # Step 0b: Reconcile FAILED files against actual Gemini state.
+        # Class B/C (actually indexed) → upgraded to indexed.
+        # Class A/D (genuinely failed)  → cleaned up and reset to untracked.
+        upgraded, reset_to_untracked = await cleanup_and_reset_failed_files(self._state, self._client)
+        if upgraded or reset_to_untracked:
+            logger.info(
+                "Startup reconcile: %d failed files upgraded to indexed, %d reset to untracked",
+                upgraded, reset_to_untracked,
+            )
+
+        # Step 0c: Recover untracked files that have valid store documents.
+        # These were incorrectly reset to untracked by the expiration deadline
+        # bug (Phase 3 of RecoveryManager checked 'indexed' state files and
+        # reset them when their raw 48hr file expired, even though the store
+        # document is permanent).  Restore STATE_ACTIVE docs back to indexed.
+        restored, cleared_docs = await recover_untracked_with_store_doc(self._state, self._client)
+        if restored or cleared_docs:
+            logger.info(
+                "Startup store-doc recovery: %d untracked files restored to indexed, "
+                "%d stale store doc IDs cleared",
+                restored, cleared_docs,
+            )
+
         # Step 1: Ensure store exists
         logger.info("Ensuring store '%s' exists...", store_display_name)
         await self._client.get_or_create_store(store_display_name)
@@ -1421,10 +1450,10 @@ class FSMUploadOrchestrator(EnrichedUploadOrchestrator):
                     operation, timeout=self._config.poll_timeout_seconds
                 )
 
-            done = getattr(completed, "done", False)
+            done = getattr(completed, "done", None)
             error = getattr(completed, "error", None)
 
-            if done and not error:
+            if done is True and not error:
                 # Extract document_name (gemini_store_doc_id)
                 gemini_store_doc_id = None
                 response = getattr(completed, "response", None)

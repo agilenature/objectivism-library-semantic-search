@@ -274,12 +274,12 @@ class GeminiFileSearchClient:
         async for attempt in AsyncRetrying(
             wait=wait_exponential(multiplier=1, min=5, max=60),
             stop=stop_after_delay(timeout),
-            retry=retry_if_result(lambda op: not getattr(op, "done", True)),
+            retry=retry_if_result(lambda op: getattr(op, "done", None) is not True),
             reraise=True,
         ):
             with attempt:
                 operation = await self._client.aio.operations.get(operation)
-                if not getattr(operation, "done", True):
+                if getattr(operation, "done", None) is not True:
                     return operation  # tenacity retries
                 return operation
 
