@@ -262,6 +262,27 @@ Plans:
 
 ---
 
+### Phase 16.1: Stability Instrument Correctness Audit (INSERTED)
+
+**Goal:** Prove — not assume — that `check_stability.py`'s A6 and A7 assertions have no false-negative modes at full corpus scale, and fix any that do with exact-match semantics and zero tolerance. The instrument itself is the adversarial target.
+**Depends on:** Phase 16 (T+24h check revealed A6/A7 failures; gate BLOCKED)
+**Distrust:** HOSTILE — the stability instrument gates all of v2.0; a false-negative mode in the instrument is worse than no gate at all
+**Gate:** `check_stability.py` exits 0 (all 7 assertions PASS), A7 tolerance=0, 0 unresolved citations — result is new T=0 baseline for Phase 16 temporal protocol
+**Success Criteria** (what must be TRUE):
+  1. `retrieved_context.title` identity contract confirmed with affirmative evidence: which file ID does Gemini return — Files API resource ID or store's internal file ID prefix? Both cannot be correct simultaneously; Phase 11 spike data used to prove this, not a live inference
+  2. A6 citation resolution uses exact-match semantics (no LIKE): for all 1,075 files with `gemini_file_id=NULL`, lookup succeeds via `SUBSTR`-based prefix extraction from `gemini_store_doc_id`; confirmed by check_stability returning 0 unresolved for a query that retrieves at least one such file
+  3. A7 query strategy is per-pattern: Episode files, MOTM files, structured-title files, and Other files each have a discriminating query constructed from available metadata — confirmed by full audit of all 1,749 filenames and accessible metadata fields
+  4. A7 tolerance is 0: check_stability passes 0/N misses under the correct query strategy; OR Episode files that cannot be semantically discriminated are explicitly excluded from sampling with named-limitation count documented in the assertion itself
+  5. `check_stability.py --sample-count 20` exits 0 (all 7 PASS) against the live corpus — this output serves as the new T=0 baseline replacing the T+24h FAIL; Phase 16 temporal stability protocol resumes from this corrected baseline
+**Plans**: 3 plans in 3 waves
+
+Plans:
+- [ ] 16.1-01-PLAN.md -- HOSTILE spike: resolve all 7 identity/matching/query challenges with affirmative evidence; no "seems likely" allowed
+- [ ] 16.1-02-PLAN.md -- Fix implementation: A6 exact-match lookup, A7 per-pattern query strategy, tolerance=0, category-aware sampling if needed
+- [ ] 16.1-03-PLAN.md -- Temporal re-validation: check_stability exits 0 as new T=0; Phase 16 temporal protocol resumes from corrected baseline
+
+---
+
 ### Phase 17: RxPY Reactive Observable Pipeline for TUI Event Streams
 **Goal**: Replace the TUI's manual debounce timer, generation-tracking, `@work(exclusive=True)` pattern, and scattered filter-refire logic with a composable RxPY observable pipeline — producing identical user-visible behavior, validated by automated UATs executed before and after implementation
 **Depends on**: Phase 16 (full library indexed, TUI smoke test complete — UATs run against live corpus)
@@ -294,10 +315,40 @@ Plans:
 
 ---
 
+### Phase 18: RxPY Codebase-Wide Async Migration
+**Goal**: Migrate all remaining async code outside `src/objlib/tui/` to a uniform RxPY reactive paradigm — zero behavior change, full test suite + UAT gates before and after
+**Depends on**: Phase 17 complete (TUI RxPY spike result inherited; post-UAT TUI invariants serve as Phase 18 regression suite)
+**Requirements**: ASYNC-RX-01 (uniform reactive paradigm), ASYNC-RX-02 (behavioral parity), ASYNC-RX-03 (end-to-end gate)
+**Distrust**: HOSTILE for spike (18-01); SKEPTICAL for implementation (18-02 through 18-04); SKEPTICAL for validation (18-05)
+**Gate**: Full pytest suite + new-lecture upload (no resets) + store-sync 0 new orphans + search citations resolved + TUI invariants 1-7 still hold
+**Success Criteria** (what must be TRUE):
+  1. All asyncio primitives (`asyncio.Semaphore`, `asyncio.gather`, `asyncio.Event`, `asyncio.wait_for`, `asyncio.to_thread`, `AsyncRetrying`) replaced with RxPY operators in all 10 migrated modules — confirmed by grep across `src/objlib/` (excluding `tui/`)
+  2. Custom operators (`occ_transition`, `upload_with_retry`, `shutdown_gate`) are implemented in `src/objlib/upload/_operators.py` with operator contracts matching the 18-01 spike design doc
+  3. `python -m pytest tests/ -x -q` exits 0 with all tests passing — no behavior regression from any tier migration
+  4. New UNTRACKED lectures uploaded through the migrated pipeline — no files stuck in UPLOADING/PROCESSING; pre-existing indexed corpus (~1,748 files) NOT touched (no `--reset-existing`)
+  5. `python -m objlib store-sync --store objectivism-library` confirms 0 new orphaned documents from new-lecture uploads — fresh uploads produce no orphans in the migrated pipeline
+  6. 5 diverse semantic search queries return correctly-resolved citations with no `[Unresolved file #N]` — RxPY-migrated `search/client.py` preserves two-pass citation lookup
+  7. Phase 17's 7 TUI behavioral invariants still hold — Tier 3 service migration did not break TUI → SearchService → GeminiFileSearchClient chain
+
+**Tiers:**
+- **Tier 1** (upload pipeline): `orchestrator.py`, `client.py`, `state.py`, `recovery.py` — highest complexity
+- **Tier 2** (extraction): `extraction/batch_orchestrator.py`, `extraction/orchestrator.py` — medium complexity
+- **Tier 3** (services/search): `services/search.py`, `services/library.py`, `search/client.py`, `sync/orchestrator.py` — low complexity
+
+**Plans**: 5 plans in 5 waves
+Plans:
+- [ ] 18-01: Spike — validate 5 high-risk operator patterns (AsyncIOScheduler+aiosqlite, OCC retry observable, dynamic concurrency, shutdown Subject, tenacity replacement) — HOSTILE gate, go/no-go verdict
+- [ ] 18-02: Tier 3 migration — services/search.py, services/library.py, search/client.py, sync/orchestrator.py
+- [ ] 18-03: Tier 2 migration — extraction/batch_orchestrator.py, extraction/orchestrator.py + batch-extract smoke test
+- [ ] 18-04: Tier 1 migration — upload/orchestrator.py, client.py, state.py, recovery.py + fsm-upload --limit 20 gate
+- [ ] 18-05: Post-migration validation — full pytest + fsm-upload 50 + store-sync + search + TUI invariants + Canon.json update
+
+---
+
 ## Progress
 
 **Execution Order:**
-Phases execute sequentially: 8 -> 9 -> 10 -> 11 -> 12 -> 13 -> 14 -> 15 -> 16
+Phases execute sequentially: 8 -> 9 -> 10 -> 11 -> 12 -> 13 -> 14 -> 15 -> 16 -> 17 -> 18
 Each wave's gate is BLOCKING for the next. If a gate fails, the failing phase must be repeated before proceeding.
 
 **Note:** Phase 07-07 (TUI integration smoke test, deferred from v1.0) is incorporated into Phase 16 as plan 16-03. It runs against the full live corpus after the library upload completes -- a more meaningful test than running it against an empty store.
@@ -323,9 +374,11 @@ Each wave's gate is BLOCKING for the next. If a gate fails, the failing phase mu
 | 14. Batch Performance | v2.0 | 3/3 | Complete | 2026-02-22 |
 | 15. Consistency + store-sync | v2.0 | 3/3 | Complete | 2026-02-23 |
 | 16. Full Library Upload | v2.0 | 2/4 | In progress | - |
+| 16.1. Stability Instrument Correctness Audit | v2.0 | 0/3 | INSERTED -- BLOCKING | - |
 | 17. RxPY TUI Reactive Pipeline | v2.0 | 0/4 | Not started | - |
+| 18. RxPY Codebase-Wide Async Migration | v2.0 | 0/5 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-19*
 *Pre-mortem: governance/pre-mortem-gemini-fsm.md*
-*Last updated: 2026-02-23 -- Plan 16-01 complete: 1748 files indexed, T=0 baseline recorded*
+*Last updated: 2026-02-24 -- Phase 16.1 inserted: T+24h check blocked by A6/A7 instrument failures; audit phase required before Phase 17*

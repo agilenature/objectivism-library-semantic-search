@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 
 ## Current Position
 
-Phase: 16 of 17 (Full Library Upload) -- IN PROGRESS (Wave 1 complete: 16-01 and 16-04 done)
-Plan: 2 of 4 complete in Phase 16 (16-01 and 16-04)
-Status: Full library upload COMPLETE. 1748/1748 .txt files indexed. Awaiting temporal stability (16-02).
-Last activity: 2026-02-23 -- Plan 16-01 COMPLETE. All 1748 .txt files indexed, store-sync clean, T=0 baseline recorded.
+Phase: 16.1 (INSERTED -- Stability Instrument Correctness Audit) -- NOT STARTED
+Plan: 0 of 3 complete in Phase 16.1
+Status: T+24h check blocked (A6 + A7 failures in check_stability.py). Phase 16.1 inserted to resolve with HOSTILE posture before resuming Phase 16 temporal protocol.
+Last activity: 2026-02-24 -- T+24h check run. A6 FAIL (2/5 citations unresolvable: 1,075 files have gemini_file_id=NULL). A7 FAIL (12/20 per-file searchability; tolerance set to 0 by user). Phase 16.1 inserted.
 
-Progress: [#########################] 25/32 v2.0 plans complete
+Progress: [#########################] 25/35 v2.0 plans complete
 
 Note: Phase 07-07 (TUI integration smoke test from v1.0) deferred to Phase 16, plan 16-03.
   Runs against full live corpus after upload -- more meaningful than running on empty store.
@@ -30,8 +30,10 @@ Phase 12: [##########] 6/6 plans -- COMPLETE (Wave 4: 50-File FSM Upload) -- gat
 Phase 13: [##########] 2/2 plans -- COMPLETE (Wave 5: State Column Retirement) -- gate PASSED 2026-02-22
 Phase 14: [##########] 3/3 plans -- COMPLETE (Wave 6: Batch Performance) -- VLID-06 PASSED + SC2 gap closed 2026-02-22
 Phase 15: [##########] 3/3 plans -- COMPLETE (Wave 7: Consistency + store-sync) -- gate PASSED 2026-02-23
-Phase 16: [#####░░░░░] 2/4 plans -- IN PROGRESS (16-01 + 16-04 COMPLETE, T=0 recorded) (Wave 8: Full Library Upload + 07-07)
-Phase 17: [░░░░░░░░░░] 0/4 plans -- BLOCKED by Phase 16 gate (RxPY TUI reactive pipeline)
+Phase 16:  [#####░░░░░] 2/4 plans -- IN PROGRESS (16-01 + 16-04 COMPLETE; 16-02 BLOCKED by Phase 16.1)
+Phase 16.1:[░░░░░░░░░░] 0/3 plans -- NOT STARTED (INSERTED: stability instrument audit, BLOCKING Phase 16-02 + Phase 17)
+Phase 17:  [░░░░░░░░░░] 0/4 plans -- BLOCKED by Phase 16 gate (RxPY TUI reactive pipeline)
+Phase 18:  [░░░░░░░░░░] 0/5 plans -- BLOCKED by Phase 17 gate (RxPY codebase-wide async migration)
 
 ## Performance Metrics
 
@@ -140,6 +142,16 @@ Recent decisions affecting current work:
 ### Roadmap Evolution
 
 - Phase 17 added (2026-02-22): RxPY reactive observable pipeline for TUI event streams, validated by pre/post UATs. Replaces manual debounce/generation-tracking, @work(exclusive=True), and scattered filter-refire logic. 4 plans: spike -> pre-UAT -> impl -> post-UAT.
+- Phase 18 added (2026-02-23): RxPY codebase-wide async migration. Migrates all asyncio primitives outside tui/ to RxPY observables. 5 plans: 18-01 spike (HOSTILE gate) -> 18-02 Tier3 -> 18-03 Tier2 -> 18-04 Tier1 (fsm-upload --limit 20 gate) -> 18-05 validation + Canon update. Blocked by Phase 17.
+- Phase 16.1 inserted (2026-02-24): Stability Instrument Correctness Audit. T+24h check blocked by A6 (1,075 files with gemini_file_id=NULL cause citation resolution failures; LIKE fix rejected -- must use exact-match semantics) and A7 (query strategy produces systematic false negatives for Episode/MOTM files; tolerance set to 0). HOSTILE posture: check_stability.py is the adversarial target. 3 plans: spike (7 challenges) -> fix -> re-validation (new T=0 baseline). BLOCKING Phase 16-02 and Phase 17.
+
+### Standing Constraints
+
+These apply to ALL future phases and plans. They are not re-derived per phase.
+
+- **No `--reset-existing` without explicit user instruction.** The ~1,748 files indexed in `objectivism-library` are production state. No plan may use `--reset-existing`, `_reset_existing_files()`, or any equivalent operation on already-indexed files unless the user explicitly requests it for a specific file or set of files. Validation and UAT tests use NEWLY added lectures or books (UNTRACKED state), not resets of existing corpus.
+- **AI-enriched metadata is sacred** (carried from v2.0 init). No operation may delete, reset, or re-derive `metadata_json` or entity tables.
+- **FAILED states on new uploads are not blockers.** RecoveryCrawler and `--retry-failed` handle recovery. A plan gate fails only if files are stuck in UPLOADING/PROCESSING, or if the pipeline crashes — not if some new files land in FAILED state on first pass.
 
 ### Pending Todos
 
@@ -148,14 +160,17 @@ None.
 ### Blockers/Concerns
 
 - Store orphan accumulation during FSM retry pass -- RecoveryManager fix in 16-01 prevents most cases; store-sync after any fsm-upload run still recommended
+- [BLOCKING] check_stability.py A6: 1,075 indexed files have gemini_file_id=NULL (cleared by RecoveryManager bug on 2026-02-23). When these files appear in search results, citation resolution fails. LIKE fix rejected; must use SUBSTR-based exact prefix extraction from gemini_store_doc_id. Requires spike to confirm retrieved_context.title identity contract.
+- [BLOCKING] check_stability.py A7: query strategy "What is 'filename' about?" produces systematic false negatives for Episode (333 files) and MOTM (468 files) file patterns at 1748-file scale. Tolerance set to 0 by user. Requires per-pattern query strategy using available metadata fields. Must also determine whether A7 secondary match logic is broken for NULL gemini_file_id files.
 
 ## Session Continuity
 
-Last session: 2026-02-23
-Stopped at: Plan 16-01 COMPLETE. All 1748 .txt files indexed. T=0 baseline recorded. Awaiting 16-02 temporal stability.
+Last session: 2026-02-24
+Stopped at: T+24h check run. A6 + A7 FAIL confirmed. Phase 16.1 inserted. Next: /gsd:plan-phase 16.1 (fresh session, /clear first).
 
 Temporal stability log (Phase 16 -- full library):
-- T=0  (2026-02-23 18:21:59 UTC): 5/7 PASS -- 1748 indexed, 0 orphans, assertions 1-5 pass; assertions 6-7 fail (search index lag at scale)
+- T=0   (2026-02-23 18:21:59 UTC): 5/7 PASS -- 1748 indexed, 0 orphans, assertions 1-5 pass; assertions 6-7 fail (search index lag at scale)
+- T+24h (2026-02-24 10:12:41 UTC): 5/7 FAIL -- 1749 indexed, 0 orphans; A6: 2/5 citations unresolvable (gemini_file_id=NULL for 1,075 files, exact-match lookup gap); A7: 12/20 per-file miss (query-specificity failure at scale + potential matching bug for NULL-file-id files). Gate BLOCKED. Phase 16.1 inserted.
 
 Temporal stability log (Phase 15 -- 90-file proxy):
 - T=0  (2026-02-22 ~16:04 UTC): STABLE -- 90 indexed, 6/6 pass, 0 orphans
