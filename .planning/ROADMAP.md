@@ -319,9 +319,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 16.3-01-PLAN.md -- Diagnosis spike: inspect transcript content for class-number signal (H3), inspect upload pipeline for metadata header (H1), check `retrieved_context.document_name` in live response (H4), run A7 twice on same fixed 6-file set to test H2 consistency
-- [ ] 16.3-02-PLAN.md -- Intervention test: apply confirmed fix to 3-6 failing files in isolated test context; verify top-10 retrieval for previously-failing queries; document evidence that fix works before production rollout
-- [ ] 16.3-03-PLAN.md -- Production remediation: extend upload pipeline (H1) or update A7 matching (H4) or re-upload silent failures (H2); apply to all affected files; two fresh-session A7=0 confirmations; store-sync 0 orphans; new T=0 baseline
+- [ ] 16.3-01-PLAN.md -- Diagnosis spike: H1 code inspection (pipeline header check), H3 transcript content check (class-number absent?), H4 live API response inspection (document_name field), H2 cross-run consistency analysis; writes 16.3-T0-DIAGNOSIS.md
+- [ ] 16.3-02-PLAN.md -- Intervention test: build header_builder.py, create ephemeral test store objectivism-library-retrieval-test, upload 20 files in 4 conditions (with/without headers, Cat A/B/working), run targeted queries, record hit rates, delete test store; writes 16.3-INTERVENTION.md
+- [ ] 16.3-03-PLAN.md -- Production remediation: generate retrieval-fix-manifest.json, implement MEMORY.md permanent fix in _reset_existing_files(), create re_enrich_retrieval.py, execute re-upload for all Category A+B files, two fresh-session A7=0 confirmations (1h apart), store-sync 0 orphans; writes 16.3-REMEDIATION-COMPLETE.md
 
 ---
 
@@ -425,4 +425,4 @@ Each wave's gate is BLOCKING for the next. If a gate fails, the failing phase mu
 ---
 *Roadmap created: 2026-02-19*
 *Pre-mortem: governance/pre-mortem-gemini-fsm.md*
-*Last updated: 2026-02-24 -- Phase 16.2 plans created: mark-unsupported + quality check + MOTM re-extraction + audit command (16.2-01), verification gate (16.2-02)*
+*Last updated: 2026-02-24 -- Phase 16.3 plans created: diagnosis spike (16.3-01), intervention test (16.3-02), production remediation (16.3-03)*
