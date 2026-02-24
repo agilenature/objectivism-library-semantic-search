@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 ## Current Position
 
 Phase: 16.3 (INSERTED -- Gemini File Search Retrievability Research) -- IN PROGRESS
-Plan: 1 of 3 complete in Phase 16.3
-Status: Plan 01 (diagnosis spike) COMPLETE. Root cause confirmed: H1 (refined) + H3 = discriminating identifiers absent from indexed content. Plan 02 (intervention test) UNBLOCKED.
-Last activity: 2026-02-24 -- Completed 16.3-01-PLAN.md (diagnosis spike)
+Plan: 2 of 3 complete in Phase 16.3
+Status: Plan 02 (intervention test) COMPLETE. Identity header raises hit rate from 50% to 100% at rank 1. GO for Plan 16.3-03 production rollout.
+Last activity: 2026-02-24 -- Completed 16.3-02-PLAN.md (intervention test)
 
-Progress: [##############################] 30/38 v2.0 plans complete
+Progress: [###############################] 31/38 v2.0 plans complete
 
 Note: Phase 07-07 (TUI integration smoke test from v1.0) deferred to Phase 16, plan 16-03.
   Runs against full live corpus after upload -- more meaningful than running on empty store.
@@ -33,7 +33,7 @@ Phase 15: [##########] 3/3 plans -- COMPLETE (Wave 7: Consistency + store-sync) 
 Phase 16:  [#####░░░░░] 2/4 plans -- IN PROGRESS (16-01 + 16-04 COMPLETE; 16-02 BLOCKED by Phase 16.1)
 Phase 16.1:[#######░░░] 2/3 plans -- IN PROGRESS (16.1-01 spike + 16.1-02 fix COMPLETE; 16.1-03 triage done: A7 FAIL structural, tolerance decision NEEDED; BLOCKING Phase 16-02 + Phase 16.2)
 Phase 16.2:[##########] 2/2 plans -- COMPLETE (audit exits 0; all 1,885 files satisfy invariant; Phase 16.3 readiness 100%; gate PASSED 2026-02-24)
-Phase 16.3:[###░░░░░░░] 1/3 plans -- IN PROGRESS (Retrievability Research: 16.3-01 diagnosis COMPLETE; H1+H3 = root cause confirmed; 16.3-02 intervention test UNBLOCKED; A7 zero-tolerance decision resolved by fix)
+Phase 16.3:[######░░░░] 2/3 plans -- IN PROGRESS (Retrievability Research: 16.3-01 diagnosis + 16.3-02 intervention COMPLETE; identity header 100% hit rate; GO for 16.3-03 production rollout; A7 tolerance resolved by content fix)
 Phase 17:  [░░░░░░░░░░] 0/4 plans -- BLOCKED by Phase 16.3 gate (RxPY TUI reactive pipeline)
 Phase 18:  [░░░░░░░░░░] 0/5 plans -- BLOCKED by Phase 17 gate (RxPY codebase-wide async migration)
 
@@ -45,9 +45,9 @@ Phase 18:  [░░░░░░░░░░] 0/5 plans -- BLOCKED by Phase 17 gat
 - Total execution time: 128 min
 
 **v2.0 Velocity:**
-- Total plans completed: 29
-- Average duration: 19.6 min
-- Total execution time: 569 min
+- Total plans completed: 30
+- Average duration: 19.3 min
+- Total execution time: 577 min
 
 *Updated after each plan completion*
 
@@ -166,6 +166,10 @@ Recent decisions affecting current work:
 - [16.3-01]: H4 FALSIFIED: retrieved_context.document_name is NULL for all File Search API responses -- field is Vertex AI Search only
 - [16.3-01]: Root cause = discriminating identifiers absent from indexed content. Fix = extend existing content_preparer.py header with identity fields at TOP of header
 - [16.3-01]: Gemini returns wrong files for class-number queries: "Objectivist Logic Class 09-02" returns Class 09-01, Class 05-01 -- target file absent from top 5
+- [16.3-02]: Identity header format: --- DOCUMENT METADATA --- / Title/Course/Class/Topic/Tags / --- END METADATA --- prepended BEFORE existing [AI Analysis] header
+- [16.3-02]: build_identity_header() in header_builder.py: file_path+conn -> structured header string. Class regex: r"Class\s+(\d{2}-\d{2})". Tags = space-separated primary_topics.
+- [16.3-02]: Intervention test: E-A 100% rank 1 (3/3), C-A 50% (1/2), E-B 100% rank 1 (3/3), C-B 50% (1/2), W-H 100% rank 1 (3/3). Ephemeral store created+deleted. Prod untouched (1748->1748).
+- [16.3-02]: GO for Plan 16.3-03 production rollout. header_builder.py is production-ready.
 
 ### Roadmap Evolution
 
@@ -191,12 +195,12 @@ None.
 
 - Store orphan accumulation during FSM retry pass -- RecoveryManager fix in 16-01 prevents most cases; store-sync after any fsm-upload run still recommended
 - [RESOLVED] check_stability.py A6: FIXED in 16.1-02. SUBSTR-based prefix extraction from gemini_store_doc_id resolves all 1,749 files. All 5 citations now resolve.
-- [OPEN] check_stability.py A7 tolerance: Two independent runs show structural failure at zero tolerance. Run 1 (16.1-02): 4/20 miss. Run 2 (16.1-03 fresh): 8/20 miss. Both runs hit same two categories: (1) course class-number files where topic==stem (query has no semantic content), (2) MOTM files with generic/historical topics. ~31% of non-Episode corpus (440/1,416 "Other-stem" files) are systematically hard to surface via title-based queries. NOT an indexing bug. Remediation options in 16.1-T0-BASELINE.md: Option A (tolerance=max(N//5,1)), Option B (exclude class-number files), Option C (empirical 100-sample calibration), Option D (investigate retrieved_context.document_name). USER DECISION REQUIRED to unblock Phase 16-02.
+- [RESOLVING] check_stability.py A7 tolerance: Two independent runs showed structural failure at zero tolerance (4/20, 8/20). Root cause diagnosed in 16.3-01: identity fields absent from indexed content. Intervention test in 16.3-02 CONFIRMED: identity header raises hit rate to 100% at rank 1. Plan 16.3-03 will re-upload affected files with identity headers; after production rollout, A7 zero-tolerance should pass. Tolerance decision NO LONGER NEEDED -- fix addresses the root cause.
 
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Plan 16.3-01 complete. Root cause diagnosed: H1 (refined) + H3 = discriminating identifiers absent from indexed content. Plan 16.3-02 (intervention test) UNBLOCKED.
+Stopped at: Plan 16.3-02 complete. Intervention test confirmed: identity header raises hit rate from 50% to 100% at rank 1. GO for Plan 16.3-03 (production rollout). header_builder.py is production-ready.
 
 Temporal stability log (Phase 16 -- full library):
 - T=0   (2026-02-23 18:21:59 UTC): 5/7 PASS -- 1748 indexed, 0 orphans, assertions 1-5 pass; assertions 6-7 fail (search index lag at scale)
@@ -209,5 +213,5 @@ Temporal stability log (Phase 15 -- 90-file proxy):
 - T+24h (2026-02-23 12:54 UTC): STABLE -- 90 indexed, 6/6 pass, 0 orphans (~20h50m elapsed)
 - Post-upgrade (2026-02-23 13:05 UTC): STABLE -- 90 indexed, 7/7 pass (Assertion 7: 4/5 found, 1 within tolerance)
 
-Resume file: .planning/phases/16.3-retrievability-research/16.3-02-PLAN.md
-Resume instruction: Phase 16.3 Plan 01 (diagnosis spike) COMPLETE. Root cause: extend existing content_preparer.py header with identity fields (filename, class number, course, topic, primary_topics). Next: Plan 16.3-02 (intervention test on 6 failing files in ephemeral test store). All metadata available in SQLite.
+Resume file: .planning/phases/16.3-retrievability-research/16.3-03-PLAN.md
+Resume instruction: Phase 16.3 Plan 02 (intervention test) COMPLETE. Identity header confirmed effective (100% hit rate). Next: Plan 16.3-03 (production rollout). Integrate build_identity_header() into content_preparer.py, re-upload ~454 affected files, run two fresh-session A7 checks at zero tolerance.
