@@ -413,9 +413,14 @@ class StabilityChecker:
             # A resolved citation has a filename extension
             if "." in title:
                 continue
-            # Try to look up by gemini_store_doc_id or gemini_file_id
+            # Try to look up by store_doc_id prefix (SUBSTR extraction) or gemini_file_id.
+            # Identity contract (Phase 11 spike, 13/13 match): retrieved_context.title
+            # is the 12-char file resource ID = SUBSTR(gemini_store_doc_id, 1, hyphen-1).
+            # SUBSTR covers all 1,749 indexed files including 1,075 with NULL gemini_file_id.
             row = conn.execute(
-                "SELECT filename FROM files WHERE gemini_store_doc_id = ? OR gemini_file_id = ?",
+                "SELECT filename FROM files "
+                "WHERE SUBSTR(gemini_store_doc_id, 1, INSTR(gemini_store_doc_id, '-') - 1) = ? "
+                "OR gemini_file_id = ?",
                 (title, f"files/{title}"),
             ).fetchone()
             if not row:
@@ -442,15 +447,26 @@ class StabilityChecker:
 
         This is the critical upgrade from Phase 15: Assertion 5 proves "search
         returns some results", but this assertion proves "specific indexed files
-        are retrievable". One miss -> UNSTABLE.
+        are retrievable". Zero tolerance: any miss -> UNSTABLE.
 
-        Query construction: uses filename stem (e.g. "B001 Introduction to
-        Objectivism" from "B001 Introduction to Objectivism.txt"). For Objectivism
-        library files, names are highly unique and specific enough to target one file.
+        Episode exclusion: 333 Episode files are excluded from sampling because
+        they have zero discriminating metadata (topic/display_title/title all NULL,
+        category='unknown', series='Peikoff Podcast'). These files are still
+        covered by Assertion 5 (general search returns results).
 
-        Result matching: checks retrieved_context.title against gemini_store_doc_id
-        (Phase 11 finding: Document.display_name returns file resource ID, not the
-        display_name submitted during upload).
+        Query construction: uses metadata fallback chain:
+          display_title -> title -> topic -> filename stem
+        Since display_title and title are NULL for all 1,749 files, the effective
+        chain is: topic (1,416 files) -> stem (440 files where topic == stem).
+
+        Result matching: checks retrieved_context.title against:
+          1. gemini_file_id suffix (exact match, handles 674 files with non-NULL file_id)
+          2. gemini_store_doc_id prefix via split('-')[0] (exact match, covers all 1,749)
+          3. filename (fallback for display_name changes)
+
+        Store doc prefix matching (Phase 11 identity contract): retrieved_context.title
+        == 12-char prefix of gemini_store_doc_id == file resource ID. This covers all
+        1,749 indexed files including 1,075 with NULL gemini_file_id.
         """
         if indexed_count == 0:
             self._pass(
@@ -473,14 +489,24 @@ class StabilityChecker:
             )
             return
 
-        # Sample N random indexed files from DB
+        # Sample N random indexed files from DB, excluding Episode files
+        # (333 files with zero discriminating metadata -- topic/display_title/title all NULL)
         try:
             conn = sqlite3.connect(self.db_path)
+            episode_count = conn.execute(
+                "SELECT COUNT(*) FROM files "
+                "WHERE gemini_state = 'indexed' AND filename LIKE 'Episode %'"
+            ).fetchone()[0]
+            self._verbose(
+                f"Assertion 7: excluding {episode_count} Episode files "
+                f"(no discriminating metadata)"
+            )
             rows = conn.execute(
                 """SELECT filename, gemini_store_doc_id, gemini_file_id, metadata_json
                    FROM files
                    WHERE gemini_state = 'indexed'
                      AND gemini_store_doc_id IS NOT NULL
+                     AND filename NOT LIKE 'Episode %'
                    ORDER BY RANDOM()
                    LIMIT ?""",
                 (sample_size,),
@@ -501,12 +527,18 @@ class StabilityChecker:
         for filename, store_doc_id, gemini_file_id, metadata_json_str in rows:
             # Construct targeted query from filename stem
             stem = Path(filename).stem  # e.g. "B001 Introduction to Objectivism"
-            # Optionally enrich with metadata title if present
+            # Enrich query with metadata: use display_title, title, or topic
+            # (display_title and title are NULL for all 1,749 files; topic is the
+            # primary discriminating field for MOTM (468) and Other (508) files)
             title = None
             if metadata_json_str:
                 try:
                     meta = json.loads(metadata_json_str)
-                    title = meta.get("display_title") or meta.get("title")
+                    title = (
+                        meta.get("display_title")
+                        or meta.get("title")
+                        or meta.get("topic")
+                    )
                 except Exception:
                     pass
             subject = title if title else stem
@@ -541,6 +573,9 @@ class StabilityChecker:
             # Primary match: strip "files/" from gemini_file_id and compare
             # directly to title (same approach as measure_searchability_lag.py).
             expected_file_id = (gemini_file_id or "").replace("files/", "")
+            # Pre-compute store doc prefix for exact prefix matching.
+            # Identity contract: title_in_result == store_doc_id prefix (12-char).
+            store_doc_prefix = store_doc_id.split("-")[0] if store_doc_id else ""
             found = False
             if response.candidates:
                 gm = getattr(response.candidates[0], "grounding_metadata", None)
@@ -557,8 +592,10 @@ class StabilityChecker:
                         if expected_file_id and title_in_result == expected_file_id:
                             found = True
                             break
-                        # Secondary: title is prefix of store_doc_id
-                        if store_doc_id and title_in_result in store_doc_id:
+                        # Secondary: exact match on store_doc_id prefix
+                        # (covers all 1,749 files including 1,075 with NULL gemini_file_id
+                        # and the 1 mismatch file where prefix != file_id suffix)
+                        if store_doc_prefix and title_in_result == store_doc_prefix:
                             found = True
                             break
                         # Tertiary: match by filename (if display_name changes)
@@ -572,31 +609,21 @@ class StabilityChecker:
                     f"Assertion 7: '{filename}' NOT found in top-10 for query {query!r}"
                 )
 
-        # Tolerance: Phase 15-01 measured 5-20% silent failure rate due to
-        # query specificity (short/generic filenames may not retrieve the
-        # target file). This is a search-ranking phenomenon, not an indexing
-        # failure. Allow up to 1 miss per 5 samples (20% tolerance) to avoid
-        # false negatives while still catching real searchability degradation.
-        max_misses = max(1, sample_size // 5)
+        # Zero tolerance: with Episode files excluded (no discriminating metadata)
+        # and topic metadata in query construction, every sampled file should be
+        # retrievable. Any miss indicates a real searchability problem.
+        max_misses = 0
         if not missed:
             self._pass(
                 "Assertion 7 -- Per-file searchability",
-                f"all {len(rows)}/{sample_size} sampled files retrievable via targeted queries",
-            )
-        elif len(missed) <= max_misses:
-            self._warn(
-                "Assertion 7 -- Per-file searchability (marginal)",
-                f"{len(missed)}/{len(rows)} files not found (within {max_misses} tolerance): {missed}",
-            )
-            self._pass(
-                "Assertion 7 -- Per-file searchability",
-                f"{len(rows) - len(missed)}/{len(rows)} found, {len(missed)} miss(es) within "
-                f"tolerance (max {max_misses}) -- known 5-20% query-specificity gap (Phase 15-01)",
+                f"all {len(rows)}/{sample_size} sampled files retrievable "
+                f"({episode_count} Episode files excluded, tolerance=0)",
             )
         else:
             self._fail(
                 "Assertion 7 -- Per-file searchability",
-                f"{len(missed)}/{len(rows)} files not found (exceeds {max_misses} tolerance): {missed}",
+                f"{len(missed)}/{len(rows)} files not found (tolerance=0): "
+                f"{missed[:5]}{'...' if len(missed) > 5 else ''}",
             )
 
     # -- Main run --------------------------------------------------------------
