@@ -417,7 +417,7 @@ Each wave's gate is BLOCKING for the next. If a gate fails, the failing phase mu
 | 15. Consistency + store-sync | v2.0 | 3/3 | Complete | 2026-02-23 |
 | 16. Full Library Upload | v2.0 | 2/4 | In progress | - |
 | 16.1. Stability Instrument Correctness Audit | v2.0 | 2/3 | In progress | - |
-| 16.2. Metadata Completeness Invariant Enforcement | v2.0 | 0/2 | INSERTED -- Not started | - |
+| 16.2. Metadata Completeness Invariant Enforcement | v2.0 | 2/2 | Complete | 2026-02-24 |
 | 16.3. Gemini File Search Retrievability Research | v2.0 | 0/3 | INSERTED -- Not started | - |
 | 17. RxPY TUI Reactive Pipeline | v2.0 | 0/4 | Not started | - |
 | 18. RxPY Codebase-Wide Async Migration | v2.0 | 0/5 | Not started | - |
