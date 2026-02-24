@@ -211,6 +211,9 @@ class _FakeDB:
     def get_file_metadata_by_gemini_ids(self, gemini_ids):
         return {}
 
+    def get_file_metadata_by_store_doc_prefix(self, prefixes):
+        return {}
+
 
 class TestEnrichCitations:
     def test_matches_filename(self):

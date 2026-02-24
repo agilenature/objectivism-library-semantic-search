@@ -991,6 +991,49 @@ class Database:
                     }
         return result
 
+    def get_file_metadata_by_store_doc_prefix(self, prefixes: list[str]) -> dict[str, dict]:
+        """Return metadata for files matching store_doc_id prefix.
+
+        When Gemini File Search returns citations, retrieved_context.title
+        contains the store document's display_name, which is the 12-character
+        prefix of gemini_store_doc_id (confirmed by Phase 11 spike: 13/13
+        exact round-trip match).
+
+        This lookup covers ALL indexed files (including the 1,075 with
+        gemini_file_id=NULL) because gemini_store_doc_id is never NULL
+        for indexed files.
+
+        Uses SUBSTR-based exact-match extraction (no LIKE):
+          SUBSTR(gemini_store_doc_id, 1, INSTR(gemini_store_doc_id, '-') - 1)
+
+        Args:
+            prefixes: List of 12-character store doc ID prefix strings.
+
+        Returns:
+            Dict mapping prefix -> {"filename": str, "file_path": str, "metadata": dict}
+        """
+        if not prefixes:
+            return {}
+        placeholders = ",".join("?" * len(prefixes))
+        rows = self.conn.execute(
+            f"SELECT SUBSTR(gemini_store_doc_id, 1, INSTR(gemini_store_doc_id, '-') - 1) as prefix, "
+            f"filename, file_path, metadata_json FROM files "
+            f"WHERE SUBSTR(gemini_store_doc_id, 1, INSTR(gemini_store_doc_id, '-') - 1) IN ({placeholders})",
+            prefixes,
+        ).fetchall()
+
+        import json
+
+        result = {}
+        for row in rows:
+            meta = json.loads(row["metadata_json"]) if row["metadata_json"] else {}
+            result[row["prefix"]] = {
+                "filename": row["filename"],
+                "file_path": row["file_path"],
+                "metadata": meta,
+            }
+        return result
+
     def get_canonical_gemini_file_id_suffixes(self) -> set[str]:
         """Return the bare file ID suffixes for all canonical uploaded files.
 

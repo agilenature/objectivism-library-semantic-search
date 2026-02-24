@@ -137,24 +137,31 @@ def enrich_citations(
     Collects all titles from citations, looks up matching filenames in
     SQLite, and populates ``file_path`` and ``metadata`` on each citation.
 
-    Tries three lookup strategies in order:
+    Tries four lookup strategies in order:
     1. Lookup by filename (when Gemini returns display_name as title)
-    2. Lookup by Gemini file ID (when Gemini returns file ID as title)
-    3. API fallback via ``files.get()`` for orphaned/duplicate file IDs not
+    2. Lookup by store doc prefix (SUBSTR extraction from gemini_store_doc_id;
+       covers all 1,749 indexed files including 1,075 with NULL gemini_file_id)
+    3. Lookup by Gemini file ID (when Gemini returns file ID as title)
+    4. API fallback via ``files.get()`` for orphaned/duplicate file IDs not
        tracked in the local DB (only when ``gemini_client`` is provided)
+
+    The store doc prefix lookup (pass 2) is the primary resolution path for
+    Gemini File Search citations. The identity contract (Phase 11 spike,
+    13/13 match): retrieved_context.title == 12-char prefix of
+    gemini_store_doc_id == file resource ID.
 
     After enrichment, deduplicates: when two citations share the same
     passage text (first 100 chars), the enriched (filename-resolved)
     citation is kept and the unresolved (raw Gemini ID) duplicate is
     dropped. This handles the case where a file appears twice in Gemini
-    results — once with a known ID and once with an orphaned ID.
+    results -- once with a known ID and once with an orphaned ID.
 
     Args:
         citations: List of Citation objects (mutated in place).
         db: Database instance for metadata lookup.
         gemini_client: Optional synchronous ``genai.Client`` for API fallback.
             When provided, unresolved Gemini file IDs are resolved via the
-            Files API. Best-effort — failures are silently ignored.
+            Files API. Best-effort -- failures are silently ignored.
 
     Returns:
         Deduplicated list of enriched citations.
@@ -167,9 +174,24 @@ def enrich_citations(
     # First pass: lookup by filename
     filename_lookup = db.get_file_metadata_by_filenames(titles)
 
-    # Second pass: for unmatched titles, try Gemini ID lookup
-    unmatched_titles = [t for t in titles if t not in filename_lookup]
-    gemini_id_lookup = db.get_file_metadata_by_gemini_ids(unmatched_titles) if unmatched_titles else {}
+    # Second pass: for unmatched titles, try store doc prefix lookup
+    # (covers all indexed files including those with NULL gemini_file_id)
+    unmatched_after_filename = [t for t in titles if t not in filename_lookup]
+    store_prefix_lookup = (
+        db.get_file_metadata_by_store_doc_prefix(unmatched_after_filename)
+        if unmatched_after_filename
+        else {}
+    )
+
+    # Third pass: for still-unmatched, try gemini_file_id lookup
+    unmatched_after_prefix = [
+        t for t in unmatched_after_filename if t not in store_prefix_lookup
+    ]
+    gemini_id_lookup = (
+        db.get_file_metadata_by_gemini_ids(unmatched_after_prefix)
+        if unmatched_after_prefix
+        else {}
+    )
 
     for citation in citations:
         # Try filename lookup first
@@ -177,16 +199,25 @@ def enrich_citations(
         if match:
             citation.file_path = match["file_path"]
             citation.metadata = match["metadata"]
-        else:
-            # Fall back to Gemini ID lookup
-            gemini_match = gemini_id_lookup.get(citation.title)
-            if gemini_match:
-                # Update citation title to the actual filename
-                citation.title = gemini_match["filename"]
-                citation.file_path = gemini_match["file_path"]
-                citation.metadata = gemini_match["metadata"]
+            continue
 
-    # Third pass: API fallback for IDs still unresolved after DB lookups
+        # Try store doc prefix lookup
+        prefix_match = store_prefix_lookup.get(citation.title)
+        if prefix_match:
+            citation.title = prefix_match["filename"]
+            citation.file_path = prefix_match["file_path"]
+            citation.metadata = prefix_match["metadata"]
+            continue
+
+        # Fall back to Gemini file ID lookup
+        gemini_match = gemini_id_lookup.get(citation.title)
+        if gemini_match:
+            # Update citation title to the actual filename
+            citation.title = gemini_match["filename"]
+            citation.file_path = gemini_match["file_path"]
+            citation.metadata = gemini_match["metadata"]
+
+    # Fourth pass: API fallback for IDs still unresolved after DB lookups
     if gemini_client is not None:
         _apply_api_fallback(citations, db, gemini_client)
 
