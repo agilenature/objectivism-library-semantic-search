@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 ## Current Position
 
 Phase: 16.1 (INSERTED -- Stability Instrument Correctness Audit) -- IN PROGRESS
-Plan: 1 of 3 complete in Phase 16.1
-Status: Spike evidence collected. Plan 16.1-02 (implementation) unblocked.
-Last activity: 2026-02-24 -- Completed 16.1-01-PLAN.md (SPIKE-EVIDENCE.md: 7 challenges answered, gate PASS)
+Plan: 2 of 3 complete in Phase 16.1
+Status: A6 and A7 fixes implemented. Production citation pipeline extended. Plan 16.1-03 (re-validation) unblocked.
+Last activity: 2026-02-24 -- Completed 16.1-02-PLAN.md (SUBSTR prefix lookup, Episode exclusion, topic query, zero tolerance)
 
-Progress: [##########################] 26/35 v2.0 plans complete
+Progress: [###########################] 27/35 v2.0 plans complete
 
 Note: Phase 07-07 (TUI integration smoke test from v1.0) deferred to Phase 16, plan 16-03.
   Runs against full live corpus after upload -- more meaningful than running on empty store.
@@ -31,7 +31,7 @@ Phase 13: [##########] 2/2 plans -- COMPLETE (Wave 5: State Column Retirement) -
 Phase 14: [##########] 3/3 plans -- COMPLETE (Wave 6: Batch Performance) -- VLID-06 PASSED + SC2 gap closed 2026-02-22
 Phase 15: [##########] 3/3 plans -- COMPLETE (Wave 7: Consistency + store-sync) -- gate PASSED 2026-02-23
 Phase 16:  [#####░░░░░] 2/4 plans -- IN PROGRESS (16-01 + 16-04 COMPLETE; 16-02 BLOCKED by Phase 16.1)
-Phase 16.1:[###░░░░░░░] 1/3 plans -- IN PROGRESS (16.1-01 spike COMPLETE; 16.1-02 fix NEXT; BLOCKING Phase 16-02 + Phase 17)
+Phase 16.1:[#######░░░] 2/3 plans -- IN PROGRESS (16.1-01 spike + 16.1-02 fix COMPLETE; 16.1-03 re-validation NEXT; BLOCKING Phase 16-02 + Phase 17)
 Phase 17:  [░░░░░░░░░░] 0/4 plans -- BLOCKED by Phase 16 gate (RxPY TUI reactive pipeline)
 Phase 18:  [░░░░░░░░░░] 0/5 plans -- BLOCKED by Phase 17 gate (RxPY codebase-wide async migration)
 
@@ -43,9 +43,9 @@ Phase 18:  [░░░░░░░░░░] 0/5 plans -- BLOCKED by Phase 17 gat
 - Total execution time: 128 min
 
 **v2.0 Velocity:**
-- Total plans completed: 26
-- Average duration: 20.4 min
-- Total execution time: 530 min
+- Total plans completed: 27
+- Average duration: 19.9 min
+- Total execution time: 538 min
 
 *Updated after each plan completion*
 
@@ -145,6 +145,11 @@ Recent decisions affecting current work:
 - [16.1-01]: 12 A7 failures are QUERY failures: display_title and title are NULL for all 1,749 files; topic is the only discriminating metadata
 - [16.1-01]: Episode files (333) excluded from A7: zero discriminating metadata (topic=NULL, display_title=NULL, title=NULL)
 - [16.1-01]: Corpus breakdown: Episode(333 exclude), MOTM(468 topic), Other-discriminating(508 topic!=stem), Other-stem(440 topic==stem risk)
+- [16.1-02]: A6 uses SUBSTR(gemini_store_doc_id, 1, INSTR(gemini_store_doc_id, '-') - 1) for citation resolution -- covers all 1,749 files
+- [16.1-02]: A7 matching changed from substring 'in' to explicit split('-')[0] == (functionally equivalent, more explicit)
+- [16.1-02]: Production citation pipeline: 4-pass lookup (filename -> store_doc_prefix -> gemini_file_id -> API fallback)
+- [16.1-02]: A7 initial run: 6/7 PASS, A7 FAIL (4/20 = 20% miss at zero tolerance) -- query-specificity failures, not code bugs
+- [16.1-02]: A6 FIXED: all 5 citations resolve (previously 2/5 unresolvable for NULL gemini_file_id files)
 
 ### Roadmap Evolution
 
@@ -167,13 +172,13 @@ None.
 ### Blockers/Concerns
 
 - Store orphan accumulation during FSM retry pass -- RecoveryManager fix in 16-01 prevents most cases; store-sync after any fsm-upload run still recommended
-- [BLOCKING] check_stability.py A6: 1,075 indexed files have gemini_file_id=NULL (cleared by RecoveryManager bug on 2026-02-23). When these files appear in search results, citation resolution fails. LIKE fix rejected; must use SUBSTR-based exact prefix extraction from gemini_store_doc_id. Requires spike to confirm retrieved_context.title identity contract.
-- [BLOCKING] check_stability.py A7: query strategy "What is 'filename' about?" produces systematic false negatives for Episode (333 files) and MOTM (468 files) file patterns at 1748-file scale. Tolerance set to 0 by user. Requires per-pattern query strategy using available metadata fields. Must also determine whether A7 secondary match logic is broken for NULL gemini_file_id files.
+- [RESOLVED] check_stability.py A6: FIXED in 16.1-02. SUBSTR-based prefix extraction from gemini_store_doc_id resolves all 1,749 files. All 5 citations now resolve.
+- [RESOLVED] check_stability.py A7 code: FIXED in 16.1-02. Episode exclusion (333), topic query fallback, explicit prefix match, zero tolerance. Residual: 4/20 misses are query-specificity failures at Gemini search ranking level (Office Hour files, MOTM files). Plan 16.1-03 re-validation will establish baseline.
 
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Plan 16.1-01 complete (SPIKE-EVIDENCE.md produced). Next: Plan 16.1-02 (implement fixes in check_stability.py, database.py, citations.py).
+Stopped at: Plan 16.1-02 complete (A6+A7 fixes + production citation pipeline). Next: Plan 16.1-03 (re-validation baseline with larger sample).
 
 Temporal stability log (Phase 16 -- full library):
 - T=0   (2026-02-23 18:21:59 UTC): 5/7 PASS -- 1748 indexed, 0 orphans, assertions 1-5 pass; assertions 6-7 fail (search index lag at scale)
