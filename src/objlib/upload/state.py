@@ -85,20 +85,21 @@ class AsyncUploadStateManager:
     async def get_pending_files(self, limit: int = 200) -> list[dict]:
         """Return files with ``status = 'pending'``, ordered by path.
 
-        Filters to .txt files only -- other file types are skipped.
+        Filters to text corpus files (.txt, .md) -- other file types are skipped.
 
         Args:
             limit: Maximum rows to return.
 
         Returns:
             List of dicts with file_path, content_hash, filename,
-            file_size, metadata_json keys (only .txt files).
+            file_size, metadata_json keys (only .txt and .md files).
         """
         db = self._ensure_connected()
         cursor = await db.execute(
             """SELECT file_path, content_hash, filename, file_size, metadata_json
                FROM files
-               WHERE gemini_state = 'untracked' AND filename LIKE '%.txt'
+               WHERE gemini_state = 'untracked'
+                 AND (filename LIKE '%.txt' OR filename LIKE '%.md')
                ORDER BY file_path
                LIMIT ?""",
             (limit,),
@@ -363,7 +364,7 @@ class AsyncUploadStateManager:
         """Return files ready for enriched upload.
 
         Requires ALL of:
-        - ``.txt`` file extension
+        - ``.txt`` or ``.md`` file extension
         - AI metadata extracted (``file_metadata_ai.is_current=1``)
         - Entity extraction complete (``entity_extraction_status='entities_done'``)
         - Upload status ``pending``
@@ -398,7 +399,7 @@ class AsyncUploadStateManager:
                 FROM files f
                 JOIN file_metadata_ai m
                     ON f.file_path = m.file_path AND m.is_current = 1
-                WHERE f.filename LIKE '%.txt'
+                WHERE (f.filename LIKE '%.txt' OR f.filename LIKE '%.md')
                   AND f.entity_extraction_status = 'entities_done'
                   AND f.gemini_state = 'untracked'
                   {status_clause}
@@ -454,9 +455,11 @@ class AsyncUploadStateManager:
                JOIN file_metadata_ai m
                    ON f.file_path = m.file_path AND m.is_current = 1
                WHERE f.gemini_state IN ('indexed', 'failed')
-                 AND f.filename LIKE '%.txt'
+                 AND (f.filename LIKE '%.txt' OR f.filename LIKE '%.md')
                  AND f.entity_extraction_status = 'entities_done'
                  AND f.ai_metadata_status IN ('extracted', 'approved', 'needs_review')
+                 AND EXISTS (SELECT 1 FROM file_primary_topics pt
+                             WHERE pt.file_path = f.file_path)
                ORDER BY f.file_path"""
         )
         rows = await cursor.fetchall()
@@ -707,7 +710,10 @@ class AsyncUploadStateManager:
                       metadata_json, version, gemini_state
                FROM files
                WHERE gemini_state = 'untracked'
-                 AND filename LIKE '%.txt'
+                 AND (filename LIKE '%.txt' OR filename LIKE '%.md')
+                 AND ai_metadata_status = 'approved'
+                 AND EXISTS (SELECT 1 FROM file_primary_topics pt
+                             WHERE pt.file_path = files.file_path)
                ORDER BY file_path
                LIMIT ?""",
             (limit,),
