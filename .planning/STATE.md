@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 
 ## Current Position
 
-Phase: 16.1 (INSERTED -- Stability Instrument Correctness Audit) -- IN PROGRESS
-Plan: 2 of 3 complete in Phase 16.1
-Status: A6 and A7 fixes implemented. Production citation pipeline extended. Plan 16.1-03 (re-validation) unblocked.
-Last activity: 2026-02-24 -- Completed 16.1-02-PLAN.md (SUBSTR prefix lookup, Episode exclusion, topic query, zero tolerance)
+Phase: 16.2 (INSERTED -- Metadata Completeness Invariant Enforcement) -- IN PROGRESS
+Plan: 1 of 2 complete in Phase 16.2
+Status: 16.2-01 complete. mark-unsupported + audit commands implemented, batch-extract run (297/337 succeeded), upload gate added. Audit exits 0 with all 4 invariant conditions passing.
+Last activity: 2026-02-24 -- Completed 16.2-01-PLAN.md
 
-Progress: [###########################] 27/35 v2.0 plans complete
+Progress: [############################] 28/38 v2.0 plans complete
 
 Note: Phase 07-07 (TUI integration smoke test from v1.0) deferred to Phase 16, plan 16-03.
   Runs against full live corpus after upload -- more meaningful than running on empty store.
@@ -31,8 +31,10 @@ Phase 13: [##########] 2/2 plans -- COMPLETE (Wave 5: State Column Retirement) -
 Phase 14: [##########] 3/3 plans -- COMPLETE (Wave 6: Batch Performance) -- VLID-06 PASSED + SC2 gap closed 2026-02-22
 Phase 15: [##########] 3/3 plans -- COMPLETE (Wave 7: Consistency + store-sync) -- gate PASSED 2026-02-23
 Phase 16:  [#####░░░░░] 2/4 plans -- IN PROGRESS (16-01 + 16-04 COMPLETE; 16-02 BLOCKED by Phase 16.1)
-Phase 16.1:[#######░░░] 2/3 plans -- IN PROGRESS (16.1-01 spike + 16.1-02 fix COMPLETE; 16.1-03 re-validation NEXT; BLOCKING Phase 16-02 + Phase 17)
-Phase 17:  [░░░░░░░░░░] 0/4 plans -- BLOCKED by Phase 16 gate (RxPY TUI reactive pipeline)
+Phase 16.1:[#######░░░] 2/3 plans -- IN PROGRESS (16.1-01 spike + 16.1-02 fix COMPLETE; 16.1-03 triage done: A7 FAIL structural, tolerance decision NEEDED; BLOCKING Phase 16-02 + Phase 16.2)
+Phase 16.2:[#####░░░░░] 1/2 plans -- IN PROGRESS (16.2-01 COMPLETE; audit exits 0; 16.2-02 verification pending)
+Phase 16.3:[░░░░░░░░░░] 0/3 plans -- INSERTED; BLOCKED by Phase 16.2 (Retrievability Research: H1/H2/H3/H4 diagnosis -> intervention test -> production fix; A7 zero-tolerance gate)
+Phase 17:  [░░░░░░░░░░] 0/4 plans -- BLOCKED by Phase 16.3 gate (RxPY TUI reactive pipeline)
 Phase 18:  [░░░░░░░░░░] 0/5 plans -- BLOCKED by Phase 17 gate (RxPY codebase-wide async migration)
 
 ## Performance Metrics
@@ -43,9 +45,9 @@ Phase 18:  [░░░░░░░░░░] 0/5 plans -- BLOCKED by Phase 17 gat
 - Total execution time: 128 min
 
 **v2.0 Velocity:**
-- Total plans completed: 27
-- Average duration: 19.9 min
-- Total execution time: 538 min
+- Total plans completed: 28
+- Average duration: 20.1 min
+- Total execution time: 564 min
 
 *Updated after each plan completion*
 
@@ -150,12 +152,22 @@ Recent decisions affecting current work:
 - [16.1-02]: Production citation pipeline: 4-pass lookup (filename -> store_doc_prefix -> gemini_file_id -> API fallback)
 - [16.1-02]: A7 initial run: 6/7 PASS, A7 FAIL (4/20 = 20% miss at zero tolerance) -- query-specificity failures, not code bugs
 - [16.1-02]: A6 FIXED: all 5 citations resolve (previously 2/5 unresolvable for NULL gemini_file_id files)
+- [16.1-03]: Fresh session run: A6 PASS. A7 FAIL 8/20 at zero tolerance. Two runs confirm structural pattern: category A = course class-number files (topic==stem, ~440/1416 = 31% of non-Episode corpus), category B = generic MOTM topics. Not transient, not a code bug. Zero-tolerance is empirically wrong for this corpus. Tolerance decision blocks Phase 16-02.
+- [16.2-01]: file_primary_topics is authoritative for "topics populated" -- audit checks EXISTS(file_primary_topics), not metadata_json
+- [16.2-01]: Signal A (scanner topic NULL) uses files.metadata_json, catches 333 Episode files. MOTM NOT caught (468/468 have scanner topic).
+- [16.2-01]: Boilerplate threshold 40% identifies 5 topics: epistemology, ethics, metaphysics, rational_egoism, values
+- [16.2-01]: Upload gate enforces scan -> batch-extract -> approve -> upload ordering invariant in get_fsm_pending_files()
+- [16.2-01]: 40 Episode files failed Mistral extraction (JSON format issues) -- at failed_validation status, retriable
+- [16.2-01]: 1 oversized file (Philosophy Who Needs It) marked skipped by batch_orchestrator -- exceeds Mistral context window
+- [16.2-01]: Audit exits 0 with Phase 16.3 readiness: MOTM 468/468, MOTM scanner topic 468/468, Other-stem 443/443
 
 ### Roadmap Evolution
 
 - Phase 17 added (2026-02-22): RxPY reactive observable pipeline for TUI event streams, validated by pre/post UATs. Replaces manual debounce/generation-tracking, @work(exclusive=True), and scattered filter-refire logic. 4 plans: spike -> pre-UAT -> impl -> post-UAT.
 - Phase 18 added (2026-02-23): RxPY codebase-wide async migration. Migrates all asyncio primitives outside tui/ to RxPY observables. 5 plans: 18-01 spike (HOSTILE gate) -> 18-02 Tier3 -> 18-03 Tier2 -> 18-04 Tier1 (fsm-upload --limit 20 gate) -> 18-05 validation + Canon update. Blocked by Phase 17.
 - Phase 16.1 inserted (2026-02-24): Stability Instrument Correctness Audit. T+24h check blocked by A6 (1,075 files with gemini_file_id=NULL cause citation resolution failures; LIKE fix rejected -- must use exact-match semantics) and A7 (query strategy produces systematic false negatives for Episode/MOTM files; tolerance set to 0). HOSTILE posture: check_stability.py is the adversarial target. 3 plans: spike (7 challenges) -> fix -> re-validation (new T=0 baseline). BLOCKING Phase 16-02 and Phase 17.
+- Phase 16.2 inserted (2026-02-24): Metadata Completeness Invariant Enforcement. ai_metadata_status is not a valid completeness invariant -- conflates "approved by scanner filename-parsing" (no primary_topics) with "approved by AI extraction" (has primary_topics). Root cause: _get_pending_files() LIKE '%.txt' silently excludes .md files (Bernstein Heroes book is pending with no extraction attempted). 26 books have ai_metadata_status='approved' but zero primary_topics. 2 plans: audit command + .md fix + batch-extract Bernstein -> verify audit exits 0. ADJUSTED 2026-02-24: audit command must also produce Phase 16.3 readiness breakdown (Other-stem/MOTM primary_topics coverage) — both categories at 100% required before Phase 16.3 metadata-header intervention.
+- Phase 16.3 inserted (2026-02-24): Gemini File Search Retrievability Research. A7 zero-tolerance failure is structural: ~440 "Other-stem" files (topic==stem, class-number queries have no semantic content) and generic MOTM files (~3% of 468) fail targeted per-file queries. Two independent runs (16.1-02: 4/20, 16.1-03: 8/20) confirm. Hypotheses: H1 (metadata not in indexed content), H2 (silent partial indexing), H3 (class numbers absent from transcript), H4 (document_name exact-match available). 3 plans: diagnosis spike (H1-H4 falsification) -> intervention test (fix on 6 failing files in test context) -> production remediation (pipeline extension + two fresh-session A7=0 confirmations). BLOCKING Phase 17. Depends on Phase 16.2 (primary_topics complete for metadata-header injection).
 
 ### Standing Constraints
 
@@ -173,16 +185,17 @@ None.
 
 - Store orphan accumulation during FSM retry pass -- RecoveryManager fix in 16-01 prevents most cases; store-sync after any fsm-upload run still recommended
 - [RESOLVED] check_stability.py A6: FIXED in 16.1-02. SUBSTR-based prefix extraction from gemini_store_doc_id resolves all 1,749 files. All 5 citations now resolve.
-- [RESOLVED] check_stability.py A7 code: FIXED in 16.1-02. Episode exclusion (333), topic query fallback, explicit prefix match, zero tolerance. Residual: 4/20 misses are query-specificity failures at Gemini search ranking level (Office Hour files, MOTM files). Plan 16.1-03 re-validation will establish baseline.
+- [OPEN] check_stability.py A7 tolerance: Two independent runs show structural failure at zero tolerance. Run 1 (16.1-02): 4/20 miss. Run 2 (16.1-03 fresh): 8/20 miss. Both runs hit same two categories: (1) course class-number files where topic==stem (query has no semantic content), (2) MOTM files with generic/historical topics. ~31% of non-Episode corpus (440/1,416 "Other-stem" files) are systematically hard to surface via title-based queries. NOT an indexing bug. Remediation options in 16.1-T0-BASELINE.md: Option A (tolerance=max(N//5,1)), Option B (exclude class-number files), Option C (empirical 100-sample calibration), Option D (investigate retrieved_context.document_name). USER DECISION REQUIRED to unblock Phase 16-02.
 
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Plan 16.1-02 complete (A6+A7 fixes + production citation pipeline). Next: Plan 16.1-03 (re-validation baseline with larger sample).
+Stopped at: Plan 16.2-01 complete. Audit exits 0, all invariants satisfied. Next: 16.2-02 (verification plan). 40 Episode files at failed_validation retriable.
 
 Temporal stability log (Phase 16 -- full library):
 - T=0   (2026-02-23 18:21:59 UTC): 5/7 PASS -- 1748 indexed, 0 orphans, assertions 1-5 pass; assertions 6-7 fail (search index lag at scale)
 - T+24h (2026-02-24 10:12:41 UTC): 5/7 FAIL -- 1749 indexed, 0 orphans; A6: 2/5 citations unresolvable (gemini_file_id=NULL for 1,075 files, exact-match lookup gap); A7: 12/20 per-file miss (query-specificity failure at scale + potential matching bug for NULL-file-id files). Gate BLOCKED. Phase 16.1 inserted.
+- T=0 (corrected attempt) (2026-02-24 15:47:47 UTC): 6/7 FAIL -- 1749 indexed, 0 orphans; A6: PASS (SUBSTR fix works, all 5 citations resolve); A7: FAIL 8/20 misses (tolerance=0). Structural: 5 course class-number files + 3 generic MOTM files. Not transient. Tolerance decision required. Recorded in 16.1-T0-BASELINE.md.
 
 Temporal stability log (Phase 15 -- 90-file proxy):
 - T=0  (2026-02-22 ~16:04 UTC): STABLE -- 90 indexed, 6/6 pass, 0 orphans
@@ -190,5 +203,5 @@ Temporal stability log (Phase 15 -- 90-file proxy):
 - T+24h (2026-02-23 12:54 UTC): STABLE -- 90 indexed, 6/6 pass, 0 orphans (~20h50m elapsed)
 - Post-upgrade (2026-02-23 13:05 UTC): STABLE -- 90 indexed, 7/7 pass (Assertion 7: 4/5 found, 1 within tolerance)
 
-Resume file: .planning/phases/16-full-library-upload/ (Phase 16 plans)
-Resume instruction: Plan 16-01 done. Plan 16-04 done. Next: 16-02 (temporal stability T+4h/T+24h/T+36h) then 16-03 (TUI smoke test). T+4h check should run ~22:22 UTC or later.
+Resume file: .planning/phases/16.2-metadata-completeness-invariant-enforcement/ (Phase 16.2 plans)
+Resume instruction: Plan 16.2-01 done. Next: 16.2-02 (verification -- confirm audit exit 0, Bernstein topics, no silent pending). Then Phase 16.3 unblocked.
