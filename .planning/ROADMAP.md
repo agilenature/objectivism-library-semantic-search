@@ -264,16 +264,16 @@ Plans:
 
 ### Phase 16.1: Stability Instrument Correctness Audit (INSERTED)
 
-**Goal:** Prove — not assume — that `check_stability.py`'s A6 and A7 assertions have no false-negative modes at full corpus scale, and fix any that do with exact-match semantics and zero tolerance. The instrument itself is the adversarial target.
+**Goal:** Prove -- not assume -- that `check_stability.py`'s A6 and A7 assertions have no false-negative modes at full corpus scale, and fix any that do with exact-match semantics and zero tolerance. The instrument itself is the adversarial target.
 **Depends on:** Phase 16 (T+24h check revealed A6/A7 failures; gate BLOCKED)
-**Distrust:** HOSTILE — the stability instrument gates all of v2.0; a false-negative mode in the instrument is worse than no gate at all
-**Gate:** `check_stability.py` exits 0 (all 7 assertions PASS), A7 tolerance=0, 0 unresolved citations — result is new T=0 baseline for Phase 16 temporal protocol
+**Distrust:** HOSTILE -- the stability instrument gates all of v2.0; a false-negative mode in the instrument is worse than no gate at all
+**Gate:** `check_stability.py` exits 0 (all 7 assertions PASS), A7 tolerance=0, 0 unresolved citations -- result is new T=0 baseline for Phase 16 temporal protocol
 **Success Criteria** (what must be TRUE):
-  1. `retrieved_context.title` identity contract confirmed with affirmative evidence: which file ID does Gemini return — Files API resource ID or store's internal file ID prefix? Both cannot be correct simultaneously; Phase 11 spike data used to prove this, not a live inference
+  1. `retrieved_context.title` identity contract confirmed with affirmative evidence: which file ID does Gemini return -- Files API resource ID or store's internal file ID prefix? Both cannot be correct simultaneously; Phase 11 spike data used to prove this, not a live inference
   2. A6 citation resolution uses exact-match semantics (no LIKE): for all 1,075 files with `gemini_file_id=NULL`, lookup succeeds via `SUBSTR`-based prefix extraction from `gemini_store_doc_id`; confirmed by check_stability returning 0 unresolved for a query that retrieves at least one such file
-  3. A7 query strategy is per-pattern: Episode files, MOTM files, structured-title files, and Other files each have a discriminating query constructed from available metadata — confirmed by full audit of all 1,749 filenames and accessible metadata fields
+  3. A7 query strategy is per-pattern: Episode files, MOTM files, structured-title files, and Other files each have a discriminating query constructed from available metadata -- confirmed by full audit of all 1,749 filenames and accessible metadata fields
   4. A7 tolerance is 0: check_stability passes 0/N misses under the correct query strategy; OR Episode files that cannot be semantically discriminated are explicitly excluded from sampling with named-limitation count documented in the assertion itself
-  5. `check_stability.py --sample-count 20` exits 0 (all 7 PASS) against the live corpus — this output serves as the new T=0 baseline replacing the T+24h FAIL; Phase 16 temporal stability protocol resumes from this corrected baseline
+  5. `check_stability.py --sample-count 20` exits 0 (all 7 PASS) against the live corpus -- this output serves as the new T=0 baseline replacing the T+24h FAIL; Phase 16 temporal stability protocol resumes from this corrected baseline
 **Plans**: 3 plans in 3 waves
 
 Plans:
@@ -283,21 +283,63 @@ Plans:
 
 ---
 
+### Phase 16.2: Metadata Completeness Invariant Enforcement (INSERTED)
+
+**Goal:** Every file in the library either has `primary_topics` populated (AI-enriched) or has `ai_metadata_status='skipped'` with a named reason -- no file silently bypasses enrichment because of an extension filter or missing routing branch
+**Depends on:** Phase 16.1
+**Distrust:** CAUTIOUS -- the violated invariant is structural (`_get_pending_files()` LIKE filter silently drops .md files); audit first, then fix
+**Gate:** `objlib metadata audit` exits 0 (all non-skipped files have `primary_topics`); Bernstein Heroes book has `primary_topics` populated
+**Note (Phase 16.3 feed-forward):** The 440 "Other-stem" files (topic == filename stem) and 468 MOTM files are the target categories for Phase 16.3's retrievability fix. Phase 16.2's gate must confirm 100% `primary_topics` coverage for these two categories before Phase 16.3's metadata-header intervention can proceed. The audit command must break down coverage by category (Other-stem, MOTM, Other-discriminating) -- not just aggregate coverage -- so Phase 16.3 knows the metadata is reliable enough to inject into indexed content.
+**Success Criteria** (what must be TRUE):
+  1. `objlib metadata audit` command exists and reports per-category breakdown distinguishing "approved by AI extraction" (has `primary_topics`) from "approved by scanner only" (no `primary_topics`); exits non-zero if any non-skipped file lacks `primary_topics`
+  2. `_get_pending_files()` in `batch_orchestrator.py` includes `.md` files (not only `LIKE '%.txt'`); the Bernstein Heroes `.md` book is processed by `batch-extract` and receives `primary_topics`
+  3. All `.epub` and `.pdf` book files have `ai_metadata_status='skipped'` with a named reason in `error_message` (e.g., "epub/pdf requires text extraction -- deferred"); they are not silently pending
+  4. `objlib metadata audit` exits 0 after fixes -- all 1,749 files satisfy the invariant
+  5. Audit output includes a Phase 16.3 readiness row: count of "Other-stem" files (metadata_json->>'topic' = filename stem) and MOTM files that have `primary_topics` populated -- both categories must be at 100% before Phase 16.3 proceeds; any gaps trigger batch-extract, not a gate waiver
+**Plans**: 2 plans in 2 waves
+
+Plans:
+- [ ] 16.2-01-PLAN.md -- mark-unsupported command (pdf/html/docx/epub skip-marking) + .md extension fix + 21-book backfill from JSON + Signal B quality check (all-boilerplate detection) + reset quality-failed MOTM to pending + batch-extract all newly-pending + audit command with Phase 16.3 readiness row
+- [ ] 16.2-02-PLAN.md -- Verify: metadata audit exits 0; Bernstein .md has primary_topics; no silent-pending files remain; MOTM quality spot-check (non-generic topics); Other-stem + MOTM at 100% primary_topics coverage
+
+---
+
+### Phase 16.3: Gemini File Search Retrievability Research (INSERTED)
+
+**Goal:** Every indexed file is independently retrievable in Gemini File Search via a targeted query -- root cause diagnosed with affirmative evidence, fix tested on failing files, and applied at production scale so A7 exits 0/N at zero tolerance
+**Depends on:** Phase 16.2 (all files have `primary_topics` populated -- required for metadata-header injection if H1 is confirmed)
+**Distrust:** HOSTILE -- three hypotheses must be falsified with affirmative evidence; "we couldn't reproduce the failure" does not constitute a fix
+**Gate:** `check_stability.py --sample-count 20` exits 0 in two consecutive fresh-session runs, A7 0/N misses at tolerance=0 -- the Phase 16.1 must-have, now actually achieved
+**Success Criteria** (what must be TRUE):
+  1. The root cause is identified for both failure categories with affirmative evidence from the transcript content and upload pipeline -- specifically: (a) does the raw transcript for an "Objectivist Logic - Class 09-02" file contain the string "09-02" anywhere? (b) does the upload pipeline include any metadata header in the content submitted to Gemini, or raw transcript only? (c) is `retrieved_context.document_name` populated in live API responses? One of H1/H2/H3/H4 is confirmed and the others are falsified
+  2. The confirmed fix is tested on the six files known to fail from the 16.1-03 run (3 Category A + 3 Category B) in a test context (not the production store, no `--reset-existing` on the full corpus): after the fix, each of the six files appears in top-10 for the same query that previously failed -- confirmed by targeted queries against the test uploads
+  3. The fix is applied to all affected indexed files: if H1 (metadata not in indexed content), the upload pipeline is extended to prepend a structured metadata header and all Category A + Category B files are re-uploaded with the enriched content; if H4 (`document_name` exact-match available), A7 matching is updated and confirmed correct for 100% of sampled files; if H2 (silent indexing failures), the specific failed files are identified by running A7 on a fixed sample and re-uploaded
+  4. `check_stability.py --sample-count 20 --verbose` exits 0 (all 7 assertions PASS) in two consecutive fresh-session runs separated by at least 1 hour -- the second run rules out transient ranking
+  5. No pre-existing indexed files are touched by `--reset-existing` -- only files confirmed as A7 failures or silently unindexed are re-uploaded; the ~1,749-file corpus is otherwise preserved; `store-sync --dry-run` confirms 0 orphans after re-uploads
+**Plans**: 3 plans
+
+Plans:
+- [ ] 16.3-01-PLAN.md -- Diagnosis spike: inspect transcript content for class-number signal (H3), inspect upload pipeline for metadata header (H1), check `retrieved_context.document_name` in live response (H4), run A7 twice on same fixed 6-file set to test H2 consistency
+- [ ] 16.3-02-PLAN.md -- Intervention test: apply confirmed fix to 3-6 failing files in isolated test context; verify top-10 retrieval for previously-failing queries; document evidence that fix works before production rollout
+- [ ] 16.3-03-PLAN.md -- Production remediation: extend upload pipeline (H1) or update A7 matching (H4) or re-upload silent failures (H2); apply to all affected files; two fresh-session A7=0 confirmations; store-sync 0 orphans; new T=0 baseline
+
+---
+
 ### Phase 17: RxPY Reactive Observable Pipeline for TUI Event Streams
-**Goal**: Replace the TUI's manual debounce timer, generation-tracking, `@work(exclusive=True)` pattern, and scattered filter-refire logic with a composable RxPY observable pipeline — producing identical user-visible behavior, validated by automated UATs executed before and after implementation
-**Depends on**: Phase 16 (full library indexed, TUI smoke test complete — UATs run against live corpus)
+**Goal**: Replace the TUI's manual debounce timer, generation-tracking, `@work(exclusive=True)` pattern, and scattered filter-refire logic with a composable RxPY observable pipeline -- producing identical user-visible behavior, validated by automated UATs executed before and after implementation
+**Depends on**: Phase 16.3 (every indexed file independently retrievable, A7 exits 0 -- UATs run against live corpus with confirmed per-file searchability)
 **Requirements**: TUI-RX-01 (observable pipeline), TUI-RX-02 (behavioral parity), TUI-RX-03 (UAT gate)
 **Distrust**: HOSTILE for the spike (RxPY + asyncio + Textual scheduler integration is non-obvious); SKEPTICAL for implementation
-**Gate**: Pre-UAT assertions ≡ Post-UAT assertions (identical behavior, not just "no crash")
+**Gate**: Pre-UAT assertions = Post-UAT assertions (identical behavior, not just "no crash")
 **Success Criteria** (what must be TRUE):
-  1. RxPY integrates cleanly with Textual's asyncio event loop via `AsyncIOScheduler` — confirmed by a spike harness that runs concurrent observable streams inside a Textual App with no event loop conflicts, no scheduler leaks, and no thread violations
-  2. The manual debounce timer + generation-tracking in `SearchBar` (`_debounce_timer`, `_debounce_gen`, `set_timer`) is replaced by a `Subject | debounce_with_timeout | distinct_until_changed` pipeline — with identical 300ms debounce behavior confirmed by UAT assertion 1
-  3. `@work(exclusive=True)` in `_run_search` is replaced by `switch_map` (flat_map_latest) — ensuring stale API responses are automatically discarded when a new query supersedes the previous one — confirmed by UAT assertion 3
-  4. The two separate `_run_search` call sites (from `on_search_requested` and `on_filter_changed`) are unified into a single `combine_latest(query$, filters$) | debounce | switch_map(search_api$)` pipeline — confirmed by UAT assertion 4
-  5. Pre-UAT behavioral assertions (7 behavioral invariants) are captured before any RxPY changes; post-UAT assertions run the identical suite and all 7 pass — behavioral parity is the gate, not test coverage
+  1. RxPY integrates cleanly with Textual's asyncio event loop via `AsyncIOScheduler` -- confirmed by a spike harness that runs concurrent observable streams inside a Textual App with no event loop conflicts, no scheduler leaks, and no thread violations
+  2. The manual debounce timer + generation-tracking in `SearchBar` (`_debounce_timer`, `_debounce_gen`, `set_timer`) is replaced by a `Subject | debounce_with_timeout | distinct_until_changed` pipeline -- with identical 300ms debounce behavior confirmed by UAT assertion 1
+  3. `@work(exclusive=True)` in `_run_search` is replaced by `switch_map` (flat_map_latest) -- ensuring stale API responses are automatically discarded when a new query supersedes the previous one -- confirmed by UAT assertion 3
+  4. The two separate `_run_search` call sites (from `on_search_requested` and `on_filter_changed`) are unified into a single `combine_latest(query$, filters$) | debounce | switch_map(search_api$)` pipeline -- confirmed by UAT assertion 4
+  5. Pre-UAT behavioral assertions (7 behavioral invariants) are captured before any RxPY changes; post-UAT assertions run the identical suite and all 7 pass -- behavioral parity is the gate, not test coverage
   6. No new `gemini_state` write sites introduced; no database schema changes; RxPY is a TUI-layer concern only
 
-**Behavioral invariants (UAT suite — must pass identically before and after):**
+**Behavioral invariants (UAT suite -- must pass identically before and after):**
   1. Debounce: rapid typing (< 300ms between keystrokes) fires exactly 1 search, after a 300ms pause
   2. Enter: fires search immediately, cancels any in-flight debounce timer
   3. Stale cancellation: if search A is in-flight and query B is submitted, search A's results never appear in the results pane
@@ -308,47 +350,47 @@ Plans:
 
 **Plans**: 4 plans
 Plans:
-- [ ] 17-01: RxPY + asyncio + Textual spike — confirm `AsyncIOScheduler` integrates cleanly; test concurrent observables inside Textual App; document approach (HOSTILE gate)
-- [ ] 17-02: Pre-implementation UAT baseline — automated scripts capturing all 7 behavioral assertions against live TUI + real corpus; record verbatim outputs as the contract
-- [ ] 17-03: RxPY pipeline implementation — replace `SearchBar` debounce, `_run_search @work`, and `on_filter_changed` re-fire with unified observable pipeline
-- [ ] 17-04: Post-implementation UAT validation — same 7 assertions re-run; gate: all pass with outputs matching pre-UAT contract
+- [ ] 17-01: RxPY + asyncio + Textual spike -- confirm `AsyncIOScheduler` integrates cleanly; test concurrent observables inside Textual App; document approach (HOSTILE gate)
+- [ ] 17-02: Pre-implementation UAT baseline -- automated scripts capturing all 7 behavioral assertions against live TUI + real corpus; record verbatim outputs as the contract
+- [ ] 17-03: RxPY pipeline implementation -- replace `SearchBar` debounce, `_run_search @work`, and `on_filter_changed` re-fire with unified observable pipeline
+- [ ] 17-04: Post-implementation UAT validation -- same 7 assertions re-run; gate: all pass with outputs matching pre-UAT contract
 
 ---
 
 ### Phase 18: RxPY Codebase-Wide Async Migration
-**Goal**: Migrate all remaining async code outside `src/objlib/tui/` to a uniform RxPY reactive paradigm — zero behavior change, full test suite + UAT gates before and after
+**Goal**: Migrate all remaining async code outside `src/objlib/tui/` to a uniform RxPY reactive paradigm -- zero behavior change, full test suite + UAT gates before and after
 **Depends on**: Phase 17 complete (TUI RxPY spike result inherited; post-UAT TUI invariants serve as Phase 18 regression suite)
 **Requirements**: ASYNC-RX-01 (uniform reactive paradigm), ASYNC-RX-02 (behavioral parity), ASYNC-RX-03 (end-to-end gate)
 **Distrust**: HOSTILE for spike (18-01); SKEPTICAL for implementation (18-02 through 18-04); SKEPTICAL for validation (18-05)
 **Gate**: Full pytest suite + new-lecture upload (no resets) + store-sync 0 new orphans + search citations resolved + TUI invariants 1-7 still hold
 **Success Criteria** (what must be TRUE):
-  1. All asyncio primitives (`asyncio.Semaphore`, `asyncio.gather`, `asyncio.Event`, `asyncio.wait_for`, `asyncio.to_thread`, `AsyncRetrying`) replaced with RxPY operators in all 10 migrated modules — confirmed by grep across `src/objlib/` (excluding `tui/`)
+  1. All asyncio primitives (`asyncio.Semaphore`, `asyncio.gather`, `asyncio.Event`, `asyncio.wait_for`, `asyncio.to_thread`, `AsyncRetrying`) replaced with RxPY operators in all 10 migrated modules -- confirmed by grep across `src/objlib/` (excluding `tui/`)
   2. Custom operators (`occ_transition`, `upload_with_retry`, `shutdown_gate`) are implemented in `src/objlib/upload/_operators.py` with operator contracts matching the 18-01 spike design doc
-  3. `python -m pytest tests/ -x -q` exits 0 with all tests passing — no behavior regression from any tier migration
-  4. New UNTRACKED lectures uploaded through the migrated pipeline — no files stuck in UPLOADING/PROCESSING; pre-existing indexed corpus (~1,748 files) NOT touched (no `--reset-existing`)
-  5. `python -m objlib store-sync --store objectivism-library` confirms 0 new orphaned documents from new-lecture uploads — fresh uploads produce no orphans in the migrated pipeline
-  6. 5 diverse semantic search queries return correctly-resolved citations with no `[Unresolved file #N]` — RxPY-migrated `search/client.py` preserves two-pass citation lookup
-  7. Phase 17's 7 TUI behavioral invariants still hold — Tier 3 service migration did not break TUI → SearchService → GeminiFileSearchClient chain
+  3. `python -m pytest tests/ -x -q` exits 0 with all tests passing -- no behavior regression from any tier migration
+  4. New UNTRACKED lectures uploaded through the migrated pipeline -- no files stuck in UPLOADING/PROCESSING; pre-existing indexed corpus (~1,748 files) NOT touched (no `--reset-existing`)
+  5. `python -m objlib store-sync --store objectivism-library` confirms 0 new orphaned documents from new-lecture uploads -- fresh uploads produce no orphans in the migrated pipeline
+  6. 5 diverse semantic search queries return correctly-resolved citations with no `[Unresolved file #N]` -- RxPY-migrated `search/client.py` preserves two-pass citation lookup
+  7. Phase 17's 7 TUI behavioral invariants still hold -- Tier 3 service migration did not break TUI -> SearchService -> GeminiFileSearchClient chain
 
 **Tiers:**
-- **Tier 1** (upload pipeline): `orchestrator.py`, `client.py`, `state.py`, `recovery.py` — highest complexity
-- **Tier 2** (extraction): `extraction/batch_orchestrator.py`, `extraction/orchestrator.py` — medium complexity
-- **Tier 3** (services/search): `services/search.py`, `services/library.py`, `search/client.py`, `sync/orchestrator.py` — low complexity
+- **Tier 1** (upload pipeline): `orchestrator.py`, `client.py`, `state.py`, `recovery.py` -- highest complexity
+- **Tier 2** (extraction): `extraction/batch_orchestrator.py`, `extraction/orchestrator.py` -- medium complexity
+- **Tier 3** (services/search): `services/search.py`, `services/library.py`, `search/client.py`, `sync/orchestrator.py` -- low complexity
 
 **Plans**: 5 plans in 5 waves
 Plans:
-- [ ] 18-01: Spike — validate 5 high-risk operator patterns (AsyncIOScheduler+aiosqlite, OCC retry observable, dynamic concurrency, shutdown Subject, tenacity replacement) — HOSTILE gate, go/no-go verdict
-- [ ] 18-02: Tier 3 migration — services/search.py, services/library.py, search/client.py, sync/orchestrator.py
-- [ ] 18-03: Tier 2 migration — extraction/batch_orchestrator.py, extraction/orchestrator.py + batch-extract smoke test
-- [ ] 18-04: Tier 1 migration — upload/orchestrator.py, client.py, state.py, recovery.py + fsm-upload --limit 20 gate
-- [ ] 18-05: Post-migration validation — full pytest + fsm-upload 50 + store-sync + search + TUI invariants + Canon.json update
+- [ ] 18-01: Spike -- validate 5 high-risk operator patterns (AsyncIOScheduler+aiosqlite, OCC retry observable, dynamic concurrency, shutdown Subject, tenacity replacement) -- HOSTILE gate, go/no-go verdict
+- [ ] 18-02: Tier 3 migration -- services/search.py, services/library.py, search/client.py, sync/orchestrator.py
+- [ ] 18-03: Tier 2 migration -- extraction/batch_orchestrator.py, extraction/orchestrator.py + batch-extract smoke test
+- [ ] 18-04: Tier 1 migration -- upload/orchestrator.py, client.py, state.py, recovery.py + fsm-upload --limit 20 gate
+- [ ] 18-05: Post-migration validation -- full pytest + fsm-upload 50 + store-sync + search + TUI invariants + Canon.json update
 
 ---
 
 ## Progress
 
 **Execution Order:**
-Phases execute sequentially: 8 -> 9 -> 10 -> 11 -> 12 -> 13 -> 14 -> 15 -> 16 -> 17 -> 18
+Phases execute sequentially: 8 -> 9 -> 10 -> 11 -> 12 -> 13 -> 14 -> 15 -> 16 -> 16.1 -> 16.2 -> 16.3 -> 17 -> 18
 Each wave's gate is BLOCKING for the next. If a gate fails, the failing phase must be repeated before proceeding.
 
 **Note:** Phase 07-07 (TUI integration smoke test, deferred from v1.0) is incorporated into Phase 16 as plan 16-03. It runs against the full live corpus after the library upload completes -- a more meaningful test than running it against an empty store.
@@ -374,11 +416,13 @@ Each wave's gate is BLOCKING for the next. If a gate fails, the failing phase mu
 | 14. Batch Performance | v2.0 | 3/3 | Complete | 2026-02-22 |
 | 15. Consistency + store-sync | v2.0 | 3/3 | Complete | 2026-02-23 |
 | 16. Full Library Upload | v2.0 | 2/4 | In progress | - |
-| 16.1. Stability Instrument Correctness Audit | v2.0 | 0/3 | INSERTED -- BLOCKING | - |
+| 16.1. Stability Instrument Correctness Audit | v2.0 | 2/3 | In progress | - |
+| 16.2. Metadata Completeness Invariant Enforcement | v2.0 | 0/2 | INSERTED -- Not started | - |
+| 16.3. Gemini File Search Retrievability Research | v2.0 | 0/3 | INSERTED -- Not started | - |
 | 17. RxPY TUI Reactive Pipeline | v2.0 | 0/4 | Not started | - |
 | 18. RxPY Codebase-Wide Async Migration | v2.0 | 0/5 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-19*
 *Pre-mortem: governance/pre-mortem-gemini-fsm.md*
-*Last updated: 2026-02-24 -- Phase 16.1 inserted: T+24h check blocked by A6/A7 instrument failures; audit phase required before Phase 17*
+*Last updated: 2026-02-24 -- Phase 16.2 plans created: mark-unsupported + quality check + MOTM re-extraction + audit command (16.2-01), verification gate (16.2-02)*
