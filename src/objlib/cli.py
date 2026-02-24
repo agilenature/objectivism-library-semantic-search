@@ -3030,6 +3030,247 @@ def batch_extract_metadata(
     )
 
 
+@metadata_app.command("mark-unsupported")
+def mark_unsupported(
+    db_path: Annotated[
+        Path,
+        typer.Option("--db", "-d", help="Path to SQLite database"),
+    ] = Path("data/library.db"),
+) -> None:
+    """Mark non-enrichable file formats as skipped with named reasons.
+
+    Performs a single backfill pass:
+    1. Marks .pdf, .html, .docx files as skipped with named reasons
+    2. Updates 26 .epub files (already skipped) with error_message
+    3. Backfills file_primary_topics for approved books with existing AI metadata
+    4. Detects quality failures (Signal A + Signal B) and resets to pending
+
+    Examples:
+        objlib metadata mark-unsupported
+        objlib metadata mark-unsupported --db data/library.db
+    """
+    import json
+
+    from objlib.extraction.schemas import CONTROLLED_VOCABULARY
+
+    if not db_path.exists():
+        console.print(f"[red]Error:[/red] Database not found: {db_path}")
+        raise typer.Exit(code=1)
+
+    with Database(db_path) as db:
+        # --- Step 1: Mark non-enrichable formats as skipped ---
+        console.print("[bold]Phase 1: Marking non-enrichable formats[/bold]\n")
+
+        extension_updates = [
+            (
+                "pdf",
+                "UPDATE files SET ai_metadata_status = 'skipped', "
+                "error_message = 'pdf requires OCR text extraction -- deferred' "
+                "WHERE file_path LIKE '%.pdf' AND ai_metadata_status != 'skipped'",
+            ),
+            (
+                "html",
+                "UPDATE files SET ai_metadata_status = 'skipped', "
+                "error_message = 'html requires text extraction -- deferred' "
+                "WHERE file_path LIKE '%.html' AND ai_metadata_status != 'skipped'",
+            ),
+            (
+                "docx",
+                "UPDATE files SET ai_metadata_status = 'skipped', "
+                "error_message = 'docx requires text extraction -- deferred' "
+                "WHERE file_path LIKE '%.docx' AND ai_metadata_status != 'skipped'",
+            ),
+        ]
+
+        total_marked = 0
+        for ext, sql in extension_updates:
+            cursor = db.conn.execute(sql)
+            count = cursor.rowcount
+            total_marked += count
+            if count > 0:
+                console.print(f"  [green]{count} {ext} files marked as skipped[/green]")
+            else:
+                console.print(f"  [dim]{ext}: 0 files to update[/dim]")
+
+        # Fix epub error_message (already skipped but NULL reason)
+        epub_cursor = db.conn.execute(
+            "UPDATE files SET error_message = 'epub requires text extraction -- deferred' "
+            "WHERE file_path LIKE '%.epub' AND ai_metadata_status = 'skipped' "
+            "AND (error_message IS NULL OR error_message = '')"
+        )
+        epub_count = epub_cursor.rowcount
+        if epub_count > 0:
+            console.print(f"  [green]{epub_count} epub files: error_message populated[/green]")
+        else:
+            console.print(f"  [dim]epub: all error_messages already set[/dim]")
+
+        db.conn.commit()
+
+        console.print(Panel(
+            f"[bold]{total_marked}[/bold] files marked as skipped, "
+            f"[bold]{epub_count}[/bold] epub error_messages populated",
+            title="Format Classification Complete",
+        ))
+
+        # --- Step 2: Backfill approved books missing file_primary_topics ---
+        console.print("\n[bold]Phase 2: Backfilling approved books without primary_topics[/bold]\n")
+
+        backfilled_paths: set[str] = set()
+        rows = db.conn.execute(
+            "SELECT f.file_path, fma.metadata_json "
+            "FROM files f "
+            "JOIN file_metadata_ai fma ON f.file_path = fma.file_path AND fma.is_current = 1 "
+            "WHERE f.ai_metadata_status = 'approved' "
+            "AND NOT EXISTS (SELECT 1 FROM file_primary_topics pt WHERE pt.file_path = f.file_path)"
+        ).fetchall()
+
+        backfilled_count = 0
+        reset_count = 0
+        for row in rows:
+            file_path = row["file_path"]
+            meta = json.loads(row["metadata_json"]) if row["metadata_json"] else {}
+            topics = meta.get("primary_topics", [])
+            valid_topics = [t for t in topics if t in CONTROLLED_VOCABULARY]
+
+            if valid_topics:
+                for topic in valid_topics:
+                    db.conn.execute(
+                        "INSERT OR IGNORE INTO file_primary_topics (file_path, topic_tag) "
+                        "VALUES (?, ?)",
+                        (file_path, topic),
+                    )
+                backfilled_count += 1
+                backfilled_paths.add(file_path)
+                filename = Path(file_path).name
+                console.print(f"  [green]Backfilled {filename}: {len(valid_topics)} topics[/green]")
+            else:
+                db.conn.execute(
+                    "UPDATE files SET ai_metadata_status = 'pending' WHERE file_path = ?",
+                    (file_path,),
+                )
+                reset_count += 1
+                filename = Path(file_path).name
+                console.print(f"  [yellow]Reset to pending: {filename}[/yellow]")
+
+        db.conn.commit()
+        console.print(
+            f"\n  [green]{backfilled_count} files backfilled from existing JSON, "
+            f"{reset_count} reset to pending[/green]"
+        )
+
+        # --- Step 3: Structural quality check (Signal A + Signal B) ---
+        console.print(
+            "\n[bold]Phase 3: Structural quality check "
+            "(Signal A + Signal B)[/bold]\n"
+        )
+
+        # Signal A: scanner topic NULL/empty on approved enrichable files
+        signal_a_rows = db.conn.execute(
+            "SELECT f.file_path FROM files f "
+            "WHERE f.ai_metadata_status = 'approved' "
+            "AND (f.file_path LIKE '%.txt' OR f.file_path LIKE '%.md') "
+            "AND (json_extract(f.metadata_json, '$.topic') IS NULL "
+            "     OR json_extract(f.metadata_json, '$.topic') = '')"
+        ).fetchall()
+        signal_a_paths = {r["file_path"] for r in signal_a_rows}
+        console.print(f"  [dim]Signal A (scanner topic NULL): {len(signal_a_paths)} files[/dim]")
+
+        # Signal B: all-boilerplate primary_topics
+        # Step B1: corpus-wide topic frequency
+        freq_rows = db.conn.execute(
+            "SELECT topic_tag, COUNT(*) as freq "
+            "FROM file_primary_topics GROUP BY topic_tag ORDER BY freq DESC"
+        ).fetchall()
+        total_with_topics_row = db.conn.execute(
+            "SELECT COUNT(DISTINCT file_path) as cnt FROM file_primary_topics"
+        ).fetchone()
+        total_with_topics = total_with_topics_row["cnt"] if total_with_topics_row else 0
+
+        # Step B2: boilerplate threshold (>40% corpus frequency)
+        boilerplate_set: set[str] = set()
+        if total_with_topics > 0:
+            for r in freq_rows:
+                if r["freq"] / total_with_topics > 0.40:
+                    boilerplate_set.add(r["topic_tag"])
+        console.print(
+            f"  [dim]Boilerplate topics (>40% frequency): "
+            f"{', '.join(sorted(boilerplate_set))}[/dim]"
+        )
+
+        # Step B3: files where ALL primary_topics are boilerplate
+        signal_b_paths: set[str] = set()
+        if boilerplate_set:
+            placeholders = ", ".join(["?"] * len(boilerplate_set))
+            bp_rows = db.conn.execute(
+                f"SELECT fp.file_path, COUNT(*) as total_topics, "
+                f"SUM(CASE WHEN fp.topic_tag IN ({placeholders}) THEN 1 ELSE 0 END) "
+                f"as boilerplate_count "
+                f"FROM file_primary_topics fp "
+                f"JOIN files f ON f.file_path = fp.file_path "
+                f"WHERE f.ai_metadata_status = 'approved' "
+                f"AND (f.file_path LIKE '%.txt' OR f.file_path LIKE '%.md') "
+                f"GROUP BY fp.file_path "
+                f"HAVING total_topics = boilerplate_count",
+                tuple(sorted(boilerplate_set)),
+            ).fetchall()
+            signal_b_paths = {r["file_path"] for r in bp_rows}
+
+        console.print(
+            f"  [dim]Signal B (all-boilerplate primary_topics): "
+            f"{len(signal_b_paths)} files[/dim]"
+        )
+
+        # Combine and exclude backfilled files
+        quality_failed = (signal_a_paths | signal_b_paths) - backfilled_paths
+        console.print(
+            f"\n  [yellow]{len(quality_failed)} files are quality failures "
+            f"after excluding {len(backfilled_paths)} just-backfilled files[/yellow]"
+        )
+
+        # --- Step 4: Reset quality-failed files to pending ---
+        if quality_failed:
+            console.print(
+                "\n[bold]Phase 4: Resetting quality-failed files to pending[/bold]\n"
+            )
+
+            # Breakdown by folder
+            motm_count = sum(
+                1 for fp in quality_failed if "/MOTM/" in fp
+            )
+            other_count = len(quality_failed) - motm_count
+            console.print(f"  [dim]MOTM: {motm_count}, Other: {other_count}[/dim]")
+
+            for fp in quality_failed:
+                db.conn.execute(
+                    "DELETE FROM file_primary_topics WHERE file_path = ?",
+                    (fp,),
+                )
+                db.conn.execute(
+                    "UPDATE files SET ai_metadata_status = 'pending' WHERE file_path = ?",
+                    (fp,),
+                )
+
+            db.conn.commit()
+            console.print(
+                f"  [green]{len(quality_failed)} files reset to pending "
+                f"for re-extraction[/green]"
+            )
+        else:
+            console.print("\n  [green]No quality failures detected[/green]")
+
+        # Final summary
+        console.print(Panel(
+            f"[bold]Format classification:[/bold] {total_marked} marked skipped, "
+            f"{epub_count} epub reasons filled\n"
+            f"[bold]Backfill:[/bold] {backfilled_count} books backfilled, "
+            f"{reset_count} reset to pending\n"
+            f"[bold]Quality check:[/bold] {len(quality_failed)} files reset to pending "
+            f"(Signal A: {len(signal_a_paths)}, Signal B: {len(signal_b_paths)}, "
+            f"excluded: {len(backfilled_paths)})",
+            title="mark-unsupported Complete",
+        ))
+
+
 # ---- Entity extraction commands (Phase 6.1) ----
 
 

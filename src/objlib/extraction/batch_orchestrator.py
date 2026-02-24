@@ -358,7 +358,7 @@ class BatchExtractionOrchestrator:
             SELECT file_path, metadata_json
             FROM files
             WHERE ai_metadata_status = 'pending'
-              AND file_path LIKE '%.txt'
+              AND (file_path LIKE '%.txt' OR file_path LIKE '%.md')
             ORDER BY file_path
         """
 
