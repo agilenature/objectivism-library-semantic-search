@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 
 ## Current Position
 
-Phase: 16.2 (INSERTED -- Metadata Completeness Invariant Enforcement) -- IN PROGRESS
-Plan: 1 of 2 complete in Phase 16.2
-Status: 16.2-01 complete. mark-unsupported + audit commands implemented, batch-extract run (297/337 succeeded), upload gate added. Audit exits 0 with all 4 invariant conditions passing.
-Last activity: 2026-02-24 -- Completed 16.2-01-PLAN.md
+Phase: 16.2 (INSERTED -- Metadata Completeness Invariant Enforcement) -- COMPLETE
+Plan: 2 of 2 complete in Phase 16.2
+Status: PHASE COMPLETE. Audit exits 0, all 4 invariant conditions pass, Phase 16.3 readiness at 100% for all three categories. Gate PASSED.
+Last activity: 2026-02-24 -- Completed 16.2-02-PLAN.md (verification)
 
-Progress: [############################] 28/38 v2.0 plans complete
+Progress: [#############################] 29/38 v2.0 plans complete
 
 Note: Phase 07-07 (TUI integration smoke test from v1.0) deferred to Phase 16, plan 16-03.
   Runs against full live corpus after upload -- more meaningful than running on empty store.
@@ -32,8 +32,8 @@ Phase 14: [##########] 3/3 plans -- COMPLETE (Wave 6: Batch Performance) -- VLID
 Phase 15: [##########] 3/3 plans -- COMPLETE (Wave 7: Consistency + store-sync) -- gate PASSED 2026-02-23
 Phase 16:  [#####░░░░░] 2/4 plans -- IN PROGRESS (16-01 + 16-04 COMPLETE; 16-02 BLOCKED by Phase 16.1)
 Phase 16.1:[#######░░░] 2/3 plans -- IN PROGRESS (16.1-01 spike + 16.1-02 fix COMPLETE; 16.1-03 triage done: A7 FAIL structural, tolerance decision NEEDED; BLOCKING Phase 16-02 + Phase 16.2)
-Phase 16.2:[#####░░░░░] 1/2 plans -- IN PROGRESS (16.2-01 COMPLETE; audit exits 0; 16.2-02 verification pending)
-Phase 16.3:[░░░░░░░░░░] 0/3 plans -- INSERTED; BLOCKED by Phase 16.2 (Retrievability Research: H1/H2/H3/H4 diagnosis -> intervention test -> production fix; A7 zero-tolerance gate)
+Phase 16.2:[##########] 2/2 plans -- COMPLETE (audit exits 0; all 1,885 files satisfy invariant; Phase 16.3 readiness 100%; gate PASSED 2026-02-24)
+Phase 16.3:[░░░░░░░░░░] 0/3 plans -- UNBLOCKED by Phase 16.2 gate PASSED (Retrievability Research: H1/H2/H3/H4 diagnosis -> intervention test -> production fix; A7 zero-tolerance decision still open)
 Phase 17:  [░░░░░░░░░░] 0/4 plans -- BLOCKED by Phase 16.3 gate (RxPY TUI reactive pipeline)
 Phase 18:  [░░░░░░░░░░] 0/5 plans -- BLOCKED by Phase 17 gate (RxPY codebase-wide async migration)
 
@@ -190,7 +190,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Plan 16.2-01 complete. Audit exits 0, all invariants satisfied. Next: 16.2-02 (verification plan). 40 Episode files at failed_validation retriable.
+Stopped at: Plan 16.2-02 complete. Phase 16.2 gate PASSED. Audit exits 0, all 1,885 files satisfy invariant, Phase 16.3 readiness at 100%.
 
 Temporal stability log (Phase 16 -- full library):
 - T=0   (2026-02-23 18:21:59 UTC): 5/7 PASS -- 1748 indexed, 0 orphans, assertions 1-5 pass; assertions 6-7 fail (search index lag at scale)
@@ -203,5 +203,5 @@ Temporal stability log (Phase 15 -- 90-file proxy):
 - T+24h (2026-02-23 12:54 UTC): STABLE -- 90 indexed, 6/6 pass, 0 orphans (~20h50m elapsed)
 - Post-upgrade (2026-02-23 13:05 UTC): STABLE -- 90 indexed, 7/7 pass (Assertion 7: 4/5 found, 1 within tolerance)
 
-Resume file: .planning/phases/16.2-metadata-completeness-invariant-enforcement/ (Phase 16.2 plans)
-Resume instruction: Plan 16.2-01 done. Next: 16.2-02 (verification -- confirm audit exit 0, Bernstein topics, no silent pending). Then Phase 16.3 unblocked.
+Resume file: .planning/phases/16.3-retrievability-research/ (Phase 16.3 plans)
+Resume instruction: Phase 16.2 COMPLETE. Phase 16.3 (Retrievability Research) is next: H1/H2/H3/H4 diagnosis spike, then intervention test, then production remediation. A7 zero-tolerance decision still open -- Phase 16.3 diagnosis spike should resolve it.
