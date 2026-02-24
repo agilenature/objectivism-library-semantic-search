@@ -3271,6 +3271,208 @@ def mark_unsupported(
         ))
 
 
+@metadata_app.command("audit")
+def metadata_audit(
+    db_path: Annotated[
+        Path,
+        typer.Option("--db", "-d", help="Path to SQLite database"),
+    ] = Path("data/library.db"),
+) -> None:
+    """Check metadata completeness invariant across all DB-tracked files.
+
+    Verifies 4 invariant conditions:
+      1. Zero approved files without file_primary_topics entries
+      2. Zero skipped files without error_message
+      3. Zero pending files with non-enrichable extensions
+      4. Phase 16.3 readiness (MOTM + Other-stem at 100% coverage)
+
+    Exits 0 if all conditions pass, 1 if any condition fails.
+
+    Examples:
+        objlib metadata audit
+        objlib metadata audit --db data/library.db
+    """
+    if not db_path.exists():
+        console.print(f"[red]Error:[/red] Database not found: {db_path}")
+        raise typer.Exit(code=1)
+
+    with Database(db_path) as db:
+        violations = 0
+
+        # --- Invariant Conditions ---
+        console.print("[bold]Metadata Completeness Audit[/bold]\n")
+
+        cond_table = Table(title="Invariant Conditions")
+        cond_table.add_column("Condition", style="bold", min_width=40)
+        cond_table.add_column("Status", justify="center", min_width=8)
+        cond_table.add_column("Count", justify="right", min_width=8)
+        cond_table.add_column("Detail", min_width=30)
+
+        # Condition 1: Approved without primary_topics
+        c1 = db.conn.execute(
+            "SELECT COUNT(*) as cnt FROM files f "
+            "WHERE f.ai_metadata_status = 'approved' "
+            "AND NOT EXISTS (SELECT 1 FROM file_primary_topics pt "
+            "WHERE pt.file_path = f.file_path)"
+        ).fetchone()["cnt"]
+        c1_status = "[green]PASS[/green]" if c1 == 0 else "[red]FAIL[/red]"
+        if c1 > 0:
+            violations += 1
+        cond_table.add_row(
+            "1. Approved without primary_topics",
+            c1_status, str(c1),
+            "All approved files must have topic rows",
+        )
+
+        # Condition 2: Skipped without reason
+        c2 = db.conn.execute(
+            "SELECT COUNT(*) as cnt FROM files f "
+            "WHERE f.ai_metadata_status = 'skipped' "
+            "AND (f.error_message IS NULL OR f.error_message = '')"
+        ).fetchone()["cnt"]
+        c2_status = "[green]PASS[/green]" if c2 == 0 else "[red]FAIL[/red]"
+        if c2 > 0:
+            violations += 1
+        cond_table.add_row(
+            "2. Skipped without reason",
+            c2_status, str(c2),
+            "All skipped files must have error_message",
+        )
+
+        # Condition 3: Pending non-enrichable
+        c3 = db.conn.execute(
+            "SELECT COUNT(*) as cnt FROM files f "
+            "WHERE f.ai_metadata_status = 'pending' "
+            "AND f.file_path NOT LIKE '%.txt' "
+            "AND f.file_path NOT LIKE '%.md'"
+        ).fetchone()["cnt"]
+        c3_status = "[green]PASS[/green]" if c3 == 0 else "[red]FAIL[/red]"
+        if c3 > 0:
+            violations += 1
+        cond_table.add_row(
+            "3. Pending non-enrichable extensions",
+            c3_status, str(c3),
+            "Only .txt/.md may be pending",
+        )
+
+        # Condition 4: Phase 16.3 readiness
+        # 4a: MOTM primary_topics coverage
+        motm_pt = db.conn.execute(
+            "SELECT COUNT(*) as total, "
+            "SUM(CASE WHEN EXISTS (SELECT 1 FROM file_primary_topics pt "
+            "WHERE pt.file_path = f.file_path) THEN 1 ELSE 0 END) as with_topics "
+            "FROM files f "
+            "WHERE f.file_path LIKE '%/MOTM/%' "
+            "AND f.ai_metadata_status = 'approved' "
+            "AND f.file_path LIKE '%.txt'"
+        ).fetchone()
+        motm_total = motm_pt["total"]
+        motm_with = motm_pt["with_topics"]
+
+        # 4b: MOTM scanner topic field
+        motm_no_topic = db.conn.execute(
+            "SELECT COUNT(*) as cnt FROM files f "
+            "WHERE f.file_path LIKE '%/MOTM/%' "
+            "AND f.ai_metadata_status = 'approved' "
+            "AND f.file_path LIKE '%.txt' "
+            "AND (json_extract(f.metadata_json, '$.topic') IS NULL "
+            "     OR json_extract(f.metadata_json, '$.topic') = '')"
+        ).fetchone()["cnt"]
+
+        # 4c: Other-stem primary_topics coverage
+        other_stem = db.conn.execute(
+            "SELECT COUNT(*) as total, "
+            "SUM(CASE WHEN EXISTS (SELECT 1 FROM file_primary_topics pt "
+            "WHERE pt.file_path = f.file_path) THEN 1 ELSE 0 END) as with_topics "
+            "FROM files f "
+            "WHERE f.ai_metadata_status = 'approved' "
+            "AND f.file_path LIKE '%.txt' "
+            "AND f.file_path NOT LIKE '%/MOTM/%' "
+            "AND json_extract(f.metadata_json, '$._unparsed_filename') = 1"
+        ).fetchone()
+        other_total = other_stem["total"]
+        other_with = other_stem["with_topics"]
+
+        c4_fail = (
+            (motm_total != motm_with)
+            or (motm_no_topic > 0)
+            or (other_total != other_with)
+        )
+        c4_status = "[red]FAIL[/red]" if c4_fail else "[green]PASS[/green]"
+        if c4_fail:
+            violations += 1
+
+        c4_details = []
+        if motm_total != motm_with:
+            c4_details.append(f"MOTM topics: {motm_with}/{motm_total}")
+        if motm_no_topic > 0:
+            c4_details.append(f"MOTM scanner topic NULL: {motm_no_topic}")
+        if other_total != other_with:
+            c4_details.append(f"Other-stem topics: {other_with}/{other_total}")
+        c4_detail_str = "; ".join(c4_details) if c4_details else "All at 100%"
+
+        cond_table.add_row(
+            "4. Phase 16.3 readiness",
+            c4_status, "---",
+            c4_detail_str,
+        )
+
+        console.print(cond_table)
+
+        # --- Phase 16.3 Readiness Table ---
+        console.print()
+        ready_table = Table(title="Phase 16.3 Readiness")
+        ready_table.add_column("Category", style="bold", min_width=30)
+        ready_table.add_column("Total", justify="right")
+        ready_table.add_column("With Topics", justify="right")
+        ready_table.add_column("Coverage", justify="right")
+        ready_table.add_column("Status", justify="center")
+
+        # MOTM primary_topics
+        motm_pct = f"{motm_with / motm_total * 100:.0f}%" if motm_total > 0 else "N/A"
+        motm_ready = "[green]READY[/green]" if motm_total == motm_with else "[red]NOT READY[/red]"
+        ready_table.add_row(
+            "MOTM (.txt approved)", str(motm_total), str(motm_with),
+            motm_pct, motm_ready,
+        )
+
+        # MOTM scanner topic field
+        motm_topic_with = motm_total - motm_no_topic
+        motm_topic_pct = f"{motm_topic_with / motm_total * 100:.0f}%" if motm_total > 0 else "N/A"
+        motm_topic_ready = "[green]READY[/green]" if motm_no_topic == 0 else "[red]NOT READY[/red]"
+        ready_table.add_row(
+            "MOTM scanner topic field", str(motm_total), str(motm_topic_with),
+            motm_topic_pct, motm_topic_ready,
+        )
+
+        # Other-stem primary_topics
+        other_pct = f"{other_with / other_total * 100:.0f}%" if other_total > 0 else "N/A"
+        other_ready = "[green]READY[/green]" if other_total == other_with else "[red]NOT READY[/red]"
+        ready_table.add_row(
+            "Other-stem (.txt approved)", str(other_total), str(other_with),
+            other_pct, other_ready,
+        )
+
+        console.print(ready_table)
+
+        # --- Summary ---
+        console.print()
+        if violations > 0:
+            console.print(Panel(
+                f"[bold red]AUDIT FAILED[/bold red] -- "
+                f"{violations} condition(s) violated",
+                title="Result",
+            ))
+            raise typer.Exit(code=1)
+        else:
+            console.print(Panel(
+                "[bold green]AUDIT PASSED[/bold green] -- "
+                "all invariants satisfied",
+                title="Result",
+            ))
+            raise typer.Exit(code=0)
+
+
 # ---- Entity extraction commands (Phase 6.1) ----
 
 
