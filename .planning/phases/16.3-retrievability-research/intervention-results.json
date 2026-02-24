@@ -1,0 +1,124 @@
+{
+  "results": [
+    {
+      "filename": "Objectivist Logic - Class 09-02.txt",
+      "condition": "E-A",
+      "category": "Cat A",
+      "query": "What is 'Objectivist Logic - Class 09-02' about?",
+      "found": true,
+      "rank": 1,
+      "store_doc_prefix": "1apkzh53n4uw"
+    },
+    {
+      "filename": "ITOE Advanced Topics - Class 02-02.txt",
+      "condition": "E-A",
+      "category": "Cat A",
+      "query": "What is 'ITOE Advanced Topics - Class 02-02' about?",
+      "found": true,
+      "rank": 1,
+      "store_doc_prefix": "pig4yl1hoqhw"
+    },
+    {
+      "filename": "Objectivist Logic - Class 02-02 - Office Hours.txt",
+      "condition": "E-A",
+      "category": "Cat A",
+      "query": "What is 'Objectivist Logic - Class 02-02 - Office Hours' about?",
+      "found": true,
+      "rank": 1,
+      "store_doc_prefix": "qhh6orz33hpl"
+    },
+    {
+      "filename": "ITOE Advanced Topics - Class 05-02 Office Hour.txt",
+      "condition": "C-A",
+      "category": "Cat A",
+      "query": "What is 'ITOE Advanced Topics - Class 05-02 Office Hour' about?",
+      "found": true,
+      "rank": 2,
+      "store_doc_prefix": "ib5wn0jzrmzl"
+    },
+    {
+      "filename": "ITOE Advanced Topics - Class 13-02 - Office Hour.txt",
+      "condition": "C-A",
+      "category": "Cat A",
+      "query": "What is 'ITOE Advanced Topics - Class 13-02 - Office Hour' about?",
+      "found": false,
+      "rank": null,
+      "store_doc_prefix": "ia9y91at3vas"
+    },
+    {
+      "filename": "MOTM_2019-03-03_Passages-from-and-positions-of-Ayn-Rand.txt",
+      "condition": "E-B",
+      "category": "Cat B",
+      "query": "What is 'Passages from and positions of Ayn Rand' about?",
+      "found": true,
+      "rank": 1,
+      "store_doc_prefix": "e11ab3biu9qz"
+    },
+    {
+      "filename": "MOTM_2021-06-13_History-of-the-Objectivist-movement-a-personal-account-part.txt",
+      "condition": "E-B",
+      "category": "Cat B",
+      "query": "What is 'History of the Objectivist movement a personal account part' about?",
+      "found": true,
+      "rank": 1,
+      "store_doc_prefix": "xquk4vfvbn87"
+    },
+    {
+      "filename": "MOTM_2022-08-21_Thinking-In-Examples.txt",
+      "condition": "E-B",
+      "category": "Cat B",
+      "query": "What is 'Thinking In Examples' about?",
+      "found": true,
+      "rank": 1,
+      "store_doc_prefix": "2mzvc118ongh"
+    },
+    {
+      "filename": "MOTM_2021-03-07_Interview-of-Mike-Garrett.txt",
+      "condition": "C-B",
+      "category": "Cat B",
+      "query": "What is 'Interview of Mike Garrett' about?",
+      "found": true,
+      "rank": 1,
+      "store_doc_prefix": "qtu07go9kogj"
+    },
+    {
+      "filename": "MOTM_2018-11-25_Psycho-teleology-applications.txt",
+      "condition": "C-B",
+      "category": "Cat B",
+      "query": "What is 'Psycho teleology applications' about?",
+      "found": false,
+      "rank": null,
+      "store_doc_prefix": "0hwhjp3ri3ce"
+    },
+    {
+      "filename": "Leonard Peikoff at the Ford Hall Forum - Lesson 12 - A Philosopher Looks at the O. J. Verdict.txt",
+      "condition": "W-H",
+      "category": "Working",
+      "query": "What is 'A Philosopher Looks at the O. J. Verdict' about?",
+      "found": true,
+      "rank": 1,
+      "store_doc_prefix": "o5fjg5dlfhg8"
+    },
+    {
+      "filename": "Leonard Peikoff at the Ford Hall Forum - Lesson 03 - The American School_ Why Johnny Can_t Think.txt",
+      "condition": "W-H",
+      "category": "Working",
+      "query": "What is 'The American School  Why Johnny Can t Think' about?",
+      "found": true,
+      "rank": 1,
+      "store_doc_prefix": "kvs9y3qb4ydi"
+    },
+    {
+      "filename": "Leonard Peikoff at the Ford Hall Forum - Lesson 09 - Some Notes About Tomorrow.txt",
+      "condition": "W-H",
+      "category": "Working",
+      "query": "What is 'Some Notes About Tomorrow' about?",
+      "found": true,
+      "rank": 1,
+      "store_doc_prefix": "0j1jz6bsid3v"
+    }
+  ],
+  "production_doc_count_before": 1748,
+  "production_doc_count_after": 1748,
+  "timestamp": "2026-02-24T21:13:27Z"
+}
