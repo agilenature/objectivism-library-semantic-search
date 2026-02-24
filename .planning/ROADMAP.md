@@ -319,7 +319,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 16.3-01-PLAN.md -- Diagnosis spike: H1 code inspection (pipeline header check), H3 transcript content check (class-number absent?), H4 live API response inspection (document_name field), H2 cross-run consistency analysis; writes 16.3-T0-DIAGNOSIS.md
+- [x] 16.3-01-PLAN.md -- Diagnosis spike: H1 PARTIALLY FALSIFIED (header exists but lacks identity fields), H2 FALSIFIED (structural not transient), H3 CONFIRMED (class numbers absent from transcripts), H4 FALSIFIED (document_name NULL in File Search API); root cause = extend content header with identity fields; writes 16.3-T0-DIAGNOSIS.md
 - [ ] 16.3-02-PLAN.md -- Intervention test: build header_builder.py, create ephemeral test store objectivism-library-retrieval-test, upload 20 files in 4 conditions (with/without headers, Cat A/B/working), run targeted queries, record hit rates, delete test store; writes 16.3-INTERVENTION.md
 - [ ] 16.3-03-PLAN.md -- Production remediation: generate retrieval-fix-manifest.json, implement MEMORY.md permanent fix in _reset_existing_files(), create re_enrich_retrieval.py, execute re-upload for all Category A+B files, two fresh-session A7=0 confirmations (1h apart), store-sync 0 orphans; writes 16.3-REMEDIATION-COMPLETE.md
 
@@ -418,11 +418,11 @@ Each wave's gate is BLOCKING for the next. If a gate fails, the failing phase mu
 | 16. Full Library Upload | v2.0 | 2/4 | In progress | - |
 | 16.1. Stability Instrument Correctness Audit | v2.0 | 2/3 | In progress | - |
 | 16.2. Metadata Completeness Invariant Enforcement | v2.0 | 2/2 | Complete | 2026-02-24 |
-| 16.3. Gemini File Search Retrievability Research | v2.0 | 0/3 | INSERTED -- Not started | - |
+| 16.3. Gemini File Search Retrievability Research | v2.0 | 1/3 | In progress | - |
 | 17. RxPY TUI Reactive Pipeline | v2.0 | 0/4 | Not started | - |
 | 18. RxPY Codebase-Wide Async Migration | v2.0 | 0/5 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-19*
 *Pre-mortem: governance/pre-mortem-gemini-fsm.md*
-*Last updated: 2026-02-24 -- Phase 16.3 plans created: diagnosis spike (16.3-01), intervention test (16.3-02), production remediation (16.3-03)*
+*Last updated: 2026-02-24 -- Phase 16.3-01 diagnosis spike complete: H1+H3 root cause confirmed, Plan 16.3-02 unblocked*

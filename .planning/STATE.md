@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 
 ## Current Position
 
-Phase: 16.2 (INSERTED -- Metadata Completeness Invariant Enforcement) -- COMPLETE
-Plan: 2 of 2 complete in Phase 16.2
-Status: PHASE COMPLETE. Audit exits 0, all 4 invariant conditions pass, Phase 16.3 readiness at 100% for all three categories. Gate PASSED.
-Last activity: 2026-02-24 -- Completed 16.2-02-PLAN.md (verification)
+Phase: 16.3 (INSERTED -- Gemini File Search Retrievability Research) -- IN PROGRESS
+Plan: 1 of 3 complete in Phase 16.3
+Status: Plan 01 (diagnosis spike) COMPLETE. Root cause confirmed: H1 (refined) + H3 = discriminating identifiers absent from indexed content. Plan 02 (intervention test) UNBLOCKED.
+Last activity: 2026-02-24 -- Completed 16.3-01-PLAN.md (diagnosis spike)
 
-Progress: [#############################] 29/38 v2.0 plans complete
+Progress: [##############################] 30/38 v2.0 plans complete
 
 Note: Phase 07-07 (TUI integration smoke test from v1.0) deferred to Phase 16, plan 16-03.
   Runs against full live corpus after upload -- more meaningful than running on empty store.
@@ -33,7 +33,7 @@ Phase 15: [##########] 3/3 plans -- COMPLETE (Wave 7: Consistency + store-sync) 
 Phase 16:  [#####░░░░░] 2/4 plans -- IN PROGRESS (16-01 + 16-04 COMPLETE; 16-02 BLOCKED by Phase 16.1)
 Phase 16.1:[#######░░░] 2/3 plans -- IN PROGRESS (16.1-01 spike + 16.1-02 fix COMPLETE; 16.1-03 triage done: A7 FAIL structural, tolerance decision NEEDED; BLOCKING Phase 16-02 + Phase 16.2)
 Phase 16.2:[##########] 2/2 plans -- COMPLETE (audit exits 0; all 1,885 files satisfy invariant; Phase 16.3 readiness 100%; gate PASSED 2026-02-24)
-Phase 16.3:[░░░░░░░░░░] 0/3 plans -- UNBLOCKED by Phase 16.2 gate PASSED (Retrievability Research: H1/H2/H3/H4 diagnosis -> intervention test -> production fix; A7 zero-tolerance decision still open)
+Phase 16.3:[###░░░░░░░] 1/3 plans -- IN PROGRESS (Retrievability Research: 16.3-01 diagnosis COMPLETE; H1+H3 = root cause confirmed; 16.3-02 intervention test UNBLOCKED; A7 zero-tolerance decision resolved by fix)
 Phase 17:  [░░░░░░░░░░] 0/4 plans -- BLOCKED by Phase 16.3 gate (RxPY TUI reactive pipeline)
 Phase 18:  [░░░░░░░░░░] 0/5 plans -- BLOCKED by Phase 17 gate (RxPY codebase-wide async migration)
 
@@ -45,9 +45,9 @@ Phase 18:  [░░░░░░░░░░] 0/5 plans -- BLOCKED by Phase 17 gat
 - Total execution time: 128 min
 
 **v2.0 Velocity:**
-- Total plans completed: 28
-- Average duration: 20.1 min
-- Total execution time: 564 min
+- Total plans completed: 29
+- Average duration: 19.6 min
+- Total execution time: 569 min
 
 *Updated after each plan completion*
 
@@ -160,6 +160,12 @@ Recent decisions affecting current work:
 - [16.2-01]: 40 Episode files failed Mistral extraction (JSON format issues) -- at failed_validation status, retriable
 - [16.2-01]: 1 oversized file (Philosophy Who Needs It) marked skipped by batch_orchestrator -- exceeds Mistral context window
 - [16.2-01]: Audit exits 0 with Phase 16.3 readiness: MOTM 468/468, MOTM scanner topic 468/468, Other-stem 443/443
+- [16.3-01]: H1 PARTIALLY FALSIFIED: content_preparer.py injects Tier 4 AI analysis header (summary, key_arguments, philosophical_positions) but NOT identity fields (filename, class number, course, topic, primary_topics)
+- [16.3-01]: H2 FALSIFIED: two independent A7 runs show same two failure categories (Category A = Other-stem, Category B = generic MOTM) -- structural, not transient
+- [16.3-01]: H3 CONFIRMED: class number strings (e.g., "09-02", "02-02") absent from raw transcript content -- zero grep matches across full files
+- [16.3-01]: H4 FALSIFIED: retrieved_context.document_name is NULL for all File Search API responses -- field is Vertex AI Search only
+- [16.3-01]: Root cause = discriminating identifiers absent from indexed content. Fix = extend existing content_preparer.py header with identity fields at TOP of header
+- [16.3-01]: Gemini returns wrong files for class-number queries: "Objectivist Logic Class 09-02" returns Class 09-01, Class 05-01 -- target file absent from top 5
 
 ### Roadmap Evolution
 
@@ -190,7 +196,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Plan 16.2-02 complete. Phase 16.2 gate PASSED. Audit exits 0, all 1,885 files satisfy invariant, Phase 16.3 readiness at 100%.
+Stopped at: Plan 16.3-01 complete. Root cause diagnosed: H1 (refined) + H3 = discriminating identifiers absent from indexed content. Plan 16.3-02 (intervention test) UNBLOCKED.
 
 Temporal stability log (Phase 16 -- full library):
 - T=0   (2026-02-23 18:21:59 UTC): 5/7 PASS -- 1748 indexed, 0 orphans, assertions 1-5 pass; assertions 6-7 fail (search index lag at scale)
@@ -203,5 +209,5 @@ Temporal stability log (Phase 15 -- 90-file proxy):
 - T+24h (2026-02-23 12:54 UTC): STABLE -- 90 indexed, 6/6 pass, 0 orphans (~20h50m elapsed)
 - Post-upgrade (2026-02-23 13:05 UTC): STABLE -- 90 indexed, 7/7 pass (Assertion 7: 4/5 found, 1 within tolerance)
 
-Resume file: .planning/phases/16.3-retrievability-research/ (Phase 16.3 plans)
-Resume instruction: Phase 16.2 COMPLETE. Phase 16.3 (Retrievability Research) is next: H1/H2/H3/H4 diagnosis spike, then intervention test, then production remediation. A7 zero-tolerance decision still open -- Phase 16.3 diagnosis spike should resolve it.
+Resume file: .planning/phases/16.3-retrievability-research/16.3-02-PLAN.md
+Resume instruction: Phase 16.3 Plan 01 (diagnosis spike) COMPLETE. Root cause: extend existing content_preparer.py header with identity fields (filename, class number, course, topic, primary_topics). Next: Plan 16.3-02 (intervention test on 6 failing files in ephemeral test store). All metadata available in SQLite.
