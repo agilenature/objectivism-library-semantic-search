@@ -3021,7 +3021,25 @@ def batch_extract_metadata(
             "Gemini File Search (2M token context) handles them natively."
         )
 
-    if not summary["failed_files"] and not summary.get("oversized_files"):
+    # Show needs-review files with reasons
+    if summary.get("needs_review_files"):
+        nr_files = summary["needs_review_files"]
+        console.print(f"\n[yellow]⚠ {len(nr_files)} files flagged for review:[/yellow]")
+        nr_table = Table(show_header=True, box=None, padding=(0, 1))
+        nr_table.add_column("File", style="dim", min_width=30)
+        nr_table.add_column("Reason", style="yellow")
+        for fp, reason in nr_files[:20]:
+            nr_table.add_row(Path(fp).name, reason)
+        if len(nr_files) > 20:
+            console.print(f"  [dim]... and {len(nr_files) - 20} more[/dim]")
+        console.print(nr_table)
+        console.print(
+            "[bold]Needs-review files:[/bold] stored with ai_metadata_status='needs_review'\n"
+            "Review with [cyan]objlib metadata list --status needs_review[/cyan], "
+            "then approve with [cyan]objlib metadata approve <file>[/cyan]"
+        )
+
+    if not summary["failed_files"] and not summary.get("oversized_files") and not summary.get("needs_review_files"):
         console.print("\n[bold green]✓ All files processed successfully![/bold green]")
 
     console.print(
@@ -3280,11 +3298,14 @@ def metadata_audit(
 ) -> None:
     """Check metadata completeness invariant across all DB-tracked files.
 
-    Verifies 4 invariant conditions:
+    Verifies 4 invariant conditions (exit code 1 if any fail):
       1. Zero approved files without file_primary_topics entries
       2. Zero skipped files without error_message
       3. Zero pending files with non-enrichable extensions
       4. Phase 16.3 readiness (MOTM + Other-stem at 100% coverage)
+
+    Also shows condition 5 (informational, does not affect exit code):
+      5. Count of needs_review files awaiting approval
 
     Exits 0 if all conditions pass, 1 if any condition fails.
 
@@ -3417,6 +3438,16 @@ def metadata_audit(
             c4_detail_str,
         )
 
+        # Condition 5 (informational): needs_review files awaiting approval
+        c5 = db.conn.execute(
+            "SELECT COUNT(*) as cnt FROM files WHERE ai_metadata_status = 'needs_review'"
+        ).fetchone()["cnt"]
+        cond_table.add_row(
+            "5. Needs-review (informational)",
+            "[blue]INFO[/blue]", str(c5),
+            "Run: objlib metadata list --status needs_review",
+        )
+
         console.print(cond_table)
 
         # --- Phase 16.3 Readiness Table ---
@@ -3454,6 +3485,21 @@ def metadata_audit(
         )
 
         console.print(ready_table)
+
+        # --- Needs-review detail (informational) ---
+        if c5 > 0:
+            console.print()
+            nr_rows = db.conn.execute(
+                "SELECT file_path, error_message FROM files "
+                "WHERE ai_metadata_status = 'needs_review' "
+                "ORDER BY file_path LIMIT 30"
+            ).fetchall()
+            nr_detail = Table(title=f"Needs-Review Files ({c5} total, showing up to 30)")
+            nr_detail.add_column("File", style="dim", min_width=35)
+            nr_detail.add_column("Reason", style="yellow")
+            for row in nr_rows:
+                nr_detail.add_row(Path(row["file_path"]).name, row["error_message"] or "")
+            console.print(nr_detail)
 
         # --- Summary ---
         console.print()

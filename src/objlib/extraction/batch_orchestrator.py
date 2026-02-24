@@ -262,6 +262,7 @@ class BatchExtractionOrchestrator:
             )
         succeeded_count = 0
         failed_files = []
+        needs_review_files: list[tuple[str, str]] = []
 
         for result in results:
             file_path = file_map.get(result.custom_id)
@@ -307,8 +308,13 @@ class BatchExtractionOrchestrator:
                         )
 
                         # Determine status based on confidence and soft warnings
+                        review_reason: str | None = None
                         if validation.soft_warnings or confidence < 0.85:
                             status = "needs_review"
+                            reasons = validation.soft_warnings[:]
+                            if confidence < 0.85:
+                                reasons.append(f"low confidence ({confidence*100:.0f}%)")
+                            review_reason = "; ".join(reasons)
                         else:
                             status = "extracted"
 
@@ -318,7 +324,10 @@ class BatchExtractionOrchestrator:
                             metadata_dict,
                             confidence,
                             status,
+                            review_reason=review_reason,
                         )
+                        if review_reason:
+                            needs_review_files.append((file_path, review_reason))
                         succeeded_count += 1
                         print(f"✓ Saved: {Path(file_path).name} (conf: {confidence*100:.1f}%, status={status})")
                     else:
@@ -352,6 +361,7 @@ class BatchExtractionOrchestrator:
             "succeeded": succeeded_count,
             "failed": len(failed_files),
             "failed_files": failed_files,
+            "needs_review_files": needs_review_files,
             "oversized_files": oversized_files,
             "processing_time_seconds": processing_time,
         }
@@ -413,16 +423,17 @@ class BatchExtractionOrchestrator:
         metadata: dict,
         confidence_score: float,
         status: str = "extracted",
+        review_reason: str | None = None,
     ) -> None:
         """Save extracted metadata to database (matches synchronous orchestrator pattern)."""
         import json
 
         with self._db.conn:
-            # 1. Update files table status
+            # 1. Update files table status (persist review_reason to error_message for visibility)
             self._db.conn.execute(
-                "UPDATE files SET ai_metadata_status = ?, ai_confidence_score = ? "
-                "WHERE file_path = ?",
-                (status, confidence_score, file_path),
+                "UPDATE files SET ai_metadata_status = ?, ai_confidence_score = ?, "
+                "error_message = ? WHERE file_path = ?",
+                (status, confidence_score, review_reason, file_path),
             )
 
             # 2. Mark previous versions as not current
