@@ -286,7 +286,11 @@ class BatchExtractionOrchestrator:
                     transcript_length = len(transcript_text)
 
                     # Validate extraction (with document text for semantic topic selection)
-                    validation = validate_extraction(metadata_dict, document_text=transcript_text)
+                    validation = validate_extraction(
+                        metadata_dict,
+                        document_text=transcript_text,
+                        filename=Path(file_path).name,
+                    )
 
                     if not validation.hard_failures:
                         # Passed validation (extracted or needs_review)

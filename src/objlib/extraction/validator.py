@@ -12,6 +12,7 @@ quality concerns (aspect count, summary length, key_arguments presence).
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 
 from objlib.extraction.schemas import (
@@ -20,6 +21,20 @@ from objlib.extraction.schemas import (
     Difficulty,
     MetadataStatus,
 )
+
+# Words excluded from filename coherence checks — either too generic to be
+# meaningful (stop words) or content-type identifiers that appear in filenames
+# but not in extracted summaries.
+_COHERENCE_STOP_WORDS: frozenset[str] = frozenset({
+    # English stop words
+    "a", "an", "the", "and", "or", "of", "in", "on", "at", "to", "for",
+    "is", "are", "was", "were", "be", "by", "as", "with", "from", "it",
+    "its", "this", "that", "these", "those", "why", "what", "how", "when",
+    "who", "about", "vs", "versus", "per", "off", "out", "up", "but", "not",
+    # Series/type identifiers in filenames (not subject matter)
+    "episode", "class", "lecture", "session", "transcript", "book", "motm",
+    "part", "vol", "volume", "chapter",
+})
 
 # Mapping of common near-miss category strings to valid Category values.
 # Used by repair logic to auto-fix LLM hallucinations.
@@ -178,7 +193,73 @@ def _filter_primary_topics(raw_data: dict, repaired: list[str], document_text: s
         # Validation will handle it in the hard rules section
 
 
-def validate_extraction(raw_data: dict, document_text: str | None = None) -> ValidationResult:
+def _filename_content_words(filename: str) -> list[str]:
+    """Extract meaningful content words from a filename stem.
+
+    Splits on non-alphanumeric characters, removes stop words, pure-number
+    tokens, and tokens shorter than 3 characters.  Returns lowercase tokens.
+    """
+    stem = re.sub(r"\.[^.]+$", "", filename)  # strip extension
+    tokens = re.split(r"[^a-zA-Z0-9]+", stem)
+    return [
+        t.lower()
+        for t in tokens
+        if len(t) >= 3 and not t.isdigit() and t.lower() not in _COHERENCE_STOP_WORDS
+    ]
+
+
+def _check_filename_coherence(
+    raw_data: dict,
+    filename: str,
+    soft_warnings: list[str],
+) -> None:
+    """Soft check: verify extracted content references at least one filename word.
+
+    For files with meaningful filenames (at least 2 content words after
+    stop-word filtering), checks that the extracted ``semantic_description``
+    summary, key_arguments, or ``topic_aspects`` contain at least one of
+    those words.  Zero overlap is a strong signal that Mistral described
+    the wrong content — e.g. fixating on an example mentioned in passing
+    rather than the document's actual subject.
+
+    Adds a soft warning (routes to ``needs_review``) on coherence failure.
+    Does nothing for files with fewer than 2 meaningful filename words
+    (Episode files, numeric IDs, etc.).
+
+    Args:
+        raw_data: Extraction dict after repair phase.
+        filename: Bare filename (with or without extension).
+        soft_warnings: List to append warning descriptions to.
+    """
+    content_words = _filename_content_words(filename)
+    if len(content_words) < 2:
+        return  # not enough signal to judge (Episode NNN, date-only slugs)
+
+    sem_desc = raw_data.get("semantic_description", {})
+    summary = sem_desc.get("summary", "") if isinstance(sem_desc, dict) else ""
+    key_args = sem_desc.get("key_arguments", []) if isinstance(sem_desc, dict) else []
+    aspects = raw_data.get("topic_aspects", [])
+
+    corpus_parts = [summary]
+    if isinstance(aspects, list):
+        corpus_parts.extend(str(a) for a in aspects)
+    if isinstance(key_args, list):
+        corpus_parts.extend(str(a) for a in key_args)
+    corpus = " ".join(corpus_parts).lower()
+
+    if not corpus.strip():
+        return
+
+    matched = [w for w in content_words if w in corpus]
+    if not matched:
+        shown = content_words[:6]
+        soft_warnings.append(
+            f"filename coherence: none of {shown} found in extracted "
+            f"summary/aspects -- extraction may describe wrong content"
+        )
+
+
+def validate_extraction(raw_data: dict, document_text: str | None = None, filename: str | None = None) -> ValidationResult:
     """Validate and optionally repair an extracted metadata dict.
 
     Applies repair logic first (category alias, confidence clamping,
@@ -195,10 +276,13 @@ def validate_extraction(raw_data: dict, document_text: str | None = None) -> Val
     - topic_aspects should have 3-10 items
     - semantic_description.summary should be >= 50 chars
     - semantic_description.key_arguments should have >= 1 item
+    - filename coherence: at least one filename content word must appear in
+      extracted summary/aspects (catches wrong-context extractions)
 
     Args:
         raw_data: Dict from parsed API response (will be mutated by repairs).
         document_text: Optional source document text for semantic topic selection.
+        filename: Optional bare filename used for coherence check.
 
     Returns:
         ValidationResult with status, failures, warnings, and repairs.
@@ -258,6 +342,10 @@ def validate_extraction(raw_data: dict, document_text: str | None = None) -> Val
     # --- Soft rules ---
 
     # Topic aspects: No count limit (thorough extraction is good)
+
+    # Filename coherence: extracted content must reference the filename subject
+    if filename:
+        _check_filename_coherence(raw_data, filename, soft_warnings)
 
     # Semantic description checks
     sem_desc = raw_data.get("semantic_description", {})
