@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 
 ## Current Position
 
-Phase: 16.1 (INSERTED -- Stability Instrument Correctness Audit) -- NOT STARTED
-Plan: 0 of 3 complete in Phase 16.1
-Status: T+24h check blocked (A6 + A7 failures in check_stability.py). Phase 16.1 inserted to resolve with HOSTILE posture before resuming Phase 16 temporal protocol.
-Last activity: 2026-02-24 -- T+24h check run. A6 FAIL (2/5 citations unresolvable: 1,075 files have gemini_file_id=NULL). A7 FAIL (12/20 per-file searchability; tolerance set to 0 by user). Phase 16.1 inserted.
+Phase: 16.1 (INSERTED -- Stability Instrument Correctness Audit) -- IN PROGRESS
+Plan: 1 of 3 complete in Phase 16.1
+Status: Spike evidence collected. Plan 16.1-02 (implementation) unblocked.
+Last activity: 2026-02-24 -- Completed 16.1-01-PLAN.md (SPIKE-EVIDENCE.md: 7 challenges answered, gate PASS)
 
-Progress: [#########################] 25/35 v2.0 plans complete
+Progress: [##########################] 26/35 v2.0 plans complete
 
 Note: Phase 07-07 (TUI integration smoke test from v1.0) deferred to Phase 16, plan 16-03.
   Runs against full live corpus after upload -- more meaningful than running on empty store.
@@ -31,7 +31,7 @@ Phase 13: [##########] 2/2 plans -- COMPLETE (Wave 5: State Column Retirement) -
 Phase 14: [##########] 3/3 plans -- COMPLETE (Wave 6: Batch Performance) -- VLID-06 PASSED + SC2 gap closed 2026-02-22
 Phase 15: [##########] 3/3 plans -- COMPLETE (Wave 7: Consistency + store-sync) -- gate PASSED 2026-02-23
 Phase 16:  [#####░░░░░] 2/4 plans -- IN PROGRESS (16-01 + 16-04 COMPLETE; 16-02 BLOCKED by Phase 16.1)
-Phase 16.1:[░░░░░░░░░░] 0/3 plans -- NOT STARTED (INSERTED: stability instrument audit, BLOCKING Phase 16-02 + Phase 17)
+Phase 16.1:[###░░░░░░░] 1/3 plans -- IN PROGRESS (16.1-01 spike COMPLETE; 16.1-02 fix NEXT; BLOCKING Phase 16-02 + Phase 17)
 Phase 17:  [░░░░░░░░░░] 0/4 plans -- BLOCKED by Phase 16 gate (RxPY TUI reactive pipeline)
 Phase 18:  [░░░░░░░░░░] 0/5 plans -- BLOCKED by Phase 17 gate (RxPY codebase-wide async migration)
 
@@ -43,9 +43,9 @@ Phase 18:  [░░░░░░░░░░] 0/5 plans -- BLOCKED by Phase 17 gat
 - Total execution time: 128 min
 
 **v2.0 Velocity:**
-- Total plans completed: 25
-- Average duration: 21.8 min
-- Total execution time: 524 min
+- Total plans completed: 26
+- Average duration: 20.4 min
+- Total execution time: 530 min
 
 *Updated after each plan completion*
 
@@ -138,6 +138,13 @@ Recent decisions affecting current work:
 - [16-01]: At full scale (1748 files), T=0 check_stability shows 5/7 PASS (assertions 1-5), 2/7 FAIL (assertions 6-7 due to search index lag)
 - [16-04]: top_k=20 default across search pipeline (client, service, CLI, TUI); flat chunk list per locked decision #3; rank = "[N / total]" in bold cyan
 - [16-04]: Scroll hints shown when result count > 3; ResultItem rank/total parameters optional for backward compatibility
+- [16.1-01]: Identity contract CONFIRMED: retrieved_context.title = 12-char prefix of gemini_store_doc_id = file resource ID (13/13 Phase 11 measurements)
+- [16.1-01]: SUBSTR fix validated: all 1,749 files have 1 hyphen, 12-char unique prefix, 0 NULLs in gemini_store_doc_id
+- [16.1-01]: File ID restoration REJECTED: 1 mismatch file (store_doc_id prefix != file_id suffix) would be corrupted
+- [16.1-01]: A7 matching logic CONFIRMED CORRECT: secondary match (substring in store_doc_id) handles NULL file_id and mismatch cases
+- [16.1-01]: 12 A7 failures are QUERY failures: display_title and title are NULL for all 1,749 files; topic is the only discriminating metadata
+- [16.1-01]: Episode files (333) excluded from A7: zero discriminating metadata (topic=NULL, display_title=NULL, title=NULL)
+- [16.1-01]: Corpus breakdown: Episode(333 exclude), MOTM(468 topic), Other-discriminating(508 topic!=stem), Other-stem(440 topic==stem risk)
 
 ### Roadmap Evolution
 
@@ -166,7 +173,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: T+24h check run. A6 + A7 FAIL confirmed. Phase 16.1 inserted. Next: /gsd:plan-phase 16.1 (fresh session, /clear first).
+Stopped at: Plan 16.1-01 complete (SPIKE-EVIDENCE.md produced). Next: Plan 16.1-02 (implement fixes in check_stability.py, database.py, citations.py).
 
 Temporal stability log (Phase 16 -- full library):
 - T=0   (2026-02-23 18:21:59 UTC): 5/7 PASS -- 1748 indexed, 0 orphans, assertions 1-5 pass; assertions 6-7 fail (search index lag at scale)
