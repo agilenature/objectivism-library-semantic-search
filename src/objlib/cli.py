@@ -3308,16 +3308,19 @@ def metadata_audit(
 ) -> None:
     """Check metadata completeness invariant across all DB-tracked files.
 
-    Verifies 4 invariant conditions (exit code 1 if any fail):
+    Verifies 5 enforcing conditions (exit code 1 if any fail):
       1. Zero approved files without file_primary_topics entries
       2. Zero skipped files without error_message
       3. Zero pending files with non-enrichable extensions
       4. Phase 16.3 readiness (MOTM + Other-stem at 100% coverage)
+      6. Zero indexed non-skipped files without file_primary_topics
 
-    Also shows condition 5 (informational, does not affect exit code):
+    Also shows informational conditions (do not affect exit code):
       5. Count of needs_review files awaiting approval
 
-    Exits 0 if all conditions pass, 1 if any condition fails.
+    Displays per-series breakdown of topic coverage for all indexed files.
+
+    Exits 0 if all enforcing conditions pass, 1 if any condition fails.
 
     Examples:
         objlib metadata audit
@@ -3458,6 +3461,23 @@ def metadata_audit(
             "Run: objlib metadata list --status needs_review",
         )
 
+        # Condition 6: Indexed non-skipped without file_primary_topics
+        c6 = db.conn.execute(
+            "SELECT COUNT(*) as cnt FROM files f "
+            "WHERE f.gemini_state = 'indexed' "
+            "AND f.ai_metadata_status != 'skipped' "
+            "AND NOT EXISTS (SELECT 1 FROM file_primary_topics pt "
+            "WHERE pt.file_path = f.file_path)"
+        ).fetchone()["cnt"]
+        c6_status = "[green]PASS[/green]" if c6 == 0 else "[red]FAIL[/red]"
+        if c6 > 0:
+            violations += 1
+        cond_table.add_row(
+            "6. Indexed non-skipped without topics",
+            c6_status, str(c6),
+            "Structural invariant: all non-book indexed files must have topics",
+        )
+
         console.print(cond_table)
 
         # --- Phase 16.3 Readiness Table ---
@@ -3495,6 +3515,69 @@ def metadata_audit(
         )
 
         console.print(ready_table)
+
+        # --- Per-Series Breakdown ---
+        console.print()
+        series_rows = db.conn.execute(
+            """
+            SELECT
+              CASE
+                WHEN file_path LIKE '%/ITOE Advanced Topics/%' AND file_path LIKE '%Office Hour%' THEN 'ITOE AT OH'
+                WHEN file_path LIKE '%/ITOE Advanced Topics/%' THEN 'ITOE AT'
+                WHEN file_path LIKE '%/ITOE/%' AND file_path LIKE '%Office Hour%' THEN 'ITOE OH'
+                WHEN file_path LIKE '%/ITOE/%' THEN 'ITOE'
+                WHEN file_path LIKE '%/Objectivist Logic/%' THEN 'OL'
+                WHEN file_path LIKE '%/MOTM/%' THEN 'MOTM'
+                WHEN file_path LIKE '%Episode%' THEN 'Episodes'
+                WHEN file_path LIKE '%/Books/%' THEN 'Books'
+                ELSE 'Other'
+              END as series,
+              COUNT(*) as total,
+              SUM(CASE WHEN EXISTS (
+                SELECT 1 FROM file_primary_topics pt WHERE pt.file_path = f.file_path
+              ) THEN 1 ELSE 0 END) as with_topics,
+              SUM(CASE WHEN EXISTS (
+                SELECT 1 FROM file_metadata_ai fma
+                WHERE fma.file_path = f.file_path AND fma.is_current = 1
+              ) THEN 1 ELSE 0 END) as with_aspects,
+              SUM(CASE WHEN EXISTS (
+                SELECT 1 FROM file_metadata_ai fma
+                WHERE fma.file_path = f.file_path AND fma.is_current = 1
+                  AND json_extract(fma.metadata_json, '$.summary') IS NOT NULL
+                  AND json_extract(fma.metadata_json, '$.summary') != ''
+              ) THEN 1 ELSE 0 END) as with_summary
+            FROM files f
+            WHERE f.gemini_state = 'indexed'
+            GROUP BY series
+            ORDER BY series
+            """
+        ).fetchall()
+
+        series_table = Table(title="Per-Series Breakdown (Indexed Files)")
+        series_table.add_column("Series", style="bold", min_width=12)
+        series_table.add_column("Total", justify="right")
+        series_table.add_column("Topics", justify="right")
+        series_table.add_column("Aspects", justify="right")
+        series_table.add_column("Summary", justify="right")
+        series_table.add_column("Topics %", justify="right")
+
+        for srow in series_rows:
+            s_total = srow["total"]
+            s_topics = srow["with_topics"]
+            s_aspects = srow["with_aspects"]
+            s_summary = srow["with_summary"]
+            s_pct = f"{s_topics / s_total * 100:.0f}%" if s_total > 0 else "N/A"
+            s_style = "[green]" if s_topics == s_total else "[yellow]"
+            series_table.add_row(
+                srow["series"],
+                str(s_total),
+                f"{s_style}{s_topics}[/]",
+                str(s_aspects),
+                str(s_summary),
+                f"{s_style}{s_pct}[/]",
+            )
+
+        console.print(series_table)
 
         # --- Needs-review detail (informational) ---
         if c5 > 0:
