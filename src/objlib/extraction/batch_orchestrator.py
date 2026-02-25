@@ -22,6 +22,7 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from objlib.constants import BOOK_SIZE_BYTES
 from objlib.extraction.batch_client import BatchRequest, MistralBatchClient
 from objlib.extraction.confidence import calculate_confidence
 from objlib.extraction.parser import parse_magistral_response
@@ -141,6 +142,18 @@ class BatchExtractionOrchestrator:
             print(f"DEBUG: Processing file {idx+1}/{len(pending_files)}", flush=True)
             file_path = file_record["file_path"]
             custom_id = str(idx)  # Use simple numeric ID
+
+            # Book routing: files >= BOOK_SIZE_BYTES are books, skip extraction entirely.
+            # This check runs BEFORE read_text to avoid loading large files into memory.
+            file_size = Path(file_path).stat().st_size
+            if file_size >= BOOK_SIZE_BYTES:
+                logger.info(
+                    "Skipping book file %s (%d bytes >= %d BOOK_SIZE_BYTES)",
+                    Path(file_path).name, file_size, BOOK_SIZE_BYTES,
+                )
+                oversized_files.append(file_path)
+                self._mark_book(file_path, file_size)
+                continue
 
             # Read file content
             try:
@@ -509,5 +522,21 @@ class BatchExtractionOrchestrator:
             WHERE file_path = ?
             """,
             (f"Oversized for extraction (~{token_count} tokens, max {MAX_DOCUMENT_TOKENS}). Will use Gemini File Search without enrichment.", file_path),
+        )
+        self._db.conn.commit()
+
+    def _mark_book(self, file_path: str, file_size: int) -> None:
+        """Mark file as a book (>= BOOK_SIZE_BYTES). Skips extraction entirely."""
+        self._db.conn.execute(
+            """
+            UPDATE files
+            SET ai_metadata_status = 'skipped',
+                error_message = ?,
+                updated_at = strftime('%Y-%m-%dT%H:%M:%f', 'now')
+            WHERE file_path = ?
+            """,
+            (f"Book file ({file_size:,} bytes >= {BOOK_SIZE_BYTES:,} BOOK_SIZE_BYTES). "
+             "Skipped extraction; uploaded to Gemini File Search without enrichment.",
+             file_path),
         )
         self._db.conn.commit()
