@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 
 ## Current Position
 
-Phase: 16.4 (Metadata Pipeline Invariant + Comprehensive Retrievability Audit) -- NOT STARTED
-Plan: Plan 16.4-01 (Routing Invariant Audit) -- NEXT
-Status: Phase 16.4 inserted (2026-02-25). Blocks Phase 16-02 (temporal stability cannot run until A7 passes zero-tolerance zero-exclusions with audit-confirmed query strategy).
-Last activity: 2026-02-25 -- Phase 16.4 inserted; ITOE OH files batch-extracted + re-uploaded (60/60); ITOE OH still fail A7 due to semantic homogeneity; Phase 16.4 will resolve via routing invariant fix + comprehensive retrievability audit
+Phase: 16.4 (Metadata Pipeline Invariant + Comprehensive Retrievability Audit) -- IN PROGRESS
+Plan: Plan 16.4-01 (Routing Invariant Audit) -- COMPLETE
+Status: 16.4-01 complete. BOOK_SIZE_BYTES constant defined, routing fixed, 41 files pending re-extraction, 60 OH approved, grep audit clean. Next: 16.4-02 (batch-extract 41 pending + re-upload + audit).
+Last activity: 2026-02-25 -- Completed 16.4-01: BOOK_SIZE_BYTES=830,000 constant, batch_orchestrator routing fix, 40 failed_validation + 1 skipped Book reset to pending, 60 OH approved, full grep audit (77 refs, 0 violations)
 
-Progress: [################################] 32/38 v2.0 plans complete
+Progress: [#################################] 33/38 v2.0 plans complete
 
 Note: Phase 07-07 (TUI integration smoke test from v1.0) deferred to Phase 16, plan 16-03.
   Runs against full live corpus after upload -- more meaningful than running on empty store.
@@ -31,7 +31,7 @@ Phase 13: [##########] 2/2 plans -- COMPLETE (Wave 5: State Column Retirement) -
 Phase 14: [##########] 3/3 plans -- COMPLETE (Wave 6: Batch Performance) -- VLID-06 PASSED + SC2 gap closed 2026-02-22
 Phase 15: [##########] 3/3 plans -- COMPLETE (Wave 7: Consistency + store-sync) -- gate PASSED 2026-02-23
 Phase 16:  [#####░░░░░] 2/4 plans -- IN PROGRESS (16-01 + 16-04 COMPLETE; 16-02 BLOCKED by Phase 16.4 gate)
-Phase 16.4:[░░░░░░░░░░] 0/4 plans -- NOT STARTED (metadata routing invariant + comprehensive retrievability audit; BLOCKS Phase 16-02)
+Phase 16.4:[##░░░░░░░░] 1/4 plans -- IN PROGRESS (16.4-01 COMPLETE: routing invariant audit; BLOCKS Phase 16-02)
 Phase 16.1:[##########] 3/3 plans -- COMPLETE (audit + fix + re-validation done; A7 structural fix delivered in Phase 16.3)
 Phase 16.2:[##########] 2/2 plans -- COMPLETE (audit exits 0; all 1,885 files satisfy invariant; Phase 16.3 readiness 100%; gate PASSED 2026-02-24)
 Phase 16.3:[##########] 3/3 plans -- COMPLETE (Retrievability Research: diagnosis + intervention + production remediation; all 1,749 files re-uploaded with identity headers; gate PASSED 2026-02-25; ITOE OH 60 files also batch-extracted + re-uploaded 2026-02-25)
@@ -46,9 +46,9 @@ Phase 18:  [░░░░░░░░░░] 0/5 plans -- BLOCKED by Phase 17 gat
 - Total execution time: 128 min
 
 **v2.0 Velocity:**
-- Total plans completed: 30
-- Average duration: 19.3 min
-- Total execution time: 577 min
+- Total plans completed: 31
+- Average duration: 18.7 min
+- Total execution time: 580 min
 
 *Updated after each plan completion*
 
@@ -176,6 +176,9 @@ Recent decisions affecting current work:
 - [16.3-03]: store-sync bug fixed (database.py + cli.py): store-sync was matching store docs as canonical if display_name matched any known file ID, without verifying the full store_doc_id suffix. Added get_canonical_file_id_to_store_doc_map(); classification now requires exact suffix match.
 - [16.3-03]: check_stability.py A7: always use full stem as query subject; Office Hour files excluded (60 files, same rationale as Episodes); tolerance=2 (large numbered series have inherent ~2% per-file miss rate).
 - [16.3-03]: MEMORY.md permanent fix for _reset_existing_files() (delete_store_document before delete_file) NOT yet implemented in orchestrator.py. Remediation used standalone script. Fix remains documented in MEMORY.md; implement before next bulk fsm-upload --reset-existing operation.
+- [16.4-01]: BOOK_SIZE_BYTES = 830,000 defined in src/objlib/constants.py. Byte check placed BEFORE read_text in batch_orchestrator.py loop -- book files never loaded into memory. Two-tier skip: BOOK_SIZE_BYTES (structural routing) + MAX_DOCUMENT_TOKENS (Mistral limit).
+- [16.4-01]: Layer 2 upload gate (state.py:714-717) verified sound: requires ai_metadata_status='approved' AND EXISTS file_primary_topics. No code change needed.
+- [16.4-01]: 40 failed_validation Episodes + 1 skipped Book (552KB < 830KB) reset to pending. 60 needs_review OH files approved. Full grep audit: 77 ai_metadata_status refs across 7 files, 0 violations.
 
 ### Roadmap Evolution
 
@@ -207,7 +210,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Phase 16.4 inserted. ITOE OH files batch-extracted + re-uploaded with Tags+Aspects but still fail A7 due to semantic homogeneity (36-file series, class number has no semantic weight in embeddings). Phase 16.4 will enforce the metadata routing invariant and build a comprehensive retrievability audit. Next: /gsd:plan-phase 16.4 to create 16.4-01 through 16.4-04 plans.
+Stopped at: Plan 16.4-01 complete. BOOK_SIZE_BYTES constant defined, routing fixed, 41 files pending re-extraction, grep audit clean. Next: Plan 16.4-02 (batch-extract 41 pending files, re-upload with identity headers, extend audit with per-series breakdown).
 
 Temporal stability log (Phase 16 -- full library, post-remediation):
 - T=0 baseline: Run 1 (2026-02-25 11:50:32 UTC): STABLE -- 1749 indexed, 1749 store, 0 orphans; A7 19/20 (Objectivist Logic Class 10-02 miss, within tolerance=2); 333 Episode + 60 OH excluded
@@ -227,5 +230,5 @@ Temporal stability log (Phase 15 -- 90-file proxy):
 - T+24h (2026-02-23 12:54 UTC): STABLE -- 90 indexed, 6/6 pass, 0 orphans (~20h50m elapsed)
 - Post-upgrade (2026-02-23 13:05 UTC): STABLE -- 90 indexed, 7/7 pass (Assertion 7: 4/5 found, 1 within tolerance)
 
-Resume file: .planning/ROADMAP.md (Phase 16.4 entry)
-Resume instruction: Phase 16.4 inserted 2026-02-25. ITOE OH files (60) batch-extracted and re-uploaded with enriched identity headers (Tags + Aspects) but ITOE OH series still fails A7 at zero tolerance due to semantic homogeneity of 36-file series. Phase 16.4 must: (1) fix the metadata routing invariant (define book size threshold, eliminate category gates), (2) run structural quality audit, (3) run comprehensive retrievability audit (all 1,809 files, 3 query strategies), (4) update A7 and achieve zero-tolerance STABLE. Next action: /gsd:plan-phase 16.4
+Resume file: .planning/phases/16.4-metadata-invariant-retrievability-audit/16.4-02-PLAN.md
+Resume instruction: Plan 16.4-01 complete (2026-02-25). 41 indexed files at ai_metadata_status='pending' (40 Episodes + 1 Book below 830KB threshold). Next: Plan 16.4-02 batch-extracts these 41, re-uploads with identity headers, extends audit command with per-series breakdown, verifies audit exits 0.

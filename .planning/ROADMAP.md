@@ -344,7 +344,7 @@ Plans:
 **Plans**: 4 plans in 4 waves
 
 Plans:
-- [ ] 16.4-01-PLAN.md -- Routing invariant audit + fix: diagnostic DB queries, define BOOK_SIZE_BYTES=830,000 constant, reset 40 failed_validation Episodes + 1 skipped Book to pending, approve 60 OH files, grep audit of all ai_metadata_status references
+- [x] 16.4-01-PLAN.md -- Routing invariant audit + fix: diagnostic DB queries, define BOOK_SIZE_BYTES=830,000 constant, reset 40 failed_validation Episodes + 1 skipped Book to pending, approve 60 OH files, grep audit of all ai_metadata_status references
 - [ ] 16.4-02-PLAN.md -- Structural metadata quality audit: batch-extract 41 pending files, re-upload with updated identity headers, extend audit command with per-series breakdown + condition 6, audit exits 0
 - [ ] 16.4-03-PLAN.md -- Comprehensive retrievability audit: script tests all 1,749 indexed files with 3 query strategies (stem-only, stem+aspects, topics+course); produces per-series hit rate tables; identifies minimum viable query strategy or documents residual failures with affirmative evidence
 - [ ] 16.4-04-PLAN.md -- A7 update + zero-tolerance validation: update check_stability.py A7 to use audit-confirmed query strategy; max_misses=0, no exclusion filters; two consecutive fresh-session STABLE runs separated by 1+ hour
@@ -445,11 +445,11 @@ Each wave's gate is BLOCKING for the next. If a gate fails, the failing phase mu
 | 16.1. Stability Instrument Correctness Audit | v2.0 | 2/3 | In progress | - |
 | 16.2. Metadata Completeness Invariant Enforcement | v2.0 | 2/2 | Complete | 2026-02-24 |
 | 16.3. Gemini File Search Retrievability Research | v2.0 | 3/3 | Complete | 2026-02-25 |
-| 16.4. Metadata Invariant + Retrievability Audit | v2.0 | 0/4 | Not started | - |
+| 16.4. Metadata Invariant + Retrievability Audit | v2.0 | 1/4 | In progress | - |
 | 17. RxPY TUI Reactive Pipeline | v2.0 | 0/4 | Not started | - |
 | 18. RxPY Codebase-Wide Async Migration | v2.0 | 0/5 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-19*
 *Pre-mortem: governance/pre-mortem-gemini-fsm.md*
-*Last updated: 2026-02-25 -- Phase 16.4 plans created: routing invariant audit, structural quality audit, comprehensive retrievability audit, A7 zero-tolerance validation*
+*Last updated: 2026-02-25 -- Plan 16.4-01 complete: BOOK_SIZE_BYTES constant, routing fix, 41 files pending re-extraction, grep audit clean*
