@@ -327,27 +327,27 @@ Plans:
 
 ### Phase 16.4: Metadata Pipeline Invariant + Comprehensive Retrievability Audit (INSERTED)
 
-**Goal:** Every non-book file satisfies the metadata completeness invariant AND is independently retrievable under a stable query strategy — zero exclusions, zero tolerance.
+**Goal:** Every non-book file satisfies the metadata completeness invariant AND is independently retrievable under a stable query strategy -- zero exclusions, zero tolerance.
 
-**The violated invariant:** Every .txt and .md file in this library is either (a) a book — a large file exceeding the Mistrat context window, routed to scanner-only metadata with `ai_metadata_status='skipped'` — or (b) a non-book — a transcript small enough to AI-extract, which MUST complete batch-extract → primary_topics (8) → topic_aspects → review before upload. No file category, filename pattern, or scanner-approval status may create a third routing path. The current system violates this invariant: Office Hours reached scanner-only approval; Episodes are excluded from A7; tolerance was raised rather than the routing fixed. Each of these is an instance of the same causal failure: the pipeline has no structural rule that collapses all small non-book files to a single path.
+**The violated invariant:** Every .txt and .md file in this library is either (a) a book -- a large file exceeding the Mistral context window, routed to scanner-only metadata with `ai_metadata_status='skipped'` -- or (b) a non-book -- a transcript small enough to AI-extract, which MUST complete batch-extract -> primary_topics (8) -> topic_aspects -> review before upload. No file category, filename pattern, or scanner-approval status may create a third routing path. The current system violates this invariant: Office Hours reached scanner-only approval; Episodes are excluded from A7; tolerance was raised rather than the routing fixed. Each of these is an instance of the same causal failure: the pipeline has no structural rule that collapses all small non-book files to a single path.
 
 **Depends on:** Phase 16.3 (all 1,749 files re-uploaded with identity headers; ITOE OH batch-extracted and re-uploaded with Tags+Aspects, 2026-02-25)
-**Distrust:** HOSTILE for routing audit and retrievability audit (affirmative evidence required — "no category gates found" does not pass unless the full pipeline is enumerated)
+**Distrust:** HOSTILE for routing audit and retrievability audit (affirmative evidence required -- "no category gates found" does not pass unless the full pipeline is enumerated)
 **Gate:** BLOCKING for Phase 16-02 (temporal stability protocol cannot run until A7 passes zero-tolerance zero-exclusions with the audit-confirmed query strategy)
 **Success Criteria** (what must be TRUE):
-  1. A named book-size threshold constant exists in the codebase; every routing decision that treats a file as a "book" (skipping AI extraction) uses this constant — no ad-hoc category labels, filename patterns, or hardcoded values in routing code; confirmed by full grep audit of all files touching `ai_metadata_status`
+  1. A named book-size threshold constant exists in the codebase; every routing decision that treats a file as a "book" (skipping AI extraction) uses this constant -- no ad-hoc category labels, filename patterns, or hardcoded values in routing code; confirmed by full grep audit of all files touching `ai_metadata_status`
   2. No path allows a non-book file (below the size threshold) to reach `ai_metadata_status='approved'` without passing through batch-extract: confirmed by code audit of `_get_pending_files()` and all callers; any scanner-approved non-book files identified and re-routed to 'pending' for extraction
-  3. `objlib metadata audit` exits 0 for all 1,809 indexed files: every non-book file has exactly 8 primary_topics from the controlled vocabulary, non-empty non-boilerplate topic_aspects, and a summary in `file_metadata_ai`; per-series breakdown (ITOE, ITOE AT, ITOE OH, ITOE AT OH, OL, Episodes, MOTM, Other) committed to repository as audit artifact
-  4. A comprehensive retrievability audit script tests all 1,809 indexed files with three query strategies: (1) current stem-only, (2) stem + aspects, (3) topics + course; per-series hit rate tables are produced; the minimum query strategy achieving 100% hit rate is identified, or the residual failure cases are documented with affirmative evidence of what would be needed to fix them
+  3. `objlib metadata audit` exits 0 for all 1,749 indexed files: every non-book file has exactly 8 primary_topics from the controlled vocabulary, non-empty non-boilerplate topic_aspects, and a summary in `file_metadata_ai`; per-series breakdown (ITOE, ITOE AT, ITOE OH, ITOE AT OH, OL, Episodes, MOTM, Other) committed to repository as audit artifact
+  4. A comprehensive retrievability audit script tests all 1,749 indexed files with three query strategies: (1) current stem-only, (2) stem + aspects, (3) topics + course; per-series hit rate tables are produced; the minimum query strategy achieving 100% hit rate is identified, or the residual failure cases are documented with affirmative evidence of what would be needed to fix them
   5. `check_stability.py` A7 uses the minimum viable query strategy confirmed by criterion 4, with `max_misses=0` and zero exclusion filters; exits 0 in two consecutive fresh-session runs separated by at least 1 hour
 
-**Plans**: 4 plans
+**Plans**: 4 plans in 4 waves
 
 Plans:
-- [ ] 16.4-01-PLAN.md -- Routing invariant audit: define book size threshold constant, enumerate all routing divergence points via grep audit, fix `_get_pending_files()` and any other scanner-approval paths, re-route any non-book files with scanner-only metadata to 'pending'; extract any that need it
-- [ ] 16.4-02-PLAN.md -- Structural metadata quality audit: extend `objlib metadata audit` with per-series breakdown (topics count, aspects presence, summary presence, boilerplate detection); batch-extract any non-book files that still lack topics/aspects after routing fix; audit exits 0
-- [ ] 16.4-03-PLAN.md -- Comprehensive retrievability audit: script tests all 1,809 indexed files with 3 query strategies (stem-only, stem+aspects, topics+course); produces per-series hit rate tables; identifies minimum viable query strategy or documents residual failures with affirmative evidence
-- [ ] 16.4-04-PLAN.md -- A7 update + zero-tolerance validation: update `check_stability.py` A7 to use audit-confirmed query strategy; `max_misses=0`, no exclusion filters; two consecutive fresh-session STABLE runs; update STATE.md temporal stability log
+- [ ] 16.4-01-PLAN.md -- Routing invariant audit + fix: diagnostic DB queries, define BOOK_SIZE_BYTES=830,000 constant, reset 40 failed_validation Episodes + 1 skipped Book to pending, approve 60 OH files, grep audit of all ai_metadata_status references
+- [ ] 16.4-02-PLAN.md -- Structural metadata quality audit: batch-extract 41 pending files, re-upload with updated identity headers, extend audit command with per-series breakdown + condition 6, audit exits 0
+- [ ] 16.4-03-PLAN.md -- Comprehensive retrievability audit: script tests all 1,749 indexed files with 3 query strategies (stem-only, stem+aspects, topics+course); produces per-series hit rate tables; identifies minimum viable query strategy or documents residual failures with affirmative evidence
+- [ ] 16.4-04-PLAN.md -- A7 update + zero-tolerance validation: update check_stability.py A7 to use audit-confirmed query strategy; max_misses=0, no exclusion filters; two consecutive fresh-session STABLE runs separated by 1+ hour
 
 ---
 
@@ -452,4 +452,4 @@ Each wave's gate is BLOCKING for the next. If a gate fails, the failing phase mu
 ---
 *Roadmap created: 2026-02-19*
 *Pre-mortem: governance/pre-mortem-gemini-fsm.md*
-*Last updated: 2026-02-25 -- Phase 16.4 inserted: metadata pipeline invariant enforcement + comprehensive retrievability audit; blocks Phase 16-02*
+*Last updated: 2026-02-25 -- Phase 16.4 plans created: routing invariant audit, structural quality audit, comprehensive retrievability audit, A7 zero-tolerance validation*
