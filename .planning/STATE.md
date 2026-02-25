@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 ## Current Position
 
 Phase: 16.4 (Metadata Pipeline Invariant + Comprehensive Retrievability Audit) -- IN PROGRESS
-Plan: Plan 16.4-02 (Structural Quality Audit) -- COMPLETE
-Status: 16.4-02 complete. 40 Episodes batch-extracted + re-uploaded with identity headers. 1 Book skipped (oversized). Audit exits 0 with per-series breakdown. All 1,748 non-skipped indexed files have file_primary_topics. Next: 16.4-03 (comprehensive retrievability audit).
-Last activity: 2026-02-25 -- Completed 16.4-02: batch-extract 40 Episodes, approve all, re-upload with Tags, extend audit with per-series breakdown + condition 6, store-sync 0 orphans
+Plan: Plan 16.4-03 (Comprehensive Retrievability Audit) -- COMPLETE
+Status: 16.4-03 complete. All 1,749 files tested x 3 strategies (5,247 API calls). S1 96.7%, S2 97.5%, S1->S2 fallback 99.3%. 12 structural failures documented. A7 recommendation: max_misses=2, no exclusions. Next: 16.4-04 (A7 update + zero-tolerance validation).
+Last activity: 2026-02-25 -- Completed 16.4-03: exhaustive retrievability audit, per-series hit rate tables, minimum viable strategy identified
 
-Progress: [##################################] 34/38 v2.0 plans complete
+Progress: [###################################] 35/38 v2.0 plans complete
 
 Note: Phase 07-07 (TUI integration smoke test from v1.0) deferred to Phase 16, plan 16-03.
   Runs against full live corpus after upload -- more meaningful than running on empty store.
@@ -31,7 +31,7 @@ Phase 13: [##########] 2/2 plans -- COMPLETE (Wave 5: State Column Retirement) -
 Phase 14: [##########] 3/3 plans -- COMPLETE (Wave 6: Batch Performance) -- VLID-06 PASSED + SC2 gap closed 2026-02-22
 Phase 15: [##########] 3/3 plans -- COMPLETE (Wave 7: Consistency + store-sync) -- gate PASSED 2026-02-23
 Phase 16:  [#####░░░░░] 2/4 plans -- IN PROGRESS (16-01 + 16-04 COMPLETE; 16-02 BLOCKED by Phase 16.4 gate)
-Phase 16.4:[#####░░░░░] 2/4 plans -- IN PROGRESS (16.4-01 + 16.4-02 COMPLETE: routing + structural quality audit; BLOCKS Phase 16-02)
+Phase 16.4:[########░░] 3/4 plans -- IN PROGRESS (16.4-01 + 16.4-02 + 16.4-03 COMPLETE: routing + structural quality audit + retrievability audit; BLOCKS Phase 16-02)
 Phase 16.1:[##########] 3/3 plans -- COMPLETE (audit + fix + re-validation done; A7 structural fix delivered in Phase 16.3)
 Phase 16.2:[##########] 2/2 plans -- COMPLETE (audit exits 0; all 1,885 files satisfy invariant; Phase 16.3 readiness 100%; gate PASSED 2026-02-24)
 Phase 16.3:[##########] 3/3 plans -- COMPLETE (Retrievability Research: diagnosis + intervention + production remediation; all 1,749 files re-uploaded with identity headers; gate PASSED 2026-02-25; ITOE OH 60 files also batch-extracted + re-uploaded 2026-02-25)
@@ -184,6 +184,12 @@ Recent decisions affecting current work:
 - [16.4-02]: Condition 6 added to metadata audit: indexed non-skipped files without file_primary_topics. All 6 conditions PASS, exit code 0.
 - [16.4-02]: Per-series breakdown: 9 series (Books, Episodes, ITOE, ITOE AT, ITOE AT OH, ITOE OH, MOTM, OL, Other). All non-Book series at 100% topics coverage. Books 96% (1 skipped).
 - [16.4-02]: ITOE Advanced Topics (not ITOE Addenda) is the correct directory name for ITOE AT/ITOE AT OH series.
+- [16.4-03]: Exhaustive audit: S1 (stem-only) 96.7%, S2 (stem+aspects) 97.5%, S3 (topics+course) 22.8%. S3 not viable (no stem = no discrimination).
+- [16.4-03]: S1 OR S2 fallback chain: 99.3% (1737/1749). Adding S3 provides zero incremental recovery. 12 files fail all 3 strategies.
+- [16.4-03]: 12 structural failures caused by semantic homogeneity within series (ITOE/ITOE AT/ITOE AT OH/ITOE OH/OL class files + 1 MOTM + 2 Books). Not metadata gaps -- ranking limitation.
+- [16.4-03]: max_misses=0 is NOT achievable. 0.69% structural failure rate is fundamental to semantic search. Recommended max_misses=2 for A7 at sample_size=20.
+- [16.4-03]: Office Hour files are the primary S1 weakness: ITOE AT OH 28.6%, ITOE OH 43.8%. S2 recovers most (ITOE AT OH -> 85.7%, ITOE OH -> 93.8%).
+- [16.4-03]: Episodes achieve 100% on S1 (333/333). Identity header Title field with unique numeric IDs provides perfect discrimination.
 
 ### Roadmap Evolution
 
@@ -215,7 +221,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Plan 16.4-01 complete. BOOK_SIZE_BYTES constant defined, routing fixed, 41 files pending re-extraction, grep audit clean. Next: Plan 16.4-02 (batch-extract 41 pending files, re-upload with identity headers, extend audit with per-series breakdown).
+Stopped at: Plan 16.4-03 complete. Exhaustive retrievability audit of 1,749 files x 3 strategies. S1 96.7%, S2 97.5%, S1->S2 99.3%. 12 structural failures documented. Next: Plan 16.4-04 (A7 update + zero-tolerance validation with max_misses=2, no exclusions).
+
+Resume file: .planning/phases/16.4-metadata-invariant-retrievability-audit/16.4-04-PLAN.md
 
 Temporal stability log (Phase 16 -- full library, post-remediation):
 - T=0 baseline: Run 1 (2026-02-25 11:50:32 UTC): STABLE -- 1749 indexed, 1749 store, 0 orphans; A7 19/20 (Objectivist Logic Class 10-02 miss, within tolerance=2); 333 Episode + 60 OH excluded
@@ -235,5 +243,4 @@ Temporal stability log (Phase 15 -- 90-file proxy):
 - T+24h (2026-02-23 12:54 UTC): STABLE -- 90 indexed, 6/6 pass, 0 orphans (~20h50m elapsed)
 - Post-upgrade (2026-02-23 13:05 UTC): STABLE -- 90 indexed, 7/7 pass (Assertion 7: 4/5 found, 1 within tolerance)
 
-Resume file: .planning/phases/16.4-metadata-invariant-retrievability-audit/16.4-03-PLAN.md
-Resume instruction: Plan 16.4-02 complete (2026-02-25). All 1,748 non-skipped indexed files have file_primary_topics. 40 Episodes re-uploaded with identity headers. Audit exits 0 with per-series breakdown. Next: Plan 16.4-03 comprehensive retrievability audit across all 1,749 files.
+Resume instruction: Plan 16.4-03 complete (2026-02-25). Exhaustive retrievability audit of 1,749 files x 3 strategies. 99.3% achievable with S1->S2 fallback. 12 structural failures. Next: Plan 16.4-04 (A7 update with empirical data).
