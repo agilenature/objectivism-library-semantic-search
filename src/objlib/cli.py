@@ -467,10 +467,12 @@ def store_sync(
         console.print(f"[red]{e}[/red]")
         raise typer.Exit(code=1)
 
-    # Step 1: Get canonical file ID suffixes AND store doc suffixes from DB
+    # Step 1: Get canonical file ID suffixes, store doc suffixes, and the
+    # file_id -> store_doc map (used to detect duplicate store documents)
     with Database(db_path) as db:
         canonical_suffixes = db.get_canonical_gemini_file_id_suffixes()
         canonical_store_doc_suffixes = db.get_canonical_store_doc_suffixes()
+        file_id_to_store_doc = db.get_canonical_file_id_to_store_doc_map()
 
     console.print(f"[dim]Canonical uploaded file IDs in DB:[/dim] {len(canonical_suffixes)}")
     console.print(f"[dim]Canonical store doc IDs in DB:[/dim] {len(canonical_store_doc_suffixes)}")
@@ -506,12 +508,20 @@ def store_sync(
             # Extract store doc suffix from resource name for secondary matching
             doc_suffix = doc_name.rsplit("/", 1)[-1] if doc_name else ""
 
-            if display_name in canonical_suffixes:
+            if doc_suffix in canonical_store_doc_suffixes:
+                # Primary: exact match on DB-recorded gemini_store_doc_id
                 canonical_count += 1
-            elif doc_suffix in canonical_store_doc_suffixes:
-                canonical_count += 1
+            elif display_name in canonical_suffixes:
+                # Secondary: display_name matches a known file ID.
+                # Verify no other canonical store doc is recorded for this
+                # file — if there is, this is a duplicate store document.
+                expected_doc = file_id_to_store_doc.get(display_name)
+                if expected_doc is None or expected_doc == doc_suffix:
+                    canonical_count += 1
+                else:
+                    orphaned.append((doc, doc_suffix, display_name))
             else:
-                orphaned.append((doc, display_name, display_name))
+                orphaned.append((doc, doc_suffix, display_name))
 
         console.print(f"[green]Canonical documents:[/green] {canonical_count}")
         console.print(f"[yellow]Orphaned documents:[/yellow] {len(orphaned)}")

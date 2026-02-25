@@ -20,6 +20,7 @@ from google.genai import errors as genai_errors
 from google.genai import types as genai_types
 from tenacity import (
     AsyncRetrying,
+    TryAgain,
     retry_if_result,
     stop_after_delay,
     wait_exponential,
@@ -274,14 +275,12 @@ class GeminiFileSearchClient:
         async for attempt in AsyncRetrying(
             wait=wait_exponential(multiplier=1, min=5, max=60),
             stop=stop_after_delay(timeout),
-            retry=retry_if_result(lambda op: getattr(op, "done", None) is not True),
             reraise=True,
         ):
             with attempt:
                 operation = await self._client.aio.operations.get(operation)
                 if getattr(operation, "done", None) is not True:
-                    return operation  # tenacity retries
-                return operation
+                    raise TryAgain
 
         return operation
 

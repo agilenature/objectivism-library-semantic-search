@@ -1081,6 +1081,33 @@ class Database:
                 suffixes.add(doc_id)
         return suffixes
 
+    def get_canonical_file_id_to_store_doc_map(self) -> dict[str, str]:
+        """Return mapping of file_id_suffix -> store_doc_id for indexed files.
+
+        Used by ``store-sync`` to detect duplicate store documents: a store doc
+        whose display_name matches a known file ID but whose doc suffix does NOT
+        match the DB-recorded gemini_store_doc_id is a duplicate/orphan.
+
+        Returns:
+            Dict mapping bare file ID suffix (e.g. ``"abc123"``) to the
+            canonical store doc ID (e.g. ``"abc123-xyz456"``). Only includes
+            files that have both gemini_file_id and gemini_store_doc_id set.
+        """
+        rows = self.conn.execute(
+            "SELECT gemini_file_id, gemini_store_doc_id FROM files "
+            "WHERE gemini_state = 'indexed' "
+            "AND gemini_file_id IS NOT NULL "
+            "AND gemini_store_doc_id IS NOT NULL "
+            "AND gemini_store_doc_id != ''"
+        ).fetchall()
+        result: dict[str, str] = {}
+        for row in rows:
+            file_id = (row["gemini_file_id"] or "").split("/")[-1]
+            store_doc = row["gemini_store_doc_id"] or ""
+            if file_id and store_doc:
+                result[file_id] = store_doc
+        return result
+
     def get_pending_files(self, limit: int = 200) -> list[sqlite3.Row]:
         """Return files with gemini_state='untracked' for upload processing.
 

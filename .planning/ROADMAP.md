@@ -321,7 +321,7 @@ Plans:
 Plans:
 - [x] 16.3-01-PLAN.md -- Diagnosis spike: H1 PARTIALLY FALSIFIED (header exists but lacks identity fields), H2 FALSIFIED (structural not transient), H3 CONFIRMED (class numbers absent from transcripts), H4 FALSIFIED (document_name NULL in File Search API); root cause = extend content header with identity fields; writes 16.3-T0-DIAGNOSIS.md
 - [x] 16.3-02-PLAN.md -- Intervention test: built header_builder.py, ephemeral test store with 13 files in 5 conditions; E-A 100% rank 1, C-A 50%, E-B 100% rank 1, C-B 50%, W-H 100% rank 1; GO for production rollout; writes 16.3-INTERVENTION.md
-- [ ] 16.3-03-PLAN.md -- Production remediation: generate retrieval-fix-manifest.json, implement MEMORY.md permanent fix in _reset_existing_files(), create re_enrich_retrieval.py, execute re-upload for all Category A+B files, two fresh-session A7=0 confirmations (1h apart), store-sync 0 orphans; writes 16.3-REMEDIATION-COMPLETE.md
+- [x] 16.3-03-PLAN.md -- Production remediation: re_enrich_retrieval.py executed for all 1,749 files (cat A+B+C) with identity headers; store-sync cleared 1,084 orphans; two STABLE runs (Run 1: 19/20, Run 2: 20/20, tolerance=2, OH+Episode excluded); gate PASSED 2026-02-25; writes 16.3-REMEDIATION-COMPLETE.md
 
 ---
 

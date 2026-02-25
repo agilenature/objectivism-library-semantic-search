@@ -93,6 +93,20 @@ def build_identity_header(file_path: str, conn: sqlite3.Connection) -> str:
     ).fetchall()
     primary_topics = [r[0] for r in topic_rows]
 
+    # Session-specific aspects from file_metadata_ai (distinguishes between
+    # semantically similar files in the same course/series)
+    ai_row = conn.execute(
+        "SELECT metadata_json FROM file_metadata_ai WHERE file_path = ? AND is_current = 1",
+        (file_path,),
+    ).fetchone()
+    topic_aspects: list[str] = []
+    if ai_row and ai_row[0]:
+        try:
+            ai_meta = json.loads(ai_row[0])
+            topic_aspects = ai_meta.get("topic_aspects", []) or []
+        except (json.JSONDecodeError, TypeError):
+            pass
+
     # Build header
     lines = ["--- DOCUMENT METADATA ---"]
     lines.append(f"Title: {stem}")
@@ -107,15 +121,19 @@ def build_identity_header(file_path: str, conn: sqlite3.Connection) -> str:
     if primary_topics:
         lines.append(f"Tags: {' '.join(primary_topics)}")
 
+    if topic_aspects:
+        lines.append(f"Aspects: {'; '.join(topic_aspects)}")
+
     lines.append("--- END METADATA ---")
 
     header = "\n".join(lines) + "\n"
 
     logger.debug(
-        "build_identity_header: %s -> %d bytes (%d tags, class=%s)",
+        "build_identity_header: %s -> %d bytes (%d tags, %d aspects, class=%s)",
         filename,
         len(header.encode("utf-8")),
         len(primary_topics),
+        len(topic_aspects),
         class_id or "none",
     )
 

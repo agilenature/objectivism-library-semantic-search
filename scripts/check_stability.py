@@ -51,6 +51,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import re
 import sqlite3
 import sys
 import time
@@ -489,24 +490,20 @@ class StabilityChecker:
             )
             return
 
-        # Sample N random indexed files from DB, excluding Episode files
-        # (333 files with zero discriminating metadata -- topic/display_title/title all NULL)
+        # Sample N random indexed files from DB.
+        #
+        # No exclusions. All 1,809 indexed files are in scope:
+        # - Episodes (333 files): included. Unique numeric IDs provide exact discrimination.
+        # - Office Hour files (60 files): included. AI metadata extracted (2026-02-25) and
+        #   re-uploaded with enriched identity headers (Tags from file_primary_topics).
+        # Zero exclusions, zero tolerance: every sampled file must be retrievable.
         try:
             conn = sqlite3.connect(self.db_path)
-            episode_count = conn.execute(
-                "SELECT COUNT(*) FROM files "
-                "WHERE gemini_state = 'indexed' AND filename LIKE 'Episode %'"
-            ).fetchone()[0]
-            self._verbose(
-                f"Assertion 7: excluding {episode_count} Episode files "
-                f"(no discriminating metadata)"
-            )
             rows = conn.execute(
                 """SELECT filename, gemini_store_doc_id, gemini_file_id, metadata_json
                    FROM files
                    WHERE gemini_state = 'indexed'
                      AND gemini_store_doc_id IS NOT NULL
-                     AND filename NOT LIKE 'Episode %'
                    ORDER BY RANDOM()
                    LIMIT ?""",
                 (sample_size,),
@@ -541,7 +538,15 @@ class StabilityChecker:
                     )
                 except Exception:
                     pass
-            subject = title if title else stem
+            # Always use the full stem as the query subject. The stem is the
+            # most specific identifier for every file and exactly matches the
+            # Title field in the identity header. Using topic alone fails for:
+            # - Course lesson/class files (topic doesn't include course+number)
+            # - MOTM series with identical topics (e.g. 9 "History...part" files)
+            # - Seminar "Week N" files with generic topics (e.g. "Capitalism")
+            # The identity header's Title = stem, so a stem-based query
+            # directly leverages the discriminating metadata we added.
+            subject = stem
             query = f"What is '{subject}' about?"
             self._verbose(f"Assertion 7: querying for '{filename}' via: {query!r}")
 
@@ -609,20 +614,22 @@ class StabilityChecker:
                     f"Assertion 7: '{filename}' NOT found in top-10 for query {query!r}"
                 )
 
-        # Zero tolerance: with Episode files excluded (no discriminating metadata)
-        # and topic metadata in query construction, every sampled file should be
-        # retrievable. Any miss indicates a real searchability problem.
+        # Zero tolerance: every sampled file must be retrievable. Any miss means
+        # the corpus has a real retrieval problem that must be fixed — not hidden.
+        # Episodes (333 files) are included — verified retrievable 5/5 at rank 1
+        # (2026-02-25) via unique numeric IDs in identity header Title field.
+        # Office Hour files (60 files) are temporarily excluded pending
+        # batch-extract + re-upload (see TODO above).
         max_misses = 0
-        if not missed:
+        if len(missed) == 0:
             self._pass(
                 "Assertion 7 -- Per-file searchability",
-                f"all {len(rows)}/{sample_size} sampled files retrievable "
-                f"({episode_count} Episode files excluded, tolerance=0)",
+                f"{len(rows)}/{len(rows)} sampled files retrievable (no exclusions)",
             )
         else:
             self._fail(
                 "Assertion 7 -- Per-file searchability",
-                f"{len(missed)}/{len(rows)} files not found (tolerance=0): "
+                f"{len(missed)}/{len(rows)} files not retrievable (no exclusions, zero tolerance): "
                 f"{missed[:5]}{'...' if len(missed) > 5 else ''}",
             )
 

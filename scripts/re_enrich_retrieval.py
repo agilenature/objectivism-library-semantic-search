@@ -12,7 +12,7 @@ Upload-first sequence (safe: new file verified before old file deleted):
 8. Remove temp file
 
 Usage:
-    python scripts/re_enrich_retrieval.py [--limit N] [--dry-run] [--category {a,b,all}]
+    python scripts/re_enrich_retrieval.py [--limit N] [--dry-run] [--category {a,b,c,all}]
 """
 
 from __future__ import annotations
@@ -363,7 +363,7 @@ def main() -> None:
     )
     parser.add_argument("--limit", type=int, default=0, help="Limit number of files to process (0=all)")
     parser.add_argument("--dry-run", action="store_true", help="Print what would be done without uploading")
-    parser.add_argument("--category", choices=["a", "b", "all"], default="all", help="Which category to process")
+    parser.add_argument("--category", choices=["a", "b", "c", "all"], default="all", help="Which category to process")
     parser.add_argument("--offset", type=int, default=0, help="Skip first N files (for resuming)")
     parser.add_argument("-v", "--verbose", action="store_true", help="Verbose logging")
     args = parser.parse_args()
@@ -385,6 +385,8 @@ def main() -> None:
         files.extend(manifest["category_a"]["files"])
     if args.category in ("b", "all"):
         files.extend(manifest["category_b"]["files"])
+    if args.category in ("c", "all"):
+        files.extend(manifest.get("category_c", {}).get("files", []))
 
     # Apply offset
     if args.offset > 0:
