@@ -345,9 +345,34 @@ Plans:
 
 Plans:
 - [x] 16.4-01-PLAN.md -- Routing invariant audit + fix: diagnostic DB queries, define BOOK_SIZE_BYTES=830,000 constant, reset 40 failed_validation Episodes + 1 skipped Book to pending, approve 60 OH files, grep audit of all ai_metadata_status references
-- [ ] 16.4-02-PLAN.md -- Structural metadata quality audit: batch-extract 41 pending files, re-upload with updated identity headers, extend audit command with per-series breakdown + condition 6, audit exits 0
-- [ ] 16.4-03-PLAN.md -- Comprehensive retrievability audit: script tests all 1,749 indexed files with 3 query strategies (stem-only, stem+aspects, topics+course); produces per-series hit rate tables; identifies minimum viable query strategy or documents residual failures with affirmative evidence
-- [ ] 16.4-04-PLAN.md -- A7 update + zero-tolerance validation: update check_stability.py A7 to use audit-confirmed query strategy; max_misses=0, no exclusion filters; two consecutive fresh-session STABLE runs separated by 1+ hour
+- [x] 16.4-02-PLAN.md -- Structural metadata quality audit: batch-extract 41 pending files, re-upload with updated identity headers, extend audit command with per-series breakdown + condition 6, audit exits 0
+- [x] 16.4-03-PLAN.md -- Comprehensive retrievability audit: S1 96.7%, S2 97.5%, S1→S2 99.3%; 12 structural failures documented with affirmative evidence; per-series hit rate tables committed
+- [ ] 16.4-04-PLAN.md -- SUPERSEDED by Phase 16.5 (root cause investigation proved all 12 failures are retrievable via S4 query strategy; A7 update deferred to 16.5-04)
+
+---
+
+### Phase 16.5: Strategy 4 Rarest-Aspect Exhaustive Audit (INSERTED)
+
+**Goal:** Root cause investigation proved all 12 structural failures from 16.4-03 are retrievable via targeted aspect-based queries (S4: rarest aspects as entire query, no preamble). This phase implements S4 in the audit script, validates 0/1,749 misses with S1→S4a→S4b chain, runs full metadata quality audit, and updates A7 to zero-tolerance zero-exclusions with S4a fallback.
+
+**Root cause (confirmed 2026-02-25):** S1/S2/S3 dilute file-unique signals. S1 uses semantically empty class-number stems. S2 prepends "What is about?" which overwhelms aspect signal. S4 fixes this by using corpus-rarity-ranked aspects as the ENTIRE query with no generic preamble.
+
+**Depends on:** Phase 16.4 (all 1,749 files indexed with identity headers + aspects; 12 structural failures documented)
+**Distrust:** HOSTILE (12/12 S4 validation required before proceeding; 0-miss tolerance for full audit)
+**Gate:** BLOCKING for Phase 16-02 (replaces 16.4-04 as the zero-tolerance A7 gate)
+**Success Criteria** (what must be TRUE):
+  1. Strategy 4 (S4a: top-3 rarest aspects, no preamble; S4b: rarest aspect + course dir) implemented in `retrievability_audit.py` and `validate_s4.py` confirms all 12 known structural failures PASS (found in top-5)
+  2. Exhaustive S1→S4a→S4b audit of all 1,749 files achieves 0/1,749 misses
+  3. `objlib metadata audit` exits 0 for all 1,749 files (all 6+ conditions PASS)
+  4. `check_stability.py` A7 updated: S4a fallback, max_misses=0, no exclusion filters; two consecutive fresh-session STABLE runs confirmed
+
+**Plans**: 4 plans in 4 waves
+
+Plans:
+- [ ] 16.5-01-PLAN.md -- Implement S4 in retrievability_audit.py + validate_s4.py confirms 12/12 PASS
+- [ ] 16.5-02-PLAN.md -- Exhaustive S1→S4a→S4b audit of all 1,749 files; 0-miss target
+- [ ] 16.5-03-PLAN.md -- Exhaustive metadata quality audit: objlib metadata audit exits 0
+- [ ] 16.5-04-PLAN.md -- A7 update + two consecutive fresh-session STABLE runs [autonomous=false]
 
 ---
 
@@ -416,7 +441,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute sequentially: 8 -> 9 -> 10 -> 11 -> 12 -> 13 -> 14 -> 15 -> 16 -> 16.1 -> 16.2 -> 16.3 -> 16.4 -> 17 -> 18
+Phases execute sequentially: 8 -> 9 -> 10 -> 11 -> 12 -> 13 -> 14 -> 15 -> 16 -> 16.1 -> 16.2 -> 16.3 -> 16.4 -> 16.5 -> 17 -> 18
 Each wave's gate is BLOCKING for the next. If a gate fails, the failing phase must be repeated before proceeding.
 
 **Note:** Phase 07-07 (TUI integration smoke test, deferred from v1.0) is incorporated into Phase 16 as plan 16-03. It runs against the full live corpus after the library upload completes -- a more meaningful test than running it against an empty store.
@@ -445,11 +470,12 @@ Each wave's gate is BLOCKING for the next. If a gate fails, the failing phase mu
 | 16.1. Stability Instrument Correctness Audit | v2.0 | 2/3 | In progress | - |
 | 16.2. Metadata Completeness Invariant Enforcement | v2.0 | 2/2 | Complete | 2026-02-24 |
 | 16.3. Gemini File Search Retrievability Research | v2.0 | 3/3 | Complete | 2026-02-25 |
-| 16.4. Metadata Invariant + Retrievability Audit | v2.0 | 1/4 | In progress | - |
+| 16.4. Metadata Invariant + Retrievability Audit | v2.0 | 3/4 | In progress | - |
+| 16.5. Strategy 4 Rarest-Aspect Exhaustive Audit | v2.0 | 0/4 | In progress | - |
 | 17. RxPY TUI Reactive Pipeline | v2.0 | 0/4 | Not started | - |
 | 18. RxPY Codebase-Wide Async Migration | v2.0 | 0/5 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-19*
 *Pre-mortem: governance/pre-mortem-gemini-fsm.md*
-*Last updated: 2026-02-25 -- Plan 16.4-01 complete: BOOK_SIZE_BYTES constant, routing fix, 41 files pending re-extraction, grep audit clean*
+*Last updated: 2026-02-25 -- Phase 16.5 inserted: root cause confirmed (S4 query strategy), all 4 plans created; 16.4-02/16.4-03 marked complete; 16.4-04 superseded by 16.5-04*

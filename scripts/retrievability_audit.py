@@ -29,6 +29,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import re
 import sqlite3
 import sys
 import time
@@ -88,6 +89,28 @@ def detect_series(file_path: str) -> str:
         return "Other"
 
 
+# -- Corpus frequency map builder ---------------------------------------------
+
+
+def build_corpus_freq_map(db_path: str) -> dict[str, int]:
+    """Build aspect corpus frequency map from all files. O(n) DB query."""
+    conn = sqlite3.connect(db_path)
+    freq: dict[str, int] = {}
+    rows = conn.execute(
+        "SELECT metadata_json FROM file_metadata_ai WHERE is_current = 1"
+    ).fetchall()
+    conn.close()
+    for (mj,) in rows:
+        if not mj:
+            continue
+        try:
+            for aspect in json.loads(mj).get("topic_aspects", []):
+                freq[aspect] = freq.get(aspect, 0) + 1
+        except (json.JSONDecodeError, TypeError):
+            pass
+    return freq
+
+
 # -- Auditor class ------------------------------------------------------------
 
 
@@ -123,6 +146,9 @@ class RetrievabilityAuditor:
             sys.exit(2)
         self.client = genai.Client(api_key=api_key)
         self.store_resource_name: str | None = None
+
+        # Strategy 4/5: corpus aspect frequency map (built once in run())
+        self.corpus_freq: dict[str, int] = {}
 
         # Stats
         self._api_calls = 0
@@ -239,41 +265,104 @@ class RetrievabilityAuditor:
                 # Degrade to course + stem if no primary_topics
                 return f"{course}: {stem}"
 
+        elif strategy == 4:
+            # S4a: top-3 rarest aspects (by corpus frequency), no preamble, markdown stripped
+            ai_row = conn.execute(
+                "SELECT metadata_json FROM file_metadata_ai WHERE file_path = ? AND is_current = 1",
+                (file_path,),
+            ).fetchone()
+            aspects: list[str] = []
+            if ai_row and ai_row[0]:
+                try:
+                    aspects = json.loads(ai_row[0]).get("topic_aspects", []) or []
+                except Exception:
+                    pass
+            sorted_aspects = sorted(aspects, key=lambda a: self.corpus_freq.get(a, 0))
+            cleaned = [re.sub(r"[*_`]", "", a) for a in sorted_aspects[:3]]
+            return " ".join(cleaned) if cleaned else f"What is '{stem}' about?"
+
+        elif strategy == 5:
+            # S4b: individual aspect trials (sequence handled in check_file)
+            # This returns the first individual aspect as a representative query string.
+            # check_file() calls _build_s4b_sequence() to get the full trial sequence.
+            ai_row = conn.execute(
+                "SELECT metadata_json FROM file_metadata_ai WHERE file_path = ? AND is_current = 1",
+                (file_path,),
+            ).fetchone()
+            aspects_5: list[str] = []
+            if ai_row and ai_row[0]:
+                try:
+                    aspects_5 = json.loads(ai_row[0]).get("topic_aspects", []) or []
+                except Exception:
+                    pass
+            sorted_aspects_5 = sorted(aspects_5, key=lambda a: self.corpus_freq.get(a, 0))
+            if sorted_aspects_5:
+                return re.sub(r"[*_`]", "", sorted_aspects_5[0])
+            return f"What is '{stem}' about?"
+
         else:
             raise ValueError(f"Unknown strategy: {strategy}")
 
-    async def check_file(
+    def _build_s4b_sequence(
         self,
-        file_info: dict,
-        strategy: int,
-        semaphore: asyncio.Semaphore,
+        file_path: str,
+        filename: str,
         conn: sqlite3.Connection,
+    ) -> list[str]:
+        """Build sequence of queries to try for S4b (individual aspect cascade).
+
+        Tries each individual aspect alone (rarest first, up to 12).
+        For Office Hour files, also tries each aspect + "{course} Office Hour".
+        """
+        ai_row = conn.execute(
+            "SELECT metadata_json FROM file_metadata_ai WHERE file_path = ? AND is_current = 1",
+            (file_path,),
+        ).fetchone()
+        aspects: list[str] = []
+        if ai_row and ai_row[0]:
+            try:
+                aspects = json.loads(ai_row[0]).get("topic_aspects", []) or []
+            except Exception:
+                pass
+
+        sorted_aspects = sorted(aspects, key=lambda a: self.corpus_freq.get(a, 0))
+        cleaned = [re.sub(r"[*_`]", "", a) for a in sorted_aspects[:12]]
+
+        queries: list[str] = list(cleaned)
+
+        if "Office Hour" in filename:
+            course = PurePosixPath(file_path).parent.name
+            for c in cleaned:
+                queries.append(f"{c} {course} Office Hour")
+
+        return queries
+
+    async def _run_single_query(
+        self,
+        query: str,
+        file_path: str,
+        filename: str,
+        strategy: int,
+        expected_file_id: str,
+        store_doc_prefix: str,
+        semaphore: asyncio.Semaphore,
+        file_info: dict,
     ) -> dict:
-        """Check a single file's retrievability with retries and backoff."""
-        file_path = file_info["file_path"]
-        filename = file_info["filename"]
-        store_doc_id = file_info["store_doc_id"]
-        gemini_file_id = file_info["gemini_file_id"]
-
-        query = self.build_query(file_path, filename, strategy, conn)
-
-        # Matching identifiers (same as check_stability.py A7)
-        expected_file_id = (gemini_file_id or "").replace("files/", "")
-        store_doc_prefix = store_doc_id.split("-")[0] if store_doc_id else ""
-
+        """Execute one query with retries and return a result dict."""
         async with semaphore:
             backoff = INITIAL_BACKOFF
             last_error = None
+            response = None
 
             for attempt in range(MAX_RETRIES):
                 try:
                     self._api_calls += 1
-                    # Run synchronous API call in thread pool to avoid blocking event loop
+                    q = query  # capture for lambda
                     response = await asyncio.get_event_loop().run_in_executor(
                         None,
-                        lambda: self.client.models.generate_content(
+                        lambda q=q: self.client.models.generate_content(
                             model=SEARCH_MODEL,
-                            contents=query,
+                            contents=q,
                             config=genai_types.GenerateContentConfig(
                                 tools=[genai_types.Tool(
                                     file_search=genai_types.FileSearch(
@@ -287,7 +376,6 @@ class RetrievabilityAuditor:
                 except Exception as e:
                     last_error = e
                     error_str = str(e)
-                    # Retry on rate limit or server errors
                     if "429" in error_str or "5" in error_str[:1] and any(
                         c in error_str for c in ["500", "502", "503", "504"]
                     ):
@@ -296,7 +384,6 @@ class RetrievabilityAuditor:
                         backoff *= 2
                         continue
                     else:
-                        # Non-retryable error
                         self._errors += 1
                         return {
                             "filename": filename,
@@ -311,7 +398,6 @@ class RetrievabilityAuditor:
                             "timestamp": datetime.now(timezone.utc).isoformat(),
                         }
             else:
-                # All retries exhausted
                 self._errors += 1
                 return {
                     "filename": filename,
@@ -331,7 +417,7 @@ class RetrievabilityAuditor:
         rank = -1
         top_ids: list[str] = []
 
-        if response.candidates:
+        if response and response.candidates:
             gm = getattr(response.candidates[0], "grounding_metadata", None)
             if gm:
                 chunks = getattr(gm, "grounding_chunks", []) or []
@@ -342,13 +428,10 @@ class RetrievabilityAuditor:
                     title_in_result = getattr(rc, "title", "") or ""
                     if title_in_result:
                         top_ids.append(title_in_result)
-
                     if not found:
-                        # Primary: exact match on file resource ID
                         if expected_file_id and title_in_result == expected_file_id:
                             found = True
                             rank = i + 1
-                        # Secondary: exact match on store_doc_id prefix
                         elif store_doc_prefix and title_in_result == store_doc_prefix:
                             found = True
                             rank = i + 1
@@ -364,6 +447,57 @@ class RetrievabilityAuditor:
             "series": file_info["series"],
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
+
+    async def check_file(
+        self,
+        file_info: dict,
+        strategy: int,
+        semaphore: asyncio.Semaphore,
+        conn: sqlite3.Connection,
+    ) -> dict:
+        """Check a single file's retrievability with retries and backoff."""
+        file_path = file_info["file_path"]
+        filename = file_info["filename"]
+        store_doc_id = file_info["store_doc_id"]
+        gemini_file_id = file_info["gemini_file_id"]
+
+        expected_file_id = (gemini_file_id or "").replace("files/", "")
+        store_doc_prefix = store_doc_id.split("-")[0] if store_doc_id else ""
+
+        if strategy == 5:
+            # S4b: individual aspect cascade -- try each aspect until one finds the file
+            query_sequence = self._build_s4b_sequence(file_path, filename, conn)
+            if not query_sequence:
+                stem = PurePosixPath(filename).stem
+                query_sequence = [f"What is '{stem}' about?"]
+
+            for query in query_sequence:
+                result = await self._run_single_query(
+                    query, file_path, filename, strategy,
+                    expected_file_id, store_doc_prefix, semaphore, file_info,
+                )
+                if result.get("found") or result.get("error"):
+                    return result  # Found, or hard error (stop trying)
+
+            # All queries exhausted without finding the file
+            return {
+                "filename": filename,
+                "file_path": file_path,
+                "strategy": strategy,
+                "found": False,
+                "rank": -1,
+                "query": query_sequence[0],
+                "top_5_ids": [],
+                "series": file_info["series"],
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+
+        # Strategies 1-4: single query
+        query = self.build_query(file_path, filename, strategy, conn)
+        return await self._run_single_query(
+            query, file_path, filename, strategy,
+            expected_file_id, store_doc_prefix, semaphore, file_info,
+        )
 
     async def run_strategy(
         self,
@@ -448,25 +582,32 @@ class RetrievabilityAuditor:
         from collections import defaultdict
 
         results = progress.get("results", {})
+        if not results:
+            print("No results to summarize.")
+            return
+
+        # Detect which strategies are present
+        all_strategies = sorted({r["strategy"] for r in results.values()})
+        strategy_labels = {1: "S1", 2: "S2", 3: "S3", 4: "S4a", 5: "S4b"}
 
         # Group by file and strategy
         by_file: dict[str, dict[int, dict]] = defaultdict(dict)
         for key, r in results.items():
             by_file[r["file_path"]][r["strategy"]] = r
 
-        # Detect series for each file
-        series_stats: dict[str, dict] = defaultdict(lambda: {
-            "total": 0,
-            1: {"hits": 0, "total": 0},
-            2: {"hits": 0, "total": 0},
-            3: {"hits": 0, "total": 0},
-        })
+        # Accumulate per-series stats for detected strategies
+        def make_series_entry() -> dict:
+            entry: dict = {"total": 0}
+            for s in all_strategies:
+                entry[s] = {"hits": 0, "total": 0}
+            return entry
+
+        series_stats: dict[str, dict] = defaultdict(make_series_entry)
 
         for fp, strats in by_file.items():
-            # Get series from any result
             series = next(iter(strats.values())).get("series", "Other")
             series_stats[series]["total"] += 1
-            for s in [1, 2, 3]:
+            for s in all_strategies:
                 if s in strats:
                     series_stats[series][s]["total"] += 1
                     if strats[s].get("found"):
@@ -477,39 +618,36 @@ class RetrievabilityAuditor:
         print("RETRIEVABILITY AUDIT RESULTS")
         print("=" * 80)
 
-        for s in [1, 2, 3]:
+        for s in all_strategies:
             total = sum(ss[s]["total"] for ss in series_stats.values())
             hits = sum(ss[s]["hits"] for ss in series_stats.values())
             rate = (hits / total * 100) if total > 0 else 0
-            print(f"  Strategy {s}: {hits}/{total} = {rate:.1f}%")
+            lbl = strategy_labels.get(s, f"S{s}")
+            print(f"  Strategy {s} ({lbl}): {hits}/{total} = {rate:.1f}%")
 
         if HAS_RICH:
             console = Console()
 
-            # Per-series table
             table = Table(title="Per-Series Hit Rates")
             table.add_column("Series", style="bold")
             table.add_column("Total", justify="right")
-            table.add_column("S1 Hits", justify="right")
-            table.add_column("S1%", justify="right")
-            table.add_column("S2 Hits", justify="right")
-            table.add_column("S2%", justify="right")
-            table.add_column("S3 Hits", justify="right")
-            table.add_column("S3%", justify="right")
+            for s in all_strategies:
+                lbl = strategy_labels.get(s, f"S{s}")
+                table.add_column(f"{lbl} Hits", justify="right")
+                table.add_column(f"{lbl}%", justify="right")
 
             for series_name in sorted(series_stats.keys()):
                 ss = series_stats[series_name]
                 row = [series_name, str(ss["total"])]
-                for s in [1, 2, 3]:
+                for s in all_strategies:
                     hits = ss[s]["hits"]
                     total = ss[s]["total"]
                     rate = (hits / total * 100) if total > 0 else 0
                     row.extend([str(hits), f"{rate:.1f}%"])
                 table.add_row(*row)
 
-            # Add totals row
             total_row = ["TOTAL", str(sum(ss["total"] for ss in series_stats.values()))]
-            for s in [1, 2, 3]:
+            for s in all_strategies:
                 hits = sum(ss[s]["hits"] for ss in series_stats.values())
                 total = sum(ss[s]["total"] for ss in series_stats.values())
                 rate = (hits / total * 100) if total > 0 else 0
@@ -518,30 +656,32 @@ class RetrievabilityAuditor:
 
             console.print(table)
         else:
-            # Fallback plain text
             print("\nPer-Series Hit Rates:")
-            print(f"{'Series':<15} {'Total':>5} {'S1 Hits':>7} {'S1%':>6} {'S2 Hits':>7} {'S2%':>6} {'S3 Hits':>7} {'S3%':>6}")
-            print("-" * 70)
+            header = f"{'Series':<15} {'Total':>5}"
+            for s in all_strategies:
+                lbl = strategy_labels.get(s, f"S{s}")
+                header += f" {(lbl + ' Hits'):>9} {(lbl + '%'):>6}"
+            print(header)
+            print("-" * (21 + 16 * len(all_strategies)))
             for series_name in sorted(series_stats.keys()):
                 ss = series_stats[series_name]
                 parts = [f"{series_name:<15}", f"{ss['total']:>5}"]
-                for s in [1, 2, 3]:
+                for s in all_strategies:
                     hits = ss[s]["hits"]
                     total = ss[s]["total"]
                     rate = (hits / total * 100) if total > 0 else 0
-                    parts.extend([f"{hits:>7}", f"{rate:>5.1f}%"])
+                    parts.extend([f"{hits:>9}", f"{rate:>5.1f}%"])
                 print(" ".join(parts))
 
-        # Files failing all 3 strategies
+        # Files failing all tested strategies
         failing_all = []
         for fp, strats in by_file.items():
-            if all(not strats.get(s, {}).get("found", False) for s in [1, 2, 3]):
-                # Only count if all 3 strategies were actually run
-                if all(s in strats for s in [1, 2, 3]):
+            if all(not strats.get(s, {}).get("found", False) for s in all_strategies):
+                if all(s in strats for s in all_strategies):
                     failing_all.append(fp)
 
         if failing_all:
-            print(f"\nFiles failing ALL 3 strategies: {len(failing_all)}")
+            print(f"\nFiles failing ALL {len(all_strategies)} strategies: {len(failing_all)}")
             for fp in sorted(failing_all)[:20]:
                 series = detect_series(fp)
                 print(f"  [{series}] {PurePosixPath(fp).name}")
@@ -563,6 +703,11 @@ class RetrievabilityAuditor:
         # Load progress
         progress = self.load_progress()
         progress["metadata"]["total_files"] = len(files)
+
+        # Build corpus aspect frequency map (needed for strategies 4 and 5)
+        print("Building corpus aspect frequency map...")
+        self.corpus_freq = build_corpus_freq_map(self.db_path)
+        print(f"  Built frequency map for {len(self.corpus_freq)} unique aspects")
 
         # Run each strategy
         for strategy in self.strategies:
@@ -608,11 +753,15 @@ Examples:
     parser.add_argument(
         "--strategy",
         required=True,
-        choices=["1", "2", "3", "all"],
-        help="Query strategy to run (1=stem-only, 2=stem+aspects, 3=topics+course, all=all 3)",
+        choices=["1", "2", "3", "4", "5", "all"],
+        help=(
+            "Query strategy to run: 1=stem-only, 2=stem+aspects, 3=topics+course, "
+            "4=S4a (rarest-aspects, no preamble), 5=S4b (rarest-aspect+course), all=1+2+3"
+        ),
     )
     parser.add_argument(
-        "--progress",
+        "--progress", "--progress-file",
+        dest="progress",
         required=True,
         help="Path to JSON progress file (created if missing, resumed if exists)",
     )

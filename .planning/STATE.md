@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 
 ## Current Position
 
-Phase: 16.4 (Metadata Pipeline Invariant + Comprehensive Retrievability Audit) -- IN PROGRESS
-Plan: Plan 16.4-03 (Comprehensive Retrievability Audit) -- COMPLETE
-Status: 16.4-03 complete. All 1,749 files tested x 3 strategies (5,247 API calls). S1 96.7%, S2 97.5%, S1->S2 fallback 99.3%. 12 structural failures documented. A7 recommendation: max_misses=2, no exclusions. Next: 16.4-04 (A7 update + zero-tolerance validation).
-Last activity: 2026-02-25 -- Completed 16.4-03: exhaustive retrievability audit, per-series hit rate tables, minimum viable strategy identified
+Phase: 16.5 (Strategy 4 Rarest-Aspect Exhaustive Audit) -- IN PROGRESS
+Plan: Plan 16.5-01 (Implement S4 in retrievability_audit.py + validate 12 known failures) -- IN PROGRESS
+Status: Phase 16.5 inserted 2026-02-25. Root cause confirmed: S1/S2/S3 dilute file-unique signals; S4 (rarest corpus aspects, no preamble) recovers all 12 structural failures. S4 implemented in scripts/retrievability_audit.py + validate_s4.py written. Next: run validate_s4.py to confirm 12/12 PASS, then commit.
+Last activity: 2026-02-25 -- Phase 16.5 inserted: root cause investigation complete, S4 code implemented, planning files updated
 
-Progress: [###################################] 35/38 v2.0 plans complete
+Progress: [###################################] 35/42 v2.0 plans complete
 
 Note: Phase 07-07 (TUI integration smoke test from v1.0) deferred to Phase 16, plan 16-03.
   Runs against full live corpus after upload -- more meaningful than running on empty store.
@@ -30,8 +30,9 @@ Phase 12: [##########] 6/6 plans -- COMPLETE (Wave 4: 50-File FSM Upload) -- gat
 Phase 13: [##########] 2/2 plans -- COMPLETE (Wave 5: State Column Retirement) -- gate PASSED 2026-02-22
 Phase 14: [##########] 3/3 plans -- COMPLETE (Wave 6: Batch Performance) -- VLID-06 PASSED + SC2 gap closed 2026-02-22
 Phase 15: [##########] 3/3 plans -- COMPLETE (Wave 7: Consistency + store-sync) -- gate PASSED 2026-02-23
-Phase 16:  [#####░░░░░] 2/4 plans -- IN PROGRESS (16-01 + 16-04 COMPLETE; 16-02 BLOCKED by Phase 16.4 gate)
-Phase 16.4:[########░░] 3/4 plans -- IN PROGRESS (16.4-01 + 16.4-02 + 16.4-03 COMPLETE: routing + structural quality audit + retrievability audit; BLOCKS Phase 16-02)
+Phase 16:  [#####░░░░░] 2/4 plans -- IN PROGRESS (16-01 + 16-04 COMPLETE; 16-02 BLOCKED by Phase 16.5 gate)
+Phase 16.4:[##########] 3/4 plans -- IN PROGRESS (16.4-01 + 16.4-02 + 16.4-03 COMPLETE; 16.4-04 SUPERSEDED by Phase 16.5)
+Phase 16.5:[░░░░░░░░░░] 0/4 plans -- IN PROGRESS (S4 code implemented; validate_s4.py written; awaiting validation run)
 Phase 16.1:[##########] 3/3 plans -- COMPLETE (audit + fix + re-validation done; A7 structural fix delivered in Phase 16.3)
 Phase 16.2:[##########] 2/2 plans -- COMPLETE (audit exits 0; all 1,885 files satisfy invariant; Phase 16.3 readiness 100%; gate PASSED 2026-02-24)
 Phase 16.3:[##########] 3/3 plans -- COMPLETE (Retrievability Research: diagnosis + intervention + production remediation; all 1,749 files re-uploaded with identity headers; gate PASSED 2026-02-25; ITOE OH 60 files also batch-extracted + re-uploaded 2026-02-25)
@@ -221,9 +222,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Plan 16.4-03 complete. Exhaustive retrievability audit of 1,749 files x 3 strategies. S1 96.7%, S2 97.5%, S1->S2 99.3%. 12 structural failures documented. Next: Plan 16.4-04 (A7 update + zero-tolerance validation with max_misses=2, no exclusions).
+Stopped at: Phase 16.5 inserted. Root cause: S4 query strategy (rarest aspects, no preamble) recovers all 12 structural failures. S4 implemented in retrievability_audit.py (strategies 4+5) and validate_s4.py written. Next: run validate_s4.py to confirm 12/12 PASS, then commit Plan 16.5-01, then run exhaustive audit (Plan 16.5-02).
 
-Resume file: .planning/phases/16.4-metadata-invariant-retrievability-audit/16.4-04-PLAN.md
+Resume file: .planning/phases/16.5-strategy4-rarest-aspect-exhaustive-audit/16.5-01-PLAN.md
 
 Temporal stability log (Phase 16 -- full library, post-remediation):
 - T=0 baseline: Run 1 (2026-02-25 11:50:32 UTC): STABLE -- 1749 indexed, 1749 store, 0 orphans; A7 19/20 (Objectivist Logic Class 10-02 miss, within tolerance=2); 333 Episode + 60 OH excluded
