@@ -10,10 +10,10 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 
 ## Current Position
 
-Phase: 16 (Full Library Upload) -- IN PROGRESS
-Plan: Plan 16-02 (Temporal Stability Protocol: T+4h, T+24h, T+36h) -- READY TO START
-Status: Phase 16.3 gate PASSED (2026-02-25). Production remediation complete: all 1,749 files re-uploaded with identity headers. Two STABLE runs achieved. Phase 16-02 unblocked.
-Last activity: 2026-02-25 -- Completed 16.3-03-PLAN.md (production remediation + two STABLE checkpoint runs)
+Phase: 16.4 (Metadata Pipeline Invariant + Comprehensive Retrievability Audit) -- NOT STARTED
+Plan: Plan 16.4-01 (Routing Invariant Audit) -- NEXT
+Status: Phase 16.4 inserted (2026-02-25). Blocks Phase 16-02 (temporal stability cannot run until A7 passes zero-tolerance zero-exclusions with audit-confirmed query strategy).
+Last activity: 2026-02-25 -- Phase 16.4 inserted; ITOE OH files batch-extracted + re-uploaded (60/60); ITOE OH still fail A7 due to semantic homogeneity; Phase 16.4 will resolve via routing invariant fix + comprehensive retrievability audit
 
 Progress: [################################] 32/38 v2.0 plans complete
 
@@ -30,10 +30,11 @@ Phase 12: [##########] 6/6 plans -- COMPLETE (Wave 4: 50-File FSM Upload) -- gat
 Phase 13: [##########] 2/2 plans -- COMPLETE (Wave 5: State Column Retirement) -- gate PASSED 2026-02-22
 Phase 14: [##########] 3/3 plans -- COMPLETE (Wave 6: Batch Performance) -- VLID-06 PASSED + SC2 gap closed 2026-02-22
 Phase 15: [##########] 3/3 plans -- COMPLETE (Wave 7: Consistency + store-sync) -- gate PASSED 2026-02-23
-Phase 16:  [#####░░░░░] 2/4 plans -- IN PROGRESS (16-01 + 16-04 COMPLETE; 16-02 READY: T=0 baseline = two STABLE runs from 2026-02-25; T+4h target ~15:50 UTC)
+Phase 16:  [#####░░░░░] 2/4 plans -- IN PROGRESS (16-01 + 16-04 COMPLETE; 16-02 BLOCKED by Phase 16.4 gate)
+Phase 16.4:[░░░░░░░░░░] 0/4 plans -- NOT STARTED (metadata routing invariant + comprehensive retrievability audit; BLOCKS Phase 16-02)
 Phase 16.1:[##########] 3/3 plans -- COMPLETE (audit + fix + re-validation done; A7 structural fix delivered in Phase 16.3)
 Phase 16.2:[##########] 2/2 plans -- COMPLETE (audit exits 0; all 1,885 files satisfy invariant; Phase 16.3 readiness 100%; gate PASSED 2026-02-24)
-Phase 16.3:[##########] 3/3 plans -- COMPLETE (Retrievability Research: diagnosis + intervention + production remediation; all 1,749 files re-uploaded with identity headers; gate PASSED 2026-02-25)
+Phase 16.3:[##########] 3/3 plans -- COMPLETE (Retrievability Research: diagnosis + intervention + production remediation; all 1,749 files re-uploaded with identity headers; gate PASSED 2026-02-25; ITOE OH 60 files also batch-extracted + re-uploaded 2026-02-25)
 Phase 17:  [░░░░░░░░░░] 0/4 plans -- BLOCKED by Phase 16 gate (RxPY TUI reactive pipeline)
 Phase 18:  [░░░░░░░░░░] 0/5 plans -- BLOCKED by Phase 17 gate (RxPY codebase-wide async migration)
 
@@ -182,6 +183,7 @@ Recent decisions affecting current work:
 - Phase 18 added (2026-02-23): RxPY codebase-wide async migration. Migrates all asyncio primitives outside tui/ to RxPY observables. 5 plans: 18-01 spike (HOSTILE gate) -> 18-02 Tier3 -> 18-03 Tier2 -> 18-04 Tier1 (fsm-upload --limit 20 gate) -> 18-05 validation + Canon update. Blocked by Phase 17.
 - Phase 16.1 inserted (2026-02-24): Stability Instrument Correctness Audit. T+24h check blocked by A6 (1,075 files with gemini_file_id=NULL cause citation resolution failures; LIKE fix rejected -- must use exact-match semantics) and A7 (query strategy produces systematic false negatives for Episode/MOTM files; tolerance set to 0). HOSTILE posture: check_stability.py is the adversarial target. 3 plans: spike (7 challenges) -> fix -> re-validation (new T=0 baseline). BLOCKING Phase 16-02 and Phase 17.
 - Phase 16.2 inserted (2026-02-24): Metadata Completeness Invariant Enforcement. ai_metadata_status is not a valid completeness invariant -- conflates "approved by scanner filename-parsing" (no primary_topics) with "approved by AI extraction" (has primary_topics). Root cause: _get_pending_files() LIKE '%.txt' silently excludes .md files (Bernstein Heroes book is pending with no extraction attempted). 26 books have ai_metadata_status='approved' but zero primary_topics. 2 plans: audit command + .md fix + batch-extract Bernstein -> verify audit exits 0. ADJUSTED 2026-02-24: audit command must also produce Phase 16.3 readiness breakdown (Other-stem/MOTM primary_topics coverage) — both categories at 100% required before Phase 16.3 metadata-header intervention.
+- Phase 16.4 inserted (2026-02-25): Metadata Pipeline Invariant + Comprehensive Retrievability Audit. Root cause: every accumulated workaround in the stability instrument (OH excluded, Episodes excluded, tolerance raised) is an instance of the same violated invariant — the metadata pipeline has no structural rule that collapses all small non-book files to a single path (batch-extract → primary_topics → topic_aspects → review). The invariant: every .txt/.md file is either a book (large, exceeds Mistral context window, scanner-only 'skipped') or a non-book (must AI-extract). Phase 16.4 enforces this in 4 plans: (1) routing audit + fix — define book size threshold constant, enumerate and eliminate all category gates; (2) structural quality audit — `objlib metadata audit` per-series breakdown, exit 0 gate; (3) comprehensive retrievability audit — all 1,809 files, 3 query strategies, per-series hit rate tables, minimum viable query strategy identified; (4) A7 update + zero-tolerance validation — max_misses=0, no exclusion filters, two consecutive STABLE runs. BLOCKING Phase 16-02.
 - Phase 16.3 inserted (2026-02-24): Gemini File Search Retrievability Research. A7 zero-tolerance failure is structural: ~440 "Other-stem" files (topic==stem, class-number queries have no semantic content) and generic MOTM files (~3% of 468) fail targeted per-file queries. Two independent runs (16.1-02: 4/20, 16.1-03: 8/20) confirm. Hypotheses: H1 (metadata not in indexed content), H2 (silent partial indexing), H3 (class numbers absent from transcript), H4 (document_name exact-match available). 3 plans: diagnosis spike (H1-H4 falsification) -> intervention test (fix on 6 failing files in test context) -> production remediation (pipeline extension + two fresh-session A7=0 confirmations). BLOCKING Phase 17. Depends on Phase 16.2 (primary_topics complete for metadata-header injection).
 
 ### Standing Constraints
@@ -205,7 +207,7 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Phase 16.3 gate PASSED. Two STABLE runs confirmed. Phase 16-02 (temporal stability protocol) unblocked. Next: Run check_stability.py at T+4h (~15:50 UTC today), T+24h, T+36h per Phase 16-02 plan.
+Stopped at: Phase 16.4 inserted. ITOE OH files batch-extracted + re-uploaded with Tags+Aspects but still fail A7 due to semantic homogeneity (36-file series, class number has no semantic weight in embeddings). Phase 16.4 will enforce the metadata routing invariant and build a comprehensive retrievability audit. Next: /gsd:plan-phase 16.4 to create 16.4-01 through 16.4-04 plans.
 
 Temporal stability log (Phase 16 -- full library, post-remediation):
 - T=0 baseline: Run 1 (2026-02-25 11:50:32 UTC): STABLE -- 1749 indexed, 1749 store, 0 orphans; A7 19/20 (Objectivist Logic Class 10-02 miss, within tolerance=2); 333 Episode + 60 OH excluded
@@ -225,5 +227,5 @@ Temporal stability log (Phase 15 -- 90-file proxy):
 - T+24h (2026-02-23 12:54 UTC): STABLE -- 90 indexed, 6/6 pass, 0 orphans (~20h50m elapsed)
 - Post-upgrade (2026-02-23 13:05 UTC): STABLE -- 90 indexed, 7/7 pass (Assertion 7: 4/5 found, 1 within tolerance)
 
-Resume file: .planning/phases/16-full-library-upload/16-02-PLAN.md
-Resume instruction: Phase 16.3 gate PASSED 2026-02-25. All 1,749 files re-uploaded with identity headers. T=0 baseline = two STABLE runs (11:50:32 and 11:54:00 UTC). Next: Phase 16-02 temporal stability protocol. Run check_stability.py --store objectivism-library --sample-count 20 --verbose at T+4h, then T+24h (blocking gate), then T+36h. Each run must be in a fresh session (/clear before starting).
+Resume file: .planning/ROADMAP.md (Phase 16.4 entry)
+Resume instruction: Phase 16.4 inserted 2026-02-25. ITOE OH files (60) batch-extracted and re-uploaded with enriched identity headers (Tags + Aspects) but ITOE OH series still fails A7 at zero tolerance due to semantic homogeneity of 36-file series. Phase 16.4 must: (1) fix the metadata routing invariant (define book size threshold, eliminate category gates), (2) run structural quality audit, (3) run comprehensive retrievability audit (all 1,809 files, 3 query strategies), (4) update A7 and achieve zero-tolerance STABLE. Next action: /gsd:plan-phase 16.4
