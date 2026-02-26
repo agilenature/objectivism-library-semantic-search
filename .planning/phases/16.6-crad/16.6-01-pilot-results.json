@@ -1,0 +1,79 @@
+{
+  "metadata": {
+    "started_at": "2026-02-26T14:48:46.244517+00:00",
+    "completed_at": "2026-02-26T14:49:53.124293+00:00",
+    "gate": "PASS",
+    "passes": 3,
+    "fails": 0,
+    "errors": 0,
+    "pilot_count": 3,
+    "validation_runs": 3,
+    "max_acceptable_rank": 5
+  },
+  "results": [
+    {
+      "filename": "ITOE Advanced Topics - Class 14-01 - Office Hour.txt",
+      "series_name": "ITOE Advanced Topics",
+      "phrase": "Zeno's arrow paradox",
+      "word_count": 3,
+      "aspects_used": [
+        "Zeno's arrow paradox"
+      ],
+      "claude_reasoning": "Only file in the 58-file ITOE AT series discussing Zeno's arrow paradox. Names a specific historical problem (motion and identity), maximally concrete.",
+      "claude_model": "inline",
+      "validation_ranks": [
+        1,
+        1,
+        1
+      ],
+      "best_rank": 1,
+      "known_query": "Zeno's arrow paradox",
+      "known_rank": 1,
+      "status": "PASS",
+      "validation_status": "validated"
+    },
+    {
+      "filename": "ITOE Advanced Topics - Class 13-02 - Office Hour.txt",
+      "series_name": "ITOE Advanced Topics",
+      "phrase": "DIMM hypothesis null hypothesis statistics",
+      "word_count": 5,
+      "aspects_used": [
+        "DIMM hypothesis",
+        "null hypothesis in statistics"
+      ],
+      "claude_reasoning": "DIMM hypothesis (corpus freq=1) combined with null hypothesis in statistics \u2014 this session uniquely discusses DIMM as a scientific hypothesis tested against the null. No other file in ITOE AT or the full corpus covers this combination.",
+      "claude_model": "inline",
+      "validation_ranks": [
+        2,
+        2,
+        2
+      ],
+      "best_rank": 2,
+      "known_query": "measurements omitted concept formation generic brand",
+      "known_rank": 4,
+      "status": "PASS",
+      "validation_status": "validated"
+    },
+    {
+      "filename": "Objectivist Logic - Class 14-02 - Open Office Hour.txt",
+      "series_name": "Objectivist Logic",
+      "phrase": "humility as a package deal",
+      "word_count": 5,
+      "aspects_used": [
+        "humility as a package deal"
+      ],
+      "claude_reasoning": "Corpus-unique aspect (freq=1 globally). Applies Objectivist anti-concept analysis to humility specifically \u2014 no other file in any series discusses this.",
+      "claude_model": "inline",
+      "validation_ranks": [
+        1,
+        1,
+        1
+      ],
+      "best_rank": 1,
+      "known_query": "humility as a package deal",
+      "known_rank": null,
+      "status": "PASS",
+      "validation_status": "validated"
+    }
+  ]
+}

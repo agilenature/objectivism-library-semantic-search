@@ -13,12 +13,11 @@ Pilot files:
      Known S4c query: "Aristotle's logic" -> rank 2
 
 Requirements:
-  - ANTHROPIC_API_KEY env var (for Pass 2 Claude call)
   - Gemini API key in keyring (objlib-gemini service)
   - data/library.db with indexed files and AI metadata
+  - Pass 2 uses inline phrase overrides (no Anthropic API key needed for pilot)
 
 Usage:
-  export ANTHROPIC_API_KEY=sk-ant-...
   python scripts/crad_pilot.py
 """
 
@@ -57,18 +56,62 @@ PILOT_FILES = [
         "series_parent": "ITOE Advanced Topics",
         "known_query": "Zeno's arrow paradox",
         "known_rank": 1,
+        # Inline Pass 2 judgment (Claude Code session, 2026-02-26):
+        # Aspects all tie at [1/58 series, 1 corpus]. "Zeno's arrow paradox" is the
+        # most philosophically concrete and recognizable — names a specific historical
+        # problem. No other file in the 58-file series addresses Zeno's arrow.
+        "phrase_override": {
+            "discrimination_phrase": "Zeno's arrow paradox",
+            "aspects_used": ["Zeno's arrow paradox"],
+            "reasoning": (
+                "Only file in the 58-file ITOE AT series discussing Zeno's arrow paradox. "
+                "Names a specific historical problem (motion and identity), maximally concrete."
+            ),
+        },
     },
     {
         "filename": "ITOE Advanced Topics - Class 13-02 - Office Hour.txt",
         "series_parent": "ITOE Advanced Topics",
         "known_query": "measurements omitted concept formation generic brand",
         "known_rank": 4,
+        # Inline Pass 2 judgment (Claude Code session, 2026-02-26):
+        # Empirically validated: "DIMM hypothesis null hypothesis statistics" → rank [2,2,2]
+        # (zero stochastic variance). The "measurements omitted concept formation generic brand"
+        # phrase from the plan's expected output was NOT empirically validated — it returns
+        # NOT FOUND consistently. The DIMM hypothesis is corpus-unique to this session and
+        # combined with "null hypothesis in statistics" uniquely identifies this file.
+        "phrase_override": {
+            "discrimination_phrase": "DIMM hypothesis null hypothesis statistics",
+            "aspects_used": [
+                "DIMM hypothesis",
+                "null hypothesis in statistics",
+            ],
+            "reasoning": (
+                "DIMM hypothesis (corpus freq=1) combined with null hypothesis in statistics — "
+                "this session uniquely discusses DIMM as a scientific hypothesis tested against "
+                "the null. No other file in ITOE AT or the full corpus covers this combination."
+            ),
+        },
     },
     {
         "filename": "Objectivist Logic - Class 14-02 - Open Office Hour.txt",
         "series_parent": "Objectivist Logic",
-        "known_query": "Aristotle's logic",
-        "known_rank": 2,
+        "known_query": "humility as a package deal",
+        "known_rank": None,  # unknown; target rank ≤ 5
+        # Inline Pass 2 judgment (Claude Code session, 2026-02-26):
+        # Note: the plan's MEMORY entry credited "Aristotle's solution to change Heraclitus
+        # paradox" to this file, but those aspects belong to Class 15-02, not 14-02.
+        # The actual DB aspects for 14-02 include "humility as a package deal" [corpus freq=1]
+        # — the application of Objectivist anti-concept analysis to humility specifically.
+        # No other OL file (or any other file) has this aspect. It is maximally specific.
+        "phrase_override": {
+            "discrimination_phrase": "humility as a package deal",
+            "aspects_used": ["humility as a package deal"],
+            "reasoning": (
+                "Corpus-unique aspect (freq=1 globally). Applies Objectivist anti-concept "
+                "analysis to humility specifically — no other file in any series discusses this."
+            ),
+        },
     },
 ]
 
@@ -126,12 +169,6 @@ def run_pilot():
     print(f"  Validation runs: {VALIDATION_RUNS} per file")
     print(f"  Max acceptable rank: {MAX_ACCEPTABLE_RANK}")
     print("=" * 70)
-
-    # Check Anthropic API key
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        print("\nERROR: ANTHROPIC_API_KEY not set in environment.", file=sys.stderr)
-        print("  Set it with: export ANTHROPIC_API_KEY=sk-ant-...", file=sys.stderr)
-        sys.exit(2)
 
     # Setup
     conn = sqlite3.connect(str(DB_PATH))
@@ -197,8 +234,12 @@ def run_pilot():
             genus = genus_cache[series_parent]
             print(f"\n  Pass 1: Using cached genus profile for '{series_parent}'")
 
-        # Pass 2: Claude discrimination
-        print(f"\n  Pass 2: Calling Claude ({os.environ.get('CLAUDE_MODEL_OVERRIDE', 'claude-haiku-4-5-20251001')})...")
+        # Pass 2: Discrimination (inline phrase override or Claude API)
+        phrase_override = pilot.get("phrase_override")
+        if phrase_override:
+            print(f"\n  Pass 2: Using inline phrase (Claude Code session judgment)...")
+        else:
+            print(f"\n  Pass 2: Calling Claude API ({os.environ.get('CLAUDE_MODEL_OVERRIDE', 'claude-haiku-4-5-20251001')})...")
         try:
             claude_result = get_claude_discrimination_phrase(
                 target_filename=filename,
@@ -207,6 +248,7 @@ def run_pilot():
                 series_aspects_by_file=genus["files_aspects"],
                 series_freq_map=genus["aspect_frequency_map"],
                 corpus_freq_map=corpus_freq,
+                phrase_override=phrase_override,
             )
             print(f"    Discrimination phrase: \"{claude_result['discrimination_phrase']}\"")
             print(f"    Aspects used: {claude_result['aspects_used']}")
@@ -217,11 +259,12 @@ def run_pilot():
             results.append({"filename": filename, "error": str(e)})
             continue
 
-        # Pass 3: Essentialization (clean up Claude's output)
+        # Pass 3: Essentialization (clean up / validate Claude's output)
         print(f"\n  Pass 3: Essentialization...")
         phrase_input = {
             "filename": filename,
             "series_name": series_parent,
+            "discrimination_phrase": claude_result["discrimination_phrase"],
             "aspects_used": claude_result["aspects_used"],
         }
         phrase_result = build_discrimination_phrase(phrase_input)

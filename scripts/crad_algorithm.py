@@ -204,17 +204,37 @@ def get_claude_discrimination_phrase(
     series_freq_map: dict[str, int],
     corpus_freq_map: dict[str, int],
     max_retries: int = 2,
+    phrase_override: dict | None = None,
 ) -> dict:
-    """Call Claude to select the philosophically discriminating aspects for target_filename.
+    """Select the philosophically discriminating aspects for target_filename.
+
+    If phrase_override is provided (dict with 'discrimination_phrase', 'aspects_used',
+    optionally 'reasoning'), it is returned directly without any API call. This allows
+    the running Claude Code session to supply its own judgment inline.
+
+    Otherwise, calls the Anthropic API (requires ANTHROPIC_API_KEY env var).
 
     Returns dict with keys:
         discrimination_phrase: str   -- the 1-7 word discrimination phrase
-        aspects_used: list[str]      -- the 1-3 aspects Claude selected
-        reasoning: str               -- Claude's explanation (for audit log)
-        model: str                   -- model used
-    Raises ValueError if Claude fails to return valid JSON after max_retries attempts.
+        aspects_used: list[str]      -- the 1-3 aspects selected
+        reasoning: str               -- explanation (for audit log)
+        model: str                   -- model used ("inline" when phrase_override is used)
+    Raises ValueError if API fails after max_retries attempts.
     Raises RuntimeError for Anthropic API errors (including auth).
     """
+    # Use pre-computed phrase if provided (bypasses API entirely)
+    if phrase_override is not None:
+        if "discrimination_phrase" not in phrase_override or "aspects_used" not in phrase_override:
+            raise ValueError(
+                f"phrase_override missing required keys: {list(phrase_override.keys())}"
+            )
+        return {
+            "discrimination_phrase": phrase_override["discrimination_phrase"],
+            "aspects_used": phrase_override["aspects_used"],
+            "reasoning": phrase_override.get("reasoning", "Inline judgment by Claude Code session"),
+            "model": "inline",
+        }
+
     import anthropic
 
     client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY from env
@@ -275,16 +295,41 @@ def get_claude_discrimination_phrase(
 def build_discrimination_phrase(differentia: dict, max_words: int = MAX_PHRASE_WORDS) -> dict:
     """Concatenate top aspects into <=max_words phrase. Strip markdown.
 
+    If 'discrimination_phrase' key is present in differentia and fits within max_words,
+    it is used directly (after cleaning). This lets Pass 2 (Claude) specify the exact
+    phrase without Pass 3 reconstructing it from full aspect strings.
+
+    Otherwise, concatenates aspects from 'aspects_used' or 'top_3_rarest' keys until
+    the word budget is exhausted.
+
     Args:
-        differentia: dict with keys 'filename', 'series_name', and either
-                     'aspects_used' (from Claude) or 'top_3_rarest' (from freq sort)
+        differentia: dict with keys 'filename', 'series_name', and one of:
+                     - 'discrimination_phrase': pre-formed phrase (used directly if ≤max_words)
+                     - 'aspects_used': list of aspects (from Claude or freq sort)
+                     - 'top_3_rarest': fallback list of aspects
         max_words: maximum word count for the phrase (default 7)
 
     Returns dict with:
         filename, series_name, phrase, word_count, aspects_used, validation_status
     """
-    def clean(aspect: str) -> str:
-        return re.sub(r'[*_`]', '', aspect).strip()
+    def clean(text: str) -> str:
+        return re.sub(r'[*_`]', '', text).strip()
+
+    # Use pre-formed phrase directly if present and within word budget
+    direct_phrase = differentia.get("discrimination_phrase")
+    if direct_phrase:
+        cleaned_phrase = clean(direct_phrase)
+        words = cleaned_phrase.split()
+        if len(words) <= max_words:
+            return {
+                "filename": differentia["filename"],
+                "series_name": differentia["series_name"],
+                "phrase": cleaned_phrase,
+                "word_count": len(words),
+                "aspects_used": differentia.get("aspects_used", []),
+                "validation_status": "candidate",
+            }
+        # If direct phrase exceeds budget, fall through to aspect concatenation
 
     # Accept aspects from either Claude output or frequency-sorted output
     aspects_to_use = differentia.get("aspects_used", differentia.get("top_3_rarest", []))
