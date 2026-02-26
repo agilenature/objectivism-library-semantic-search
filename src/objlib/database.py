@@ -522,6 +522,27 @@ MIGRATION_V10_SQL = """-- V10: Phase 10 OCC + write-ahead intent columns
 -- Applied via ALTER TABLE in _setup_schema() for column-exists safety
 """
 
+MIGRATION_V12_SQL = """
+-- V12: CRAD tables (Phase 16.6 — Corpus-Relative Aspect Differentiation)
+CREATE TABLE IF NOT EXISTS series_genus (
+    series_name TEXT PRIMARY KEY,
+    genus_profile_json TEXT NOT NULL,
+    file_count INTEGER NOT NULL,
+    last_updated TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS file_discrimination_phrases (
+    filename TEXT PRIMARY KEY,
+    series_name TEXT NOT NULL,
+    phrase TEXT NOT NULL,
+    word_count INTEGER NOT NULL,
+    aspects_used TEXT NOT NULL,
+    validation_rank INTEGER,
+    validation_status TEXT NOT NULL DEFAULT 'candidate',
+    last_validated TEXT
+);
+"""
+
 MIGRATION_V11_SQL = """
 -- V11: Retire legacy status column, add CHECK on gemini_state, add is_deleted
 -- Safety: drop partial migration artifact if previous attempt failed
@@ -683,6 +704,7 @@ class Database:
         - v9: gemini_store_doc_id, gemini_state, gemini_state_updated_at columns (Phase 8 FSM)
         - v10: OCC version, intent_type, intent_started_at, intent_api_calls_completed columns (Phase 10)
         - v11: Drop legacy status column, add is_deleted, CHECK on gemini_state (Phase 13)
+        - v12: CRAD tables: series_genus, file_discrimination_phrases (Phase 16.6)
         """
         self.conn.executescript(SCHEMA_SQL)
 
@@ -780,7 +802,11 @@ class Database:
             self.conn.executescript(MIGRATION_V11_SQL)
             self.conn.execute("PRAGMA foreign_keys = ON")
 
-        self.conn.execute("PRAGMA user_version = 11")
+        if version < 12:
+            # V12: CRAD tables (Phase 16.6 — Corpus-Relative Aspect Differentiation)
+            self.conn.executescript(MIGRATION_V12_SQL)
+
+        self.conn.execute("PRAGMA user_version = 12")
 
     def upsert_file(self, record: FileRecord) -> None:
         """Insert or update a single file record.
