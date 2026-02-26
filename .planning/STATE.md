@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 
 ## Current Position
 
-Phase: 16.5 (Strategy 4 Rarest-Aspect Exhaustive Audit) -- IN PROGRESS
-Plan: Plan 16.5-04 (A7 Update + Zero-Tolerance Gate) -- T=0 STABLE complete; awaiting T+1h fresh-session run
-Status: Plans 16.5-01/02/03 COMPLETE. T=0 STABLE: all 7 assertions PASS, A7: 20/20 (2026-02-26 01:48 UTC). Need T+1h fresh-session STABLE run to declare Phase 16.5 gate PASSED.
-Last activity: 2026-02-26 -- Plans 16.5-01 through 16.5-04 Task 2 complete: 0/1749 misses confirmed, metadata audit passed, A7 updated with S4a fallback, T=0 STABLE
+Phase: 16-02 (Full-library stability gate) -- UNBLOCKED (pending Phase 16-02 plan execution)
+Plan: Phase 16.5 COMPLETE -- Phase 16-02 gate PASSED
+Status: Phase 16.4 COMPLETE. Phase 16.5 COMPLETE. Phase 16-02 now unblocked. Two consecutive STABLE runs: T=0 (01:48 UTC 20/20) + T+1h (01:58 UTC 20/20). Zero misses confirmed across all 1,749 files.
+Last activity: 2026-02-26 -- Phase 16.5 gate PASSED: T+1h fresh-session STABLE (all 7 assertions PASS, A7: 20/20 with S4a fallback active)
 
-Progress: [###################################] 35/42 v2.0 plans complete
+Progress: [####################################] 36/42 v2.0 plans complete
 
 Note: Phase 07-07 (TUI integration smoke test from v1.0) deferred to Phase 16, plan 16-03.
   Runs against full live corpus after upload -- more meaningful than running on empty store.
@@ -30,9 +30,9 @@ Phase 12: [##########] 6/6 plans -- COMPLETE (Wave 4: 50-File FSM Upload) -- gat
 Phase 13: [##########] 2/2 plans -- COMPLETE (Wave 5: State Column Retirement) -- gate PASSED 2026-02-22
 Phase 14: [##########] 3/3 plans -- COMPLETE (Wave 6: Batch Performance) -- VLID-06 PASSED + SC2 gap closed 2026-02-22
 Phase 15: [##########] 3/3 plans -- COMPLETE (Wave 7: Consistency + store-sync) -- gate PASSED 2026-02-23
-Phase 16:  [#####░░░░░] 2/4 plans -- IN PROGRESS (16-01 + 16-04 COMPLETE; 16-02 BLOCKED by Phase 16.5 gate)
-Phase 16.4:[##########] 3/4 plans -- IN PROGRESS (16.4-01 + 16.4-02 + 16.4-03 COMPLETE; 16.4-04 SUPERSEDED by Phase 16.5)
-Phase 16.5:[########░░] 3/4 plans -- IN PROGRESS (16.5-01 COMPLETE: 12/12 validated; 16.5-02 COMPLETE: 0/1749 misses; 16.5-03 COMPLETE: metadata audit exit 0; 16.5-04 Task 2 done: T=0 STABLE 2026-02-26)
+Phase 16:  [#####░░░░░] 2/4 plans -- IN PROGRESS (16-01 + 16-04 COMPLETE; 16-02 UNBLOCKED; 16-03 deferred to post-upload)
+Phase 16.4:[##########] 4/4 plans -- COMPLETE (16.4-04 SUPERSEDED by Phase 16.5; gate delivered by Phase 16.5)
+Phase 16.5:[##########] 4/4 plans -- COMPLETE (gate PASSED 2026-02-26: T=0 01:48 UTC + T+1h 01:58 UTC both STABLE 20/20)
 Phase 16.1:[##########] 3/3 plans -- COMPLETE (audit + fix + re-validation done; A7 structural fix delivered in Phase 16.3)
 Phase 16.2:[##########] 2/2 plans -- COMPLETE (audit exits 0; all 1,885 files satisfy invariant; Phase 16.3 readiness 100%; gate PASSED 2026-02-24)
 Phase 16.3:[##########] 3/3 plans -- COMPLETE (Retrievability Research: diagnosis + intervention + production remediation; all 1,749 files re-uploaded with identity headers; gate PASSED 2026-02-25; ITOE OH 60 files also batch-extracted + re-uploaded 2026-02-25)
@@ -221,17 +221,18 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-25
-Stopped at: Phase 16.5 inserted. Root cause: S4 query strategy (rarest aspects, no preamble) recovers all 12 structural failures. S4 implemented in retrievability_audit.py (strategies 4+5) and validate_s4.py written. Next: run validate_s4.py to confirm 12/12 PASS, then commit Plan 16.5-01, then run exhaustive audit (Plan 16.5-02).
+Last session: 2026-02-26
+Stopped at: Phase 16.5 gate PASSED. T=0 (01:48 UTC) + T+1h (01:58 UTC) both STABLE 20/20, no exclusions. Phase 16.4 COMPLETE. Phase 16.5 COMPLETE. Phase 16-02 UNBLOCKED.
 
-Resume file: .planning/phases/16.5-strategy4-rarest-aspect-exhaustive-audit/16.5-01-PLAN.md
+Resume file: .planning/phases/16-full-library-gate/ (Phase 16-02 plan)
 
 Temporal stability log (Phase 16 -- full library, post-remediation):
 - T=0 baseline: Run 1 (2026-02-25 11:50:32 UTC): STABLE -- 1749 indexed, 1749 store, 0 orphans; A7 19/20 (Objectivist Logic Class 10-02 miss, within tolerance=2); 333 Episode + 60 OH excluded
 - T=0 baseline: Run 2 (2026-02-25 11:54:00 UTC): STABLE -- 1749 indexed, 1749 store, 0 orphans; A7 20/20; 333 Episode + 60 OH excluded
-- Phase 16-02 T+4h: TBD (~2026-02-25 15:50 UTC)
-- Phase 16-02 T+24h: TBD (~2026-02-26 11:50 UTC) -- BLOCKING gate for Phase 16 completion
-- Phase 16-02 T+36h: TBD (~2026-02-26 23:50 UTC)
+- Phase 16.5 gate T=0 (2026-02-26 01:48:28 UTC): STABLE -- 7/7 PASS, A7: 20/20, no exclusions, S4a fallback active
+- Phase 16.5 gate T+1h (2026-02-26 01:58:40 UTC): STABLE -- 7/7 PASS, A7: 20/20 (1 file via S4a: ITOE AT Class 05-02 OH), no exclusions
+- Phase 16.5 GATE PASSED -- zero-tolerance A7 confirmed. Phase 16.4 COMPLETE. Phase 16.5 COMPLETE. Phase 16-02 UNBLOCKED.
+- Phase 16-02 run: TBD (next planned session)
 
 Prior Phase 16 stability log (pre-remediation, superseded):
 - T=0   (2026-02-23 18:21:59 UTC): 5/7 PASS -- assertions 6-7 fail; gate BLOCKED
