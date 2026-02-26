@@ -11,9 +11,9 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 ## Current Position
 
 Phase: 16.5 (Strategy 4 Rarest-Aspect Exhaustive Audit) -- IN PROGRESS
-Plan: Plan 16.5-01 (Implement S4 in retrievability_audit.py + validate 12 known failures) -- IN PROGRESS
-Status: Phase 16.5 inserted 2026-02-25. Root cause confirmed: S1/S2/S3 dilute file-unique signals; S4 (rarest corpus aspects, no preamble) recovers all 12 structural failures. S4 implemented in scripts/retrievability_audit.py + validate_s4.py written. Next: run validate_s4.py to confirm 12/12 PASS, then commit.
-Last activity: 2026-02-25 -- Phase 16.5 inserted: root cause investigation complete, S4 code implemented, planning files updated
+Plan: Plan 16.5-04 (A7 Update + Zero-Tolerance Gate) -- T=0 STABLE complete; awaiting T+1h fresh-session run
+Status: Plans 16.5-01/02/03 COMPLETE. T=0 STABLE: all 7 assertions PASS, A7: 20/20 (2026-02-26 01:48 UTC). Need T+1h fresh-session STABLE run to declare Phase 16.5 gate PASSED.
+Last activity: 2026-02-26 -- Plans 16.5-01 through 16.5-04 Task 2 complete: 0/1749 misses confirmed, metadata audit passed, A7 updated with S4a fallback, T=0 STABLE
 
 Progress: [###################################] 35/42 v2.0 plans complete
 
@@ -32,7 +32,7 @@ Phase 14: [##########] 3/3 plans -- COMPLETE (Wave 6: Batch Performance) -- VLID
 Phase 15: [##########] 3/3 plans -- COMPLETE (Wave 7: Consistency + store-sync) -- gate PASSED 2026-02-23
 Phase 16:  [#####░░░░░] 2/4 plans -- IN PROGRESS (16-01 + 16-04 COMPLETE; 16-02 BLOCKED by Phase 16.5 gate)
 Phase 16.4:[##########] 3/4 plans -- IN PROGRESS (16.4-01 + 16.4-02 + 16.4-03 COMPLETE; 16.4-04 SUPERSEDED by Phase 16.5)
-Phase 16.5:[░░░░░░░░░░] 0/4 plans -- IN PROGRESS (S4 code implemented; validate_s4.py written; awaiting validation run)
+Phase 16.5:[########░░] 3/4 plans -- IN PROGRESS (16.5-01 COMPLETE: 12/12 validated; 16.5-02 COMPLETE: 0/1749 misses; 16.5-03 COMPLETE: metadata audit exit 0; 16.5-04 Task 2 done: T=0 STABLE 2026-02-26)
 Phase 16.1:[##########] 3/3 plans -- COMPLETE (audit + fix + re-validation done; A7 structural fix delivered in Phase 16.3)
 Phase 16.2:[##########] 2/2 plans -- COMPLETE (audit exits 0; all 1,885 files satisfy invariant; Phase 16.3 readiness 100%; gate PASSED 2026-02-24)
 Phase 16.3:[##########] 3/3 plans -- COMPLETE (Retrievability Research: diagnosis + intervention + production remediation; all 1,749 files re-uploaded with identity headers; gate PASSED 2026-02-25; ITOE OH 60 files also batch-extracted + re-uploaded 2026-02-25)
