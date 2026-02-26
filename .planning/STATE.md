@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 
 ## Current Position
 
-Phase: 16-02 (Full-library stability gate) -- UNBLOCKED (pending Phase 16-02 plan execution)
-Plan: Phase 16.5 COMPLETE -- Phase 16-02 gate PASSED
-Status: Phase 16.4 COMPLETE. Phase 16.5 COMPLETE. Phase 16-02 now unblocked. Two consecutive STABLE runs: T=0 (01:48 UTC 20/20) + T+1h (01:58 UTC 20/20). Zero misses confirmed across all 1,749 files.
-Last activity: 2026-02-26 -- Phase 16.5 gate PASSED: T+1h fresh-session STABLE (all 7 assertions PASS, A7: 20/20 with S4a fallback active)
+Phase: 16.6 (CRAD) -- IN PROGRESS (Plan 16.6-01 COMPLETE, gate PASSED)
+Plan: Phase 16.6-01 COMPLETE -- pilot GATE PASSED (3/3 phrases at rank ≤5, zero stochastic variance)
+Status: CRAD algorithm implemented. 3 pilot files validated. DB: series_genus(2), file_discrimination_phrases(3). Plan 16.6-02 unblocked.
+Last activity: 2026-02-26 -- Plan 16.6-01 gate PASSED: Zeno→[1,1,1], DIMM→[2,2,2], humility→[1,1,1]
 
-Progress: [####################################] 36/42 v2.0 plans complete
+Progress: [#####################################] 37/45 v2.0 plans complete
 
 Note: Phase 07-07 (TUI integration smoke test from v1.0) deferred to Phase 16, plan 16-03.
   Runs against full live corpus after upload -- more meaningful than running on empty store.
@@ -33,6 +33,7 @@ Phase 15: [##########] 3/3 plans -- COMPLETE (Wave 7: Consistency + store-sync) 
 Phase 16:  [#####░░░░░] 2/4 plans -- IN PROGRESS (16-01 + 16-04 COMPLETE; 16-02 UNBLOCKED; 16-03 deferred to post-upload)
 Phase 16.4:[##########] 4/4 plans -- COMPLETE (16.4-04 SUPERSEDED by Phase 16.5; gate delivered by Phase 16.5)
 Phase 16.5:[##########] 4/4 plans -- COMPLETE (gate PASSED 2026-02-26: T=0 01:48 UTC + T+1h 01:58 UTC both STABLE 20/20)
+Phase 16.6:[###░░░░░░░] 1/3 plans -- IN PROGRESS (16.6-01 COMPLETE gate PASSED; 3 pilot phrases validated; 16.6-02 unblocked)
 Phase 16.1:[##########] 3/3 plans -- COMPLETE (audit + fix + re-validation done; A7 structural fix delivered in Phase 16.3)
 Phase 16.2:[##########] 2/2 plans -- COMPLETE (audit exits 0; all 1,885 files satisfy invariant; Phase 16.3 readiness 100%; gate PASSED 2026-02-24)
 Phase 16.3:[##########] 3/3 plans -- COMPLETE (Retrievability Research: diagnosis + intervention + production remediation; all 1,749 files re-uploaded with identity headers; gate PASSED 2026-02-25; ITOE OH 60 files also batch-extracted + re-uploaded 2026-02-25)
@@ -191,6 +192,12 @@ Recent decisions affecting current work:
 - [16.4-03]: max_misses=0 is NOT achievable. 0.69% structural failure rate is fundamental to semantic search. Recommended max_misses=2 for A7 at sample_size=20.
 - [16.4-03]: Office Hour files are the primary S1 weakness: ITOE AT OH 28.6%, ITOE OH 43.8%. S2 recovers most (ITOE AT OH -> 85.7%, ITOE OH -> 93.8%).
 - [16.4-03]: Episodes achieve 100% on S1 (333/333). Identity header Title field with unique numeric IDs provides perfect discrimination.
+- [16.6-01]: Pass 2 uses phrase_override (inline Claude Code judgment) instead of Anthropic API -- no ANTHROPIC_API_KEY needed; crad_algorithm.py get_claude_discrimination_phrase() accepts optional phrase_override dict
+- [16.6-01]: Pass 3 updated to use discrimination_phrase directly when ≤7 words -- aspect concatenation fallback only used when no phrase provided
+- [16.6-01]: Zero genus at 80% threshold for ITOE AT (58 files) and OL (50 files) -- algorithm degrades gracefully to pure rarity+judgment discrimination
+- [16.6-01]: DIMM hypothesis null hypothesis statistics → rank [2,2,2] for ITOE AT Class 13-02 OH (plan's expected "measurements omitted concept formation generic brand" returns NOT FOUND -- empirically wrong)
+- [16.6-01]: Gemini store config key is 'gemini_store_name' (not 'gemini_store_resource_name') in library_config table
+- [16.6-01]: PILOT GATE PASSED -- 3/3 phrases at rank ≤5, zero stochastic variance; Plan 16.6-02 unblocked
 
 ### Roadmap Evolution
 
@@ -225,6 +232,13 @@ Last session: 2026-02-26
 Stopped at: Phase 16.5 gate PASSED. T=0 (01:48 UTC) + T+1h (01:58 UTC) both STABLE 20/20, no exclusions. Phase 16.4 COMPLETE. Phase 16.5 COMPLETE. Phase 16-02 UNBLOCKED.
 
 Resume file: .planning/phases/16-full-library-gate/ (Phase 16-02 plan)
+
+Phase 16.6 (CRAD) context:
+- 63 files fail S1 retrieval deterministically (3.6% of corpus)
+- CRAD algorithm: 3-pass Genus Method — Pass 1 (series genus profile), Pass 2 (per-file differentia), Pass 3 (≤7-word phrase)
+- Pilot inline validation: ITOE AT 14-01 OH → "Zeno's arrow paradox" (rank 1), OL 14-02 OH → "Aristotle's solution to change Heraclitus paradox" (rank 2), ITOE AT 13-02 OH → "measurements omitted concept formation generic brand" (≈rank ≤5)
+- Plans: 16.6-01 (pilot 3 files), 16.6-02 (full 63 files, re-upload), 16.6-03 (A7 update, 3 fresh-session stability runs)
+- Depends on Phase 16-02 complete; blocks Phase 17
 
 Temporal stability log (Phase 16 -- full library, post-remediation):
 - T=0 baseline: Run 1 (2026-02-25 11:50:32 UTC): STABLE -- 1749 indexed, 1749 store, 0 orphans; A7 19/20 (Objectivist Logic Class 10-02 miss, within tolerance=2); 333 Episode + 60 OH excluded
