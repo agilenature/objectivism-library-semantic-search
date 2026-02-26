@@ -716,8 +716,8 @@ class AsyncUploadStateManager:
                WHERE f.gemini_state = 'untracked'
                  AND (f.filename LIKE '%.txt' OR f.filename LIKE '%.md')
                  AND f.ai_metadata_status = 'approved'
-                 AND EXISTS (SELECT 1 FROM file_primary_topics pt
-                             WHERE pt.file_path = f.file_path)
+                 AND (SELECT COUNT(*) FROM file_primary_topics pt
+                      WHERE pt.file_path = f.file_path) = 8
                ORDER BY f.file_path
                LIMIT ?""",
             (limit,),

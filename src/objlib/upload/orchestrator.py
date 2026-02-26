@@ -1150,6 +1150,13 @@ class FSMUploadOrchestrator(EnrichedUploadOrchestrator):
                 self._reset_count,
                 self._total,
             )
+            if self._succeeded > 0:
+                logger.info(
+                    "Run retrievability check after upload: "
+                    "python scripts/check_stability.py "
+                    "--store objectivism-library --db data/library.db "
+                    "--sample-count 20 --verbose"
+                )
 
         return self.enriched_summary
 
@@ -1374,6 +1381,17 @@ class FSMUploadOrchestrator(EnrichedUploadOrchestrator):
                 temp_path = prepare_enriched_content(file_path, ai_metadata)
                 if temp_path is not None:
                     upload_path = temp_path
+
+            # Warn if topic_aspects is empty — S4a fallback will be
+            # unavailable for this file, degrading per-file retrievability.
+            if ai_json:
+                _aspects = ai_metadata.get("topic_aspects") or []
+                if not _aspects:
+                    logger.warning(
+                        "Empty topic_aspects for %s — S4a fallback unavailable; "
+                        "file may be harder to retrieve via rarest-aspect queries",
+                        file_info.get("filename", file_path),
+                    )
 
             # Prepend identity header (Title/Course/Class/Tags/Aspects) so
             # Gemini can discriminate semantically similar files by their
