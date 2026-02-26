@@ -702,19 +702,23 @@ class AsyncUploadStateManager:
 
         Returns:
             List of dicts with file_path, content_hash, filename,
-            file_size, metadata_json, version, gemini_state.
+            file_size, metadata_json, version, gemini_state,
+            ai_metadata_json (from file_metadata_ai, None if absent).
         """
         db = self._ensure_connected()
         cursor = await db.execute(
-            """SELECT file_path, content_hash, filename, file_size,
-                      metadata_json, version, gemini_state
-               FROM files
-               WHERE gemini_state = 'untracked'
-                 AND (filename LIKE '%.txt' OR filename LIKE '%.md')
-                 AND ai_metadata_status = 'approved'
+            """SELECT f.file_path, f.content_hash, f.filename, f.file_size,
+                      f.metadata_json, f.version, f.gemini_state,
+                      fma.metadata_json AS ai_metadata_json
+               FROM files f
+               LEFT JOIN file_metadata_ai fma
+                       ON fma.file_path = f.file_path AND fma.is_current = 1
+               WHERE f.gemini_state = 'untracked'
+                 AND (f.filename LIKE '%.txt' OR f.filename LIKE '%.md')
+                 AND f.ai_metadata_status = 'approved'
                  AND EXISTS (SELECT 1 FROM file_primary_topics pt
-                             WHERE pt.file_path = files.file_path)
-               ORDER BY file_path
+                             WHERE pt.file_path = f.file_path)
+               ORDER BY f.file_path
                LIMIT ?""",
             (limit,),
         )

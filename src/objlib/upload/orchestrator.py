@@ -18,13 +18,17 @@ import logging
 import os
 import random
 import signal
+import sqlite3
+import tempfile
 import uuid
+from pathlib import Path
 from typing import Any
 
 from objlib.models import UploadConfig
 from objlib.upload.circuit_breaker import CircuitState, RollingWindowCircuitBreaker
 from objlib.upload.client import GeminiFileSearchClient, RateLimitError
 from objlib.upload.content_preparer import cleanup_temp_file, prepare_enriched_content
+from objlib.upload.header_builder import build_identity_header
 from objlib.upload.exceptions import OCCConflictError
 from objlib.upload.fsm import create_fsm
 from objlib.upload.metadata_builder import build_enriched_metadata, compute_upload_hash
@@ -1356,9 +1360,10 @@ class FSMUploadOrchestrator(EnrichedUploadOrchestrator):
             metadata = json.loads(metadata_json)
             custom_metadata = self._client.build_custom_metadata(metadata)
 
-            # Prepare content (use enriched content if AI metadata available)
+            # Prepare content: [AI Analysis] header + original transcript
             upload_path = file_path
             temp_path = None
+            identity_temp_path = None
             ai_json = file_info.get("ai_metadata_json")
             if ai_json:
                 ai_metadata = json.loads(ai_json)
@@ -1369,6 +1374,38 @@ class FSMUploadOrchestrator(EnrichedUploadOrchestrator):
                 temp_path = prepare_enriched_content(file_path, ai_metadata)
                 if temp_path is not None:
                     upload_path = temp_path
+
+            # Prepend identity header (Title/Course/Class/Tags/Aspects) so
+            # Gemini can discriminate semantically similar files by their
+            # unique class number, course, and aspects (Phase 16.3 fix).
+            identity_header = ""
+            sync_conn = sqlite3.connect(self._state.db_path)
+            try:
+                identity_header = build_identity_header(file_path, sync_conn)
+            except Exception as _exc:
+                logger.warning(
+                    "Identity header build failed for %s: %s", file_path, _exc
+                )
+            finally:
+                sync_conn.close()
+
+            if identity_header:
+                base_content = Path(upload_path).read_text(encoding="utf-8")
+                _itmp = tempfile.NamedTemporaryFile(
+                    mode="w", suffix=".txt", delete=False, encoding="utf-8"
+                )
+                try:
+                    _itmp.write(identity_header)
+                    _itmp.write(base_content)
+                    _itmp.close()
+                    identity_temp_path = _itmp.name
+                    upload_path = identity_temp_path
+                except Exception as _exc:
+                    _itmp.close()
+                    cleanup_temp_file(_itmp.name)
+                    logger.warning(
+                        "Identity temp file failed for %s: %s", file_path, _exc
+                    )
 
             try:
                 # Upload with 429 in-place retry (locked decision #1)
@@ -1397,6 +1434,7 @@ class FSMUploadOrchestrator(EnrichedUploadOrchestrator):
                         await asyncio.sleep(jittered)
             finally:
                 cleanup_temp_file(temp_path)
+                cleanup_temp_file(identity_temp_path)
 
             # Transition to processing: record Gemini file identifiers
             version = await self._state.transition_to_processing(
