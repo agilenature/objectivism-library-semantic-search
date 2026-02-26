@@ -311,29 +311,56 @@ class RetrievabilityAuditor:
     ) -> list[str]:
         """Build sequence of queries to try for S4b (individual aspect cascade).
 
-        Tries each individual aspect alone (rarest first, up to 12).
-        For Office Hour files, also tries each aspect + "{course} Office Hour".
+        Cascade order:
+          S4b: top-5 rarest aspects concatenated (catches 4th/5th as discriminating)
+          S4c: each individual aspect alone (rarest first, up to 12)
+          S4d: for Office Hour files, each aspect + "{course} Office Hour"
+          S4e: each individual aspect + course_dir_name (for all course files)
+          S4f: course + primary_topic + class_number (for numbered class files)
         """
         ai_row = conn.execute(
             "SELECT metadata_json FROM file_metadata_ai WHERE file_path = ? AND is_current = 1",
             (file_path,),
         ).fetchone()
         aspects: list[str] = []
+        primary_topics: list[str] = []
         if ai_row and ai_row[0]:
             try:
-                aspects = json.loads(ai_row[0]).get("topic_aspects", []) or []
+                meta = json.loads(ai_row[0])
+                aspects = meta.get("topic_aspects", []) or []
+                primary_topics = meta.get("primary_topics", []) or []
             except Exception:
                 pass
 
         sorted_aspects = sorted(aspects, key=lambda a: self.corpus_freq.get(a, 0))
         cleaned = [re.sub(r"[*_`]", "", a) for a in sorted_aspects[:12]]
+        course = PurePosixPath(file_path).parent.name
 
-        queries: list[str] = list(cleaned)
+        queries: list[str] = []
 
+        # S4b: top-5 rarest aspects combined
+        if len(cleaned) >= 4:
+            queries.append(" ".join(cleaned[:5]))
+
+        # S4c: individual aspects alone (rarest first)
+        queries.extend(cleaned)
+
+        # S4d: for Office Hour files, each aspect + "{course} Office Hour"
         if "Office Hour" in filename:
-            course = PurePosixPath(file_path).parent.name
             for c in cleaned:
                 queries.append(f"{c} {course} Office Hour")
+
+        # S4e: each individual aspect + course_dir_name (for all files)
+        for c in cleaned:
+            queries.append(f"{c} {course}")
+
+        # S4f: course + primary_topic + class_number (for numbered class files)
+        class_match = re.search(r"Class (\d+)", filename)
+        if class_match and primary_topics:
+            class_num = class_match.group(1)
+            for pt in primary_topics[:3]:
+                pt_clean = pt.replace("_", " ")
+                queries.append(f"{course} {pt_clean} {class_num}")
 
         return queries
 
