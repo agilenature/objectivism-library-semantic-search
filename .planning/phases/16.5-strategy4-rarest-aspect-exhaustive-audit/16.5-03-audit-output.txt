@@ -1,0 +1,46 @@
+Metadata Completeness Audit
+
+                                       Invariant Conditions                     
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━━━
+┃ Condition                                ┃  Status  ┃    Count ┃ Detail       
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━━━
+│ 1. Approved without primary_topics       │   PASS   │        0 │ All approved 
+│                                          │          │          │ topic rows   
+│ 2. Skipped without reason                │   PASS   │        0 │ All skipped f
+│                                          │          │          │ error_message
+│ 3. Pending non-enrichable extensions     │   PASS   │        0 │ Only .txt/.md
+│ 4. Phase 16.3 readiness                  │   PASS   │      --- │ All at 100%  
+│ 5. Needs-review (informational)          │   INFO   │        0 │ Run: objlib m
+│                                          │          │          │ --status need
+│ 6. Indexed non-skipped without topics    │   PASS   │        0 │ Structural in
+│                                          │          │          │ non-book inde
+│                                          │          │          │ have topics  
+└──────────────────────────────────────────┴──────────┴──────────┴──────────────
+
+                            Phase 16.3 Readiness                            
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━┓
+┃ Category                       ┃ Total ┃ With Topics ┃ Coverage ┃ Status ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━┩
+│ MOTM (.txt approved)           │   468 │         468 │     100% │ READY  │
+│ MOTM scanner topic field       │   468 │         468 │     100% │ READY  │
+│ Other-stem (.txt approved)     │   443 │         443 │     100% │ READY  │
+└────────────────────────────────┴───────┴─────────────┴──────────┴────────┘
+
+              Per-Series Breakdown (Indexed Files)              
+┏━━━━━━━━━━━━━━┳━━━━━━━┳━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━┓
+┃ Series       ┃ Total ┃ Topics ┃ Aspects ┃ Summary ┃ Topics % ┃
+┡━━━━━━━━━━━━━━╇━━━━━━━╇━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━┩
+│ Books        │    27 │     26 │      27 │       0 │      96% │
+│ Episodes     │   333 │    333 │     333 │       0 │     100% │
+│ ITOE         │    32 │     32 │      32 │       0 │     100% │
+│ ITOE AT      │    30 │     30 │      30 │       0 │     100% │
+│ ITOE AT OH   │    28 │     28 │      28 │       0 │     100% │
+│ ITOE OH      │    16 │     16 │      16 │       0 │     100% │
+│ MOTM         │   468 │    468 │     468 │       0 │     100% │
+│ OL           │    50 │     50 │      50 │       0 │     100% │
+│ Other        │   765 │    765 │     765 │       0 │     100% │
+└──────────────┴───────┴────────┴─────────┴─────────┴──────────┘
+
+╭─────────────────────────────────── Result ───────────────────────────────────╮
+│ AUDIT PASSED -- all invariants satisfied                                     │
+╰──────────────────────────────────────────────────────────────────────────────╯
