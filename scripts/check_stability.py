@@ -490,20 +490,42 @@ class StabilityChecker:
             )
             return
 
+        # Build corpus aspect frequency map for S4a fallback (O(n) DB query).
+        corpus_freq: dict[str, int] = {}
+        try:
+            _freq_conn = sqlite3.connect(self.db_path)
+            _freq_rows = _freq_conn.execute(
+                "SELECT metadata_json FROM file_metadata_ai WHERE is_current = 1"
+            ).fetchall()
+            _freq_conn.close()
+            for (_mj,) in _freq_rows:
+                if not _mj:
+                    continue
+                try:
+                    for _a in json.loads(_mj).get("topic_aspects", []):
+                        corpus_freq[_a] = corpus_freq.get(_a, 0) + 1
+                except Exception:
+                    pass
+        except Exception as e:
+            self._fail("Assertion 7 -- Per-file searchability", f"DB error building corpus frequency map: {e}")
+            return
+
         # Sample N random indexed files from DB.
         #
-        # No exclusions. All 1,809 indexed files are in scope:
+        # No exclusions. All 1,749 indexed files are in scope:
         # - Episodes (333 files): included. Unique numeric IDs provide exact discrimination.
-        # - Office Hour files (60 files): included. AI metadata extracted (2026-02-25) and
-        #   re-uploaded with enriched identity headers (Tags from file_primary_topics).
+        # - Office Hour files (60 files): included. AI metadata extracted (2026-02-25).
         # Zero exclusions, zero tolerance: every sampled file must be retrievable.
         try:
             conn = sqlite3.connect(self.db_path)
             rows = conn.execute(
-                """SELECT filename, gemini_store_doc_id, gemini_file_id, metadata_json
-                   FROM files
-                   WHERE gemini_state = 'indexed'
-                     AND gemini_store_doc_id IS NOT NULL
+                """SELECT f.filename, f.gemini_store_doc_id, f.gemini_file_id, f.file_path,
+                          fma.metadata_json AS ai_metadata_json
+                   FROM files f
+                   LEFT JOIN file_metadata_ai fma
+                     ON fma.file_path = f.file_path AND fma.is_current = 1
+                   WHERE f.gemini_state = 'indexed'
+                     AND f.gemini_store_doc_id IS NOT NULL
                    ORDER BY RANDOM()
                    LIMIT ?""",
                 (sample_size,),
@@ -521,23 +543,13 @@ class StabilityChecker:
             return
 
         missed = []
-        for filename, store_doc_id, gemini_file_id, metadata_json_str in rows:
+        for filename, store_doc_id, gemini_file_id, file_path, ai_metadata_json_str in rows:
             # Construct targeted query from filename stem
             stem = Path(filename).stem  # e.g. "B001 Introduction to Objectivism"
             # Enrich query with metadata: use display_title, title, or topic
             # (display_title and title are NULL for all 1,749 files; topic is the
             # primary discriminating field for MOTM (468) and Other (508) files)
-            title = None
-            if metadata_json_str:
-                try:
-                    meta = json.loads(metadata_json_str)
-                    title = (
-                        meta.get("display_title")
-                        or meta.get("title")
-                        or meta.get("topic")
-                    )
-                except Exception:
-                    pass
+            title = None  # unused — subject always set to stem (see comment below)
             # Always use the full stem as the query subject. The stem is the
             # most specific identifier for every file and exactly matches the
             # Title field in the identity header. Using topic alone fails for:
@@ -570,7 +582,7 @@ class StabilityChecker:
                 )
                 return
 
-            # Check top-10 grounding chunks for the target file.
+            # Check top-5 grounding chunks for the target file (TOP_K = 5 per Phase 16.5).
             # Phase 11 finding: retrieved_context.title returns the raw file
             # resource ID (e.g. "yg1gquo3eo88"), NOT the display_name.
             # DB stores: gemini_file_id = "files/yg1gquo3eo88"
@@ -586,7 +598,7 @@ class StabilityChecker:
                 gm = getattr(response.candidates[0], "grounding_metadata", None)
                 if gm:
                     chunks = getattr(gm, "grounding_chunks", []) or []
-                    for chunk in chunks[:10]:
+                    for chunk in chunks[:5]:
                         rc = getattr(chunk, "retrieved_context", None)
                         if not rc:
                             continue
@@ -609,9 +621,57 @@ class StabilityChecker:
                             break
 
             if not found:
+                # S4a fallback: top-3 rarest aspects, no preamble (per Phase 16.5 fix)
+                aspects_s4a: list[str] = []
+                if ai_metadata_json_str:
+                    try:
+                        aspects_s4a = json.loads(ai_metadata_json_str).get("topic_aspects", []) or []
+                    except Exception:
+                        pass
+                if aspects_s4a:
+                    _sorted = sorted(aspects_s4a, key=lambda a: corpus_freq.get(a, 0))
+                    _cleaned = [re.sub(r"[*_`]", "", a) for a in _sorted[:3]]
+                    s4a_query = " ".join(_cleaned)
+                    if s4a_query:
+                        self._verbose(
+                            f"Assertion 7: S4a fallback for '{filename}': {s4a_query!r}"
+                        )
+                        try:
+                            s4a_response = self.client.models.generate_content(
+                                model=SEARCH_MODEL,
+                                contents=s4a_query,
+                                config=genai_types.GenerateContentConfig(
+                                    tools=[genai_types.Tool(
+                                        file_search=genai_types.FileSearch(
+                                            file_search_store_names=[self.store_resource_name]
+                                        )
+                                    )]
+                                ),
+                            )
+                            if s4a_response.candidates:
+                                gm_s4a = getattr(s4a_response.candidates[0], "grounding_metadata", None)
+                                if gm_s4a:
+                                    chunks_s4a = getattr(gm_s4a, "grounding_chunks", []) or []
+                                    for chunk_s4a in chunks_s4a[:5]:
+                                        rc_s4a = getattr(chunk_s4a, "retrieved_context", None)
+                                        if not rc_s4a:
+                                            continue
+                                        title_s4a = getattr(rc_s4a, "title", "") or ""
+                                        if expected_file_id and title_s4a == expected_file_id:
+                                            found = True
+                                            break
+                                        if store_doc_prefix and title_s4a == store_doc_prefix:
+                                            found = True
+                                            break
+                        except Exception as e_s4a:
+                            self._verbose(
+                                f"Assertion 7: S4a API error for '{filename}': {e_s4a}"
+                            )
+
+            if not found:
                 missed.append(filename)
                 self._verbose(
-                    f"Assertion 7: '{filename}' NOT found in top-10 for query {query!r}"
+                    f"Assertion 7: '{filename}' NOT found via S1 or S4a fallback"
                 )
 
         # Zero tolerance: every sampled file must be retrievable. Any miss means
