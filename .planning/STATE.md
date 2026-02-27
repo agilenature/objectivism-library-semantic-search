@@ -11,9 +11,9 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 ## Current Position
 
 Phase: 18 (RxPY Codebase-Wide Async Migration) -- IN PROGRESS
-Plan: 18-03 COMPLETE -- Tier 2 extraction pipeline migrated; 18-04 UNBLOCKED
+Plan: 18-04 COMPLETE -- Tier 1 upload pipeline migrated; 18-05 UNBLOCKED
 Status: Phase 18 execution in progress.
-Last activity: 2026-02-27 -- Completed 18-03: Tier 2 extraction pipeline (batch_client, orchestrator) migrated from asyncio.Semaphore/AsyncLimiter/asyncio.sleep to RxPY rx.interval/rx.timer
+Last activity: 2026-02-27 -- Completed 18-04: Tier 1 upload pipeline (orchestrator, client, recovery) migrated from asyncio.Semaphore+gather+Event+tenacity to RxPY ops.merge+Subject+make_retrying_observable; 476 tests pass, check_stability STABLE, 0 orphans
 
 Progress: [############################################] 45/45 v2.0 plans complete
 
@@ -38,7 +38,7 @@ Phase 16.1:[##########] 3/3 plans -- COMPLETE (audit + fix + re-validation done;
 Phase 16.2:[##########] 2/2 plans -- COMPLETE (audit exits 0; all 1,885 files satisfy invariant; Phase 16.3 readiness 100%; gate PASSED 2026-02-24)
 Phase 16.3:[##########] 3/3 plans -- COMPLETE (Retrievability Research: diagnosis + intervention + production remediation; all 1,749 files re-uploaded with identity headers; gate PASSED 2026-02-25; ITOE OH 60 files also batch-extracted + re-uploaded 2026-02-25)
 Phase 17:  [##########] 4/4 plans -- COMPLETE (gate PASSED 2026-02-27: 7/7 UATs match pre-migration, 470/470 full suite green)
-Phase 18:  [######░░░░] 3/5 plans -- IN PROGRESS (18-01 spike GO; 18-02 Tier 3 COMPLETE; 18-03 Tier 2 COMPLETE; 18-04 UNBLOCKED)
+Phase 18:  [########░░] 4/5 plans -- IN PROGRESS (18-01 spike GO; 18-02 Tier 3 COMPLETE; 18-03 Tier 2 COMPLETE; 18-04 Tier 1 COMPLETE; 18-05 UNBLOCKED)
 
 ## Performance Metrics
 
