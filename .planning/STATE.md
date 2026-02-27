@@ -11,9 +11,9 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 ## Current Position
 
 Phase: 18 (RxPY Codebase-Wide Async Migration) -- IN PROGRESS
-Plan: 18-01 COMPLETE -- Spike GO verdict; 18-02 UNBLOCKED
+Plan: 18-02 COMPLETE -- Tier 3 migration done; 18-03 UNBLOCKED
 Status: Phase 18 execution in progress.
-Last activity: 2026-02-27 -- Completed 18-01 spike: all 5 patterns validated, operator contracts finalized, 3 RxPY 3.x API corrections documented
+Last activity: 2026-02-27 -- Completed 18-02: Tier 3 (services/search, services/library, search/client) migrated from asyncio.to_thread/tenacity to RxPY observables
 
 Progress: [############################################] 45/45 v2.0 plans complete
 
@@ -38,7 +38,7 @@ Phase 16.1:[##########] 3/3 plans -- COMPLETE (audit + fix + re-validation done;
 Phase 16.2:[##########] 2/2 plans -- COMPLETE (audit exits 0; all 1,885 files satisfy invariant; Phase 16.3 readiness 100%; gate PASSED 2026-02-24)
 Phase 16.3:[##########] 3/3 plans -- COMPLETE (Retrievability Research: diagnosis + intervention + production remediation; all 1,749 files re-uploaded with identity headers; gate PASSED 2026-02-25; ITOE OH 60 files also batch-extracted + re-uploaded 2026-02-25)
 Phase 17:  [##########] 4/4 plans -- COMPLETE (gate PASSED 2026-02-27: 7/7 UATs match pre-migration, 470/470 full suite green)
-Phase 18:  [##░░░░░░░░] 1/5 plans -- IN PROGRESS (18-01 spike GO; 18-02 UNBLOCKED)
+Phase 18:  [####░░░░░░] 2/5 plans -- IN PROGRESS (18-01 spike GO; 18-02 Tier 3 COMPLETE; 18-03 UNBLOCKED)
 
 ## Performance Metrics
 
@@ -216,6 +216,10 @@ Recent decisions affecting current work:
 - [18-01]: dynamic_semaphore MUST receive coroutine factories, not pre-started futures (bypasses concurrency control)
 - [18-01]: .run() forbidden in async contexts (deadlocks event loop); use Future-based subscription pattern
 - [18-01]: Bounded concurrency: ops.map(factory).pipe(ops.merge(max_concurrent=N)), NOT flat_map(max_concurrent=N)
+- [18-02]: _operators.py created with make_retrying_observable + subscribe_awaitable -- shared across all migration tiers
+- [18-02]: search/client.py query_with_retry converted sync->async; tenacity @retry removed entirely
+- [18-02]: services/library.py uses _run_in_executor helper to DRY 7 identical asyncio.to_thread->RxPY patterns
+- [18-02]: sync/orchestrator.py has zero asyncio primitives -- no migration needed (only awaits client.* async methods)
 
 ### Roadmap Evolution
 
@@ -247,9 +251,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Phase 18 Plan 18-01 COMPLETE (spike GO). Plan 18-02 next.
+Stopped at: Phase 18 Plan 18-02 COMPLETE (Tier 3 migration). Plan 18-03 next.
 
-Resume file: .planning/phases/18-rxpy-codebase-wide-async-migration/18-02-PLAN.md
+Resume file: .planning/phases/18-rxpy-codebase-wide-async-migration/18-03-PLAN.md
 
 Phase 17 context (COMPLETE):
 - RxPY reactive observable pipeline for TUI event streams -- DELIVERED
