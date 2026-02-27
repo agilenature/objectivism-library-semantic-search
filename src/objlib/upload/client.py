@@ -18,13 +18,7 @@ from typing import Any
 from google import genai
 from google.genai import errors as genai_errors
 from google.genai import types as genai_types
-from tenacity import (
-    AsyncRetrying,
-    TryAgain,
-    retry_if_result,
-    stop_after_delay,
-    wait_exponential,
-)
+from objlib.upload._operators import subscribe_awaitable, make_retrying_observable
 
 from objlib.models import MetadataQuality
 from objlib.upload.circuit_breaker import RollingWindowCircuitBreaker
@@ -175,6 +169,8 @@ class GeminiFileSearchClient:
     async def wait_for_active(self, file_obj: Any, timeout: int = 300) -> Any:
         """Step 2: Poll until the uploaded file reaches ACTIVE state.
 
+        Uses RxPY make_retrying_observable with exponential backoff (2-30s).
+
         Args:
             file_obj: File object returned by :meth:`upload_file`.
             timeout: Maximum seconds to wait.
@@ -184,25 +180,41 @@ class GeminiFileSearchClient:
 
         Raises:
             RuntimeError: If the file transitions to FAILED state.
+            TimeoutError: If the file does not become active within timeout.
         """
-        async for attempt in AsyncRetrying(
-            wait=wait_exponential(min=2, max=30),
-            stop=stop_after_delay(timeout),
-            retry=retry_if_result(lambda f: getattr(f, "state", None) and f.state.name == "PROCESSING"),
-            reraise=True,
-        ):
-            with attempt:
-                file_obj = await self._client.aio.files.get(name=file_obj.name)
-                if hasattr(file_obj, "state"):
-                    if file_obj.state.name == "FAILED":
-                        raise RuntimeError(
-                            f"File processing failed: {file_obj.name}"
-                        )
-                    if file_obj.state.name == "PROCESSING":
-                        return file_obj  # tenacity retries
-                return file_obj  # ACTIVE or no state attribute
+        import time
 
-        return file_obj
+        start_time = time.monotonic()
+        file_name = file_obj.name
+
+        class _StillProcessing(Exception):
+            """Sentinel: file is still in PROCESSING state, retry needed."""
+
+        async def _poll_once() -> Any:
+            elapsed = time.monotonic() - start_time
+            if elapsed >= timeout:
+                raise TimeoutError(
+                    f"File {file_name} did not become active within {timeout}s"
+                )
+            result = await self._client.aio.files.get(name=file_name)
+            if hasattr(result, "state"):
+                if result.state.name == "FAILED":
+                    raise RuntimeError(
+                        f"File processing failed: {file_name}"
+                    )
+                if result.state.name == "PROCESSING":
+                    raise _StillProcessing()
+            return result  # ACTIVE or no state attribute
+
+        # Exponential backoff: 2s base, ~30s max, enough retries for timeout
+        # max_retries calculated from timeout: at 2s doubling, 7 retries = ~256s
+        max_retries = max(20, timeout // 5)
+        obs = make_retrying_observable(
+            _poll_once,
+            max_retries=max_retries,
+            base_delay=2.0,
+        )
+        return await subscribe_awaitable(obs)
 
     async def import_to_store(
         self, file_name: str, metadata: list[dict[str, Any]]
@@ -263,7 +275,7 @@ class GeminiFileSearchClient:
     async def poll_operation(self, operation: Any, timeout: int = 3600) -> Any:
         """Poll a long-running operation until done.
 
-        Uses exponential backoff: 5s -> 10s -> 20s -> 40s -> 60s (cap).
+        Uses RxPY make_retrying_observable with exponential backoff (5-60s).
 
         Args:
             operation: Operation object from :meth:`import_to_store`.
@@ -272,17 +284,33 @@ class GeminiFileSearchClient:
         Returns:
             Completed operation.
         """
-        async for attempt in AsyncRetrying(
-            wait=wait_exponential(multiplier=1, min=5, max=60),
-            stop=stop_after_delay(timeout),
-            reraise=True,
-        ):
-            with attempt:
-                operation = await self._client.aio.operations.get(operation)
-                if getattr(operation, "done", None) is not True:
-                    raise TryAgain
+        import time
 
-        return operation
+        start_time = time.monotonic()
+
+        class _OperationNotDone(Exception):
+            """Sentinel: operation not yet complete, retry needed."""
+
+        async def _poll_once() -> Any:
+            nonlocal operation
+            elapsed = time.monotonic() - start_time
+            if elapsed >= timeout:
+                raise TimeoutError(
+                    f"Operation did not complete within {timeout}s"
+                )
+            operation = await self._client.aio.operations.get(operation)
+            if getattr(operation, "done", None) is not True:
+                raise _OperationNotDone()
+            return operation
+
+        # Exponential backoff: 5s base, enough retries for timeout
+        max_retries = max(20, timeout // 10)
+        obs = make_retrying_observable(
+            _poll_once,
+            max_retries=max_retries,
+            base_delay=5.0,
+        )
+        return await subscribe_awaitable(obs)
 
     async def delete_file(self, file_name: str) -> None:
         """Delete a raw file from the Gemini Files API (temporary, 48hr TTL).
