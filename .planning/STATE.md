@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 
 ## Current Position
 
-Phase: 17 (RxPY TUI Reactive Pipeline) -- IN PROGRESS
-Plan: 17-03 COMPLETE -- RxPY pipeline replaces manual debounce/@work; 7/7 UAT invariants pass
-Status: Pipeline implementation complete. Plan 17-04 (post-UAT validation) UNBLOCKED.
-Last activity: 2026-02-27 -- Plan 17-03 COMPLETE: combine_latest/switch_map pipeline wired, all 7 behavioral invariants match pre-migration values
+Phase: 17 (RxPY TUI Reactive Pipeline) -- COMPLETE
+Plan: 17-04 COMPLETE -- Post-UAT validation: all 7 invariants pass, 470/470 full suite green
+Status: Phase 17 COMPLETE. Phase 18 UNBLOCKED.
+Last activity: 2026-02-27 -- Plan 17-04 COMPLETE: post-UAT validation passed, 10 test_tui.py tests fixed, full project suite 470/470 green
 
-Progress: [##########################################] 43/45 v2.0 plans complete
+Progress: [############################################] 45/45 v2.0 plans complete
 
 Note: Phase 07-07 (TUI integration smoke test from v1.0) deferred to Phase 16, plan 16-03.
   Runs against full live corpus after upload -- more meaningful than running on empty store.
@@ -37,8 +37,8 @@ Phase 16.6:[##########] 3/3 plans -- COMPLETE (gate PASSED 2026-02-26: 3x STABLE
 Phase 16.1:[##########] 3/3 plans -- COMPLETE (audit + fix + re-validation done; A7 structural fix delivered in Phase 16.3)
 Phase 16.2:[##########] 2/2 plans -- COMPLETE (audit exits 0; all 1,885 files satisfy invariant; Phase 16.3 readiness 100%; gate PASSED 2026-02-24)
 Phase 16.3:[##########] 3/3 plans -- COMPLETE (Retrievability Research: diagnosis + intervention + production remediation; all 1,749 files re-uploaded with identity headers; gate PASSED 2026-02-25; ITOE OH 60 files also batch-extracted + re-uploaded 2026-02-25)
-Phase 17:  [########░░] 3/4 plans -- IN PROGRESS (17-01 HOSTILE gate PASSED; 17-02 pre-UAT baseline COMPLETE; 17-03 RxPY pipeline COMPLETE 2026-02-27; 17-04 UNBLOCKED)
-Phase 18:  [░░░░░░░░░░] 0/5 plans -- BLOCKED by Phase 17 gate (RxPY codebase-wide async migration)
+Phase 17:  [##########] 4/4 plans -- COMPLETE (gate PASSED 2026-02-27: 7/7 UATs match pre-migration, 470/470 full suite green)
+Phase 18:  [░░░░░░░░░░] 0/5 plans -- UNBLOCKED (RxPY codebase-wide async migration)
 
 ## Performance Metrics
 
@@ -48,9 +48,9 @@ Phase 18:  [░░░░░░░░░░] 0/5 plans -- BLOCKED by Phase 17 gat
 - Total execution time: 128 min
 
 **v2.0 Velocity:**
-- Total plans completed: 32
-- Average duration: 18.2 min
-- Total execution time: 584 min
+- Total plans completed: 33
+- Average duration: 18.1 min
+- Total execution time: 599 min
 
 *Updated after each plan completion*
 
@@ -208,6 +208,9 @@ Recent decisions affecting current work:
 - [17-03]: on_filter_changed feeds BehaviorSubject; combine_latest only fires when query_stream has emitted (architectural change from direct _run_search call)
 - [17-03]: 108/118 test_tui.py pass; 10 expected failures (7 post_message(SearchRequested), 2 _fire_search access, 1 filter-with-direct-query-set)
 - [17-03]: All 7 behavioral UAT invariant tests pass with identical pre-migration contract values -- behavioral parity confirmed
+- [17-04]: 10 broken test_tui.py tests fixed: SearchRequested->_enter_subject.on_next(), _fire_search->pilot.press("enter"), filter test->pipeline-first emission
+- [17-04]: test_schema.py fixed for Phase 16.6 CRAD tables (EXPECTED_TABLES +2, user_version 11->12) -- pre-existing gap, not Phase 17
+- [17-04]: Phase 17 gate PASSED: 7/7 UAT invariants match pre-migration contract, 470/470 full project suite green, Phase 18 UNBLOCKED
 
 ### Roadmap Evolution
 
@@ -239,18 +242,18 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Phase 17 Plan 17-03 COMPLETE. RxPY pipeline implemented. Plan 17-04 UNBLOCKED.
+Stopped at: Phase 17 COMPLETE. All 4 plans done. Phase 18 UNBLOCKED.
 
-Resume file: .planning/phases/17-rxpy-reactive-observable-pipeline-for-tui-event-streams-validated-by-pre-post-uats/17-04-PLAN.md
+Resume file: .planning/phases/18-rxpy-codebase-wide-async-migration/ (Phase 18 plans)
 
-Phase 17 context:
-- RxPY reactive observable pipeline for TUI event streams
-- Replaces manual debounce/generation-tracking, @work(exclusive=True), scattered filter-refire logic
-- 4 plans: spike -> pre-UAT -> impl -> post-UAT
-- Plan 17-01 (spike) COMPLETE: 5/5 affirmative evidence tests, HOSTILE gate PASSED, human-approved
+Phase 17 context (COMPLETE):
+- RxPY reactive observable pipeline for TUI event streams -- DELIVERED
+- Manual debounce/generation-tracking, @work(exclusive=True), scattered filter-refire logic -- ALL REPLACED
+- 4/4 plans COMPLETE: spike -> pre-UAT -> impl -> post-UAT
+- Plan 17-01 (spike) COMPLETE: 5/5 affirmative evidence tests, HOSTILE gate PASSED
 - Plan 17-02 (pre-UAT) COMPLETE: 7/7 invariant tests pass, measured baselines captured
 - Plan 17-03 (implementation) COMPLETE: RxPY pipeline wired, 7/7 behavioral UAT tests pass with identical values
-- Next: Plan 17-04 (post-UAT validation -- update 10 broken test_tui.py tests, confirm full suite passes)
+- Plan 17-04 (post-UAT) COMPLETE: 10 broken tests fixed, 470/470 full project suite green, Phase 17 gate PASSED
 
 Temporal stability log (Phase 16 -- full library, post-remediation):
 - T=0 baseline: Run 1 (2026-02-25 11:50:32 UTC): STABLE -- 1749 indexed, 1749 store, 0 orphans; A7 19/20 (Objectivist Logic Class 10-02 miss, within tolerance=2); 333 Episode + 60 OH excluded
