@@ -17,7 +17,11 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
+import rx
+from rx import operators as ops
+
 from objlib.models import UploadConfig
+from objlib.upload._operators import subscribe_awaitable
 from objlib.upload.client import GeminiFileSearchClient
 from objlib.upload.exceptions import OCCConflictError
 from objlib.upload.state import AsyncUploadStateManager
@@ -88,6 +92,8 @@ class RecoveryManager:
     async def run(self) -> RecoveryResult:
         """Execute the full recovery protocol with a timeout guard.
 
+        Uses RxPY ops.timeout replacing asyncio.wait_for.
+
         Returns:
             :class:`RecoveryResult` summarising what was recovered.
 
@@ -97,16 +103,24 @@ class RecoveryManager:
         """
         timeout = self._config.recovery_timeout_seconds
         try:
-            return await asyncio.wait_for(
-                self._recover(), timeout=timeout
+            obs = rx.from_future(asyncio.ensure_future(self._recover())).pipe(
+                ops.timeout(timeout)
             )
-        except asyncio.TimeoutError:
-            logger.critical(
-                "Recovery timed out after %d seconds", timeout
+            return await subscribe_awaitable(obs)
+        except Exception as exc:
+            # ops.timeout raises Exception("Timeout")
+            is_timeout = (
+                isinstance(exc, (asyncio.TimeoutError, TimeoutError))
+                or str(exc) == "Timeout"
             )
-            raise RecoveryTimeoutError(
-                f"Recovery exceeded {timeout}s timeout"
-            ) from None
+            if is_timeout:
+                logger.critical(
+                    "Recovery timed out after %d seconds", timeout
+                )
+                raise RecoveryTimeoutError(
+                    f"Recovery exceeded {timeout}s timeout"
+                ) from None
+            raise
 
     # ------------------------------------------------------------------
     # Internal recovery phases
@@ -230,10 +244,12 @@ class RecoveryManager:
             try:
                 # Create a minimal operation-like object for the client
                 op_proxy = _OperationProxy(op_name)
-                completed = await asyncio.wait_for(
-                    self._client.poll_operation(op_proxy, timeout=60),
-                    timeout=65,  # slightly longer than poll timeout
-                )
+                obs = rx.from_future(
+                    asyncio.ensure_future(
+                        self._client.poll_operation(op_proxy, timeout=60)
+                    )
+                ).pipe(ops.timeout(65))  # slightly longer than poll timeout
+                completed = await subscribe_awaitable(obs)
 
                 done = getattr(completed, "done", None)
                 error = getattr(completed, "error", None)
@@ -263,24 +279,30 @@ class RecoveryManager:
                         op_name,
                     )
 
-            except (asyncio.TimeoutError, TimeoutError):
-                # Operation poll timed out -- leave as pending
-                logger.warning(
-                    "Timeout polling operation %s, will retry later", op_name
-                )
-
             except Exception as exc:
-                # API error (file expired, not found, etc.)
-                msg = f"Error polling operation {op_name}: {exc}"
-                logger.error(msg)
-                result.errors.append(msg)
-
-                # Reset file for re-upload since we can't determine status
-                await self._state.update_operation_state(
-                    op_name, "failed", str(exc)
+                # Handle both timeout (asyncio.TimeoutError, RxPY Exception("Timeout"))
+                # and API errors (file expired, not found, etc.)
+                is_timeout = (
+                    isinstance(exc, (asyncio.TimeoutError, TimeoutError))
+                    or str(exc) == "Timeout"
                 )
-                await self._reset_file_to_pending(file_path)
-                result.reset_to_pending += 1
+                if is_timeout:
+                    # Operation poll timed out -- leave as pending
+                    logger.warning(
+                        "Timeout polling operation %s, will retry later", op_name
+                    )
+                else:
+                    # API error
+                    msg = f"Error polling operation {op_name}: {exc}"
+                    logger.error(msg)
+                    result.errors.append(msg)
+
+                    # Reset file for re-upload since we can't determine status
+                    await self._state.update_operation_state(
+                        op_name, "failed", str(exc)
+                    )
+                    await self._reset_file_to_pending(file_path)
+                    result.reset_to_pending += 1
 
     async def _check_expiration_deadlines(self, result: RecoveryResult) -> None:
         """Phase 3: Identify files approaching or past the 48-hour TTL.
