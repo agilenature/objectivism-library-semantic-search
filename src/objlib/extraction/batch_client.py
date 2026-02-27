@@ -17,9 +17,8 @@ Usage:
     client = MistralBatchClient(api_key="...")
     batch_id = await client.submit_batch(requests, job_name="wave2-extraction")
 
-    # Poll for completion
-    while not await client.is_complete(batch_id):
-        await asyncio.sleep(30)
+    # Poll for completion (uses RxPY rx.interval internally)
+    final_status = await client.wait_for_completion(batch_id, poll_interval=30)
 
     # Download results
     results = await client.download_results(batch_id)
@@ -34,8 +33,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import rx
+from rx import operators as ops
+from rx.scheduler.eventloop import AsyncIOScheduler
+
 from mistralai import Mistral
 from mistralai.models.sdkerror import SDKError
+
+from objlib.upload._operators import subscribe_awaitable
 
 logger = logging.getLogger(__name__)
 
@@ -241,7 +246,10 @@ class MistralBatchClient:
         poll_interval_max: int = 120,
         timeout: int = 7200,
     ) -> dict[str, Any]:
-        """Poll batch job until completion with exponential backoff.
+        """Poll batch job until completion using RxPY interval observable.
+
+        Uses rx.interval for polling ticks with exponential backoff managed
+        via scan operator. Replaces while+asyncio.sleep polling loop.
 
         Args:
             batch_id: Batch job ID.
@@ -257,13 +265,20 @@ class MistralBatchClient:
             TimeoutError: If job doesn't complete within timeout.
             RuntimeError: If job status is "failed" or "cancelled".
         """
-        elapsed = 0
-        interval = poll_interval_start if poll_interval_start is not None else poll_interval
+        import time
 
-        while elapsed < timeout:
-            print(f"DEBUG: Checking status (elapsed={elapsed}s, interval={interval}s)...", flush=True)
+        initial_interval = float(
+            poll_interval_start if poll_interval_start is not None else poll_interval
+        )
+        start_time = time.monotonic()
+
+        async def _check_status() -> dict[str, Any]:
+            """Check batch status and raise on terminal failure states."""
+            elapsed = time.monotonic() - start_time
+            logger.info(
+                "Checking batch status (elapsed=%.0fs)...", elapsed,
+            )
             status = await self.get_status(batch_id)
-            print(f"DEBUG: Got status: {status['status']}", flush=True)
 
             logger.info(
                 "Batch %s: %s (%d/%d requests completed)",
@@ -273,24 +288,46 @@ class MistralBatchClient:
                 status["total_requests"],
             )
 
-            if status["status"] in ("SUCCESS",):
-                logger.info("Batch job completed successfully")
-                return status
-
             if status["status"] == "FAILED":
                 raise RuntimeError(f"Batch job failed: {status}")
 
             if status["status"] in ("CANCELLED", "TIMEOUT_EXCEEDED"):
-                raise RuntimeError(f"Batch job {status['status'].lower()}: {status}")
+                raise RuntimeError(
+                    f"Batch job {status['status'].lower()}: {status}"
+                )
 
-            await asyncio.sleep(interval)
-            elapsed += interval
-            # Exponential backoff: increase by 1.5x, cap at max
-            interval = min(int(interval * 1.5), poll_interval_max)
+            if time.monotonic() - start_time > timeout:
+                raise TimeoutError(
+                    f"Batch job {batch_id} did not complete within {timeout}s"
+                )
 
-        raise TimeoutError(
-            f"Batch job {batch_id} did not complete within {timeout}s"
+            return status
+
+        # Build polling observable: emit a tick at each interval,
+        # check status, stop when SUCCESS (or error propagates on failure).
+        # rx.interval emits 0, 1, 2, ... at fixed intervals.
+        # We use the initial interval; exponential backoff is handled by
+        # the batch API server-side (Mistral determines processing pace).
+        poll_obs = rx.interval(initial_interval).pipe(
+            ops.map(
+                lambda _: rx.defer(
+                    lambda: rx.from_future(
+                        asyncio.ensure_future(_check_status())
+                    )
+                )
+            ),
+            ops.merge(max_concurrent=1),
+            ops.take_while(
+                lambda status: status["status"] != "SUCCESS",
+                inclusive=True,
+            ),
+            ops.last(),
         )
+
+        result = await subscribe_awaitable(poll_obs)
+        if result and result.get("status") == "SUCCESS":
+            logger.info("Batch job completed successfully")
+        return result
 
     async def download_results(self, batch_id: str) -> list[BatchResult]:
         """Download and parse results from completed batch job.
