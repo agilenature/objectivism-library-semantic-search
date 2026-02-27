@@ -5,15 +5,14 @@ Wave 2: Production batch processing with validated prompt template,
 two-level validation, multi-dimensional confidence scoring, and
 versioned metadata persistence to file_metadata_ai / file_primary_topics.
 
-Both waves enforce rate limits (60 req/min) and concurrency limits (3
-simultaneous) via asyncio Semaphore and aiolimiter. On credit exhaustion
-(HTTP 402), saves checkpoint and exits cleanly. On rate limiting (HTTP 429),
-applies exponential backoff with jitter.
+Both waves enforce rate limits (60 req/min) via RxPY rx.timer-based
+pacing. On credit exhaustion (HTTP 402), saves checkpoint and exits
+cleanly. On rate limiting (HTTP 429), applies exponential backoff with
+jitter using rx.timer delays.
 """
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import random
@@ -23,8 +22,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from aiolimiter import AsyncLimiter
+import rx
 from pydantic import ValidationError
+
+from objlib.upload._operators import subscribe_awaitable
 
 from objlib.extraction.checkpoint import CheckpointManager, CreditExhaustionHandler
 from objlib.extraction.chunker import prepare_transcript
@@ -94,10 +95,8 @@ class ExtractionOrchestrator:
         self._db = db
         self._checkpoint = checkpoint
         self._config = config or ExtractionConfig()
-        self._semaphore = asyncio.Semaphore(self._config.max_concurrent)
-        self._rate_limiter = AsyncLimiter(
-            self._config.rate_limit_rpm, 60
-        )
+        # Rate limit delay: 60 req/min = 1 request per second minimum
+        self._rate_limit_delay_s = 60.0 / self._config.rate_limit_rpm
         self._total_calls = 0
         self._credit_handler = CreditExhaustionHandler()
 
@@ -240,6 +239,15 @@ class ExtractionOrchestrator:
 
         return summary
 
+    async def _rate_limit_delay(self) -> None:
+        """Apply rate-limit pacing via rx.timer.
+
+        Replaces AsyncLimiter — enforces minimum delay between API calls
+        to stay within rate_limit_rpm. Uses rx.timer() instead of
+        asyncio.sleep() for RxPY consistency.
+        """
+        await subscribe_awaitable(rx.timer(self._rate_limit_delay_s))
+
     async def _process_one(
         self,
         file_path: str,
@@ -248,10 +256,10 @@ class ExtractionOrchestrator:
     ) -> dict:
         """Process a single file with a single strategy.
 
-        Acquires semaphore and rate limiter, builds prompts, calls API,
-        validates response against Pydantic model, and returns result.
+        Enforces rate limiting via rx.timer-based pacing (replaces
+        asyncio.Semaphore + AsyncLimiter). Handles RateLimitException
+        with exponential backoff using rx.timer delays.
 
-        Handles RateLimitException with exponential backoff and jitter.
         Re-raises CreditExhaustedException for orchestrator-level handling.
 
         Args:
@@ -268,16 +276,17 @@ class ExtractionOrchestrator:
 
         for attempt in range(self._config.max_retries + 1):
             try:
-                async with self._semaphore:
-                    async with self._rate_limiter:
-                        start_time = time.monotonic()
-                        metadata_dict, tokens = await self._client.extract_metadata(
-                            transcript_text=user_prompt,
-                            system_prompt=system_prompt,
-                            max_tokens=8000,
-                            temperature=strategy.temperature,
-                        )
-                        latency_ms = int((time.monotonic() - start_time) * 1000)
+                # Rate-limit pacing via rx.timer (replaces AsyncLimiter)
+                await self._rate_limit_delay()
+
+                start_time = time.monotonic()
+                metadata_dict, tokens = await self._client.extract_metadata(
+                    transcript_text=user_prompt,
+                    system_prompt=system_prompt,
+                    max_tokens=8000,
+                    temperature=strategy.temperature,
+                )
+                latency_ms = int((time.monotonic() - start_time) * 1000)
 
                 # Validate against Pydantic model
                 try:
@@ -318,7 +327,8 @@ class ExtractionOrchestrator:
                         "Rate limited on %s/%s, backing off %.1fs (attempt %d)",
                         strategy.name, file_path, backoff, attempt + 1,
                     )
-                    await asyncio.sleep(backoff)
+                    # Exponential backoff via rx.timer (replaces asyncio.sleep)
+                    await subscribe_awaitable(rx.timer(backoff))
                 else:
                     logger.error(
                         "Max retries on rate limit for %s/%s",
@@ -518,20 +528,21 @@ class ExtractionOrchestrator:
 
                 for attempt in range(2):  # Initial + 1 retry
                     try:
-                        async with self._semaphore:
-                            async with self._rate_limiter:
-                                start_time = time.monotonic()
-                                retry_suffix = ""
-                                if attempt > 0 and validation and validation.hard_failures:
-                                    retry_suffix = build_retry_prompt(validation.hard_failures)
+                        # Rate-limit pacing via rx.timer (replaces AsyncLimiter)
+                        await self._rate_limit_delay()
 
-                                metadata_dict, tokens = await self._client.extract_metadata(
-                                    transcript_text=user_prompt + retry_suffix,
-                                    system_prompt=system_prompt,
-                                    max_tokens=8000,
-                                    temperature=temperature,  # From Wave 1 winning strategy
-                                )
-                                latency_ms = int((time.monotonic() - start_time) * 1000)
+                        start_time = time.monotonic()
+                        retry_suffix = ""
+                        if attempt > 0 and validation and validation.hard_failures:
+                            retry_suffix = build_retry_prompt(validation.hard_failures)
+
+                        metadata_dict, tokens = await self._client.extract_metadata(
+                            transcript_text=user_prompt + retry_suffix,
+                            system_prompt=system_prompt,
+                            max_tokens=8000,
+                            temperature=temperature,  # From Wave 1 winning strategy
+                        )
+                        latency_ms = int((time.monotonic() - start_time) * 1000)
 
                         self._total_calls += 1
 
@@ -562,7 +573,8 @@ class ExtractionOrchestrator:
                             "Rate limited on %s, backing off %.1fs (attempt %d)",
                             file_path, backoff, attempt + 1,
                         )
-                        await asyncio.sleep(backoff)
+                        # Exponential backoff via rx.timer (replaces asyncio.sleep)
+                        await subscribe_awaitable(rx.timer(backoff))
 
                     except Exception as e:
                         logger.error(
