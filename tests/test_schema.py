@@ -13,7 +13,7 @@ import pytest
 from objlib.database import Database
 
 
-# All 16 tables expected after full schema initialization (V1-V7).
+# All 18 tables expected after full schema initialization (V1-V7 + CRAD).
 # Note: files_v7 is a transient migration table that gets renamed to files,
 # so it should NOT exist after initialization.
 EXPECTED_TABLES = {
@@ -34,6 +34,8 @@ EXPECTED_TABLES = {
     "sessions",
     "session_events",
     "library_config",
+    "file_discrimination_phrases",  # Phase 16.6 CRAD discrimination phrases
+    "series_genus",                 # Phase 16.6 series/genus taxonomy
 }
 
 EXPECTED_TRIGGERS = {"update_files_timestamp"}
@@ -86,10 +88,10 @@ class TestSchemaCreation:
             f"Missing triggers: {EXPECTED_TRIGGERS - actual_triggers}"
         )
 
-    def test_user_version_is_11(self, in_memory_db):
-        """PRAGMA user_version returns 11 after schema setup (V11: status column retired)."""
+    def test_user_version_is_12(self, in_memory_db):
+        """PRAGMA user_version returns 12 after schema setup (V12: CRAD tables)."""
         version = in_memory_db.conn.execute("PRAGMA user_version").fetchone()[0]
-        assert version == 11
+        assert version == 12
 
 
 class TestTriggers:
