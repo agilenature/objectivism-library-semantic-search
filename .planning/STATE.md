@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 
 ## Current Position
 
-Phase: 18 (RxPY Codebase-Wide Async Migration) -- IN PROGRESS
-Plan: 18-04 COMPLETE -- Tier 1 upload pipeline migrated; 18-05 UNBLOCKED
-Status: Phase 18 execution in progress.
-Last activity: 2026-02-27 -- Completed 18-04: Tier 1 upload pipeline (orchestrator, client, recovery) migrated from asyncio.Semaphore+gather+Event+tenacity to RxPY ops.merge+Subject+make_retrying_observable; 476 tests pass, check_stability STABLE, 0 orphans
+Phase: 18 (RxPY Codebase-Wide Async Migration) -- COMPLETE
+Plan: 18-05 COMPLETE -- Post-migration validation; Phase 18 gate PASSED
+Status: Phase 18 complete. All async code outside tui/ migrated to RxPY.
+Last activity: 2026-02-27 -- Completed 18-05: gate PASSED (476 tests, 0 asyncio primitives, STABLE 7/7, 0 orphans, 5/5 search queries resolved, 7/7 TUI invariants); CLI async bridge bug fixed
 
-Progress: [############################################] 45/45 v2.0 plans complete
+Progress: [############################################] 46/46 v2.0 plans complete
 
 Note: Phase 07-07 (TUI integration smoke test from v1.0) deferred to Phase 16, plan 16-03.
   Runs against full live corpus after upload -- more meaningful than running on empty store.
@@ -38,7 +38,7 @@ Phase 16.1:[##########] 3/3 plans -- COMPLETE (audit + fix + re-validation done;
 Phase 16.2:[##########] 2/2 plans -- COMPLETE (audit exits 0; all 1,885 files satisfy invariant; Phase 16.3 readiness 100%; gate PASSED 2026-02-24)
 Phase 16.3:[##########] 3/3 plans -- COMPLETE (Retrievability Research: diagnosis + intervention + production remediation; all 1,749 files re-uploaded with identity headers; gate PASSED 2026-02-25; ITOE OH 60 files also batch-extracted + re-uploaded 2026-02-25)
 Phase 17:  [##########] 4/4 plans -- COMPLETE (gate PASSED 2026-02-27: 7/7 UATs match pre-migration, 470/470 full suite green)
-Phase 18:  [########░░] 4/5 plans -- IN PROGRESS (18-01 spike GO; 18-02 Tier 3 COMPLETE; 18-03 Tier 2 COMPLETE; 18-04 Tier 1 COMPLETE; 18-05 UNBLOCKED)
+Phase 18:  [##########] 5/5 plans -- COMPLETE (RxPY codebase-wide async migration) -- gate PASSED 2026-02-27
 
 ## Performance Metrics
 
@@ -48,9 +48,9 @@ Phase 18:  [########░░] 4/5 plans -- IN PROGRESS (18-01 spike GO; 18-02 Tier
 - Total execution time: 128 min
 
 **v2.0 Velocity:**
-- Total plans completed: 34
-- Average duration: 17.8 min
-- Total execution time: 624 min
+- Total plans completed: 35
+- Average duration: 18.2 min
+- Total execution time: 638 min
 
 *Updated after each plan completion*
 
@@ -224,6 +224,10 @@ Recent decisions affecting current work:
 - [18-03]: AsyncLimiter replaced with rx.timer-based fixed-interval pacing (60 req/min = 1s delay per call)
 - [18-03]: asyncio.Semaphore removed entirely -- was guarding sequential for-loop calls (no-op)
 - [18-03]: No concat_map wave chaining needed -- run_wave1/run_production are separate CLI entry points
+- [18-05]: CLI search/view commands use asyncio.run() to bridge sync Typer callback to async query_with_retry (Rule 1 bug fix -- Phase 18-02 made method async but CLI not updated)
+- [18-05]: tenacity dependency retained in pyproject.toml despite zero imports in src/ -- removal is separate cleanup task
+- [18-05]: Canon.json modules section added with structured documentation of all 10 migrated modules, 5 custom operators, and 3 RxPY-specific rules
+- [18-05]: Phase 18 GATE PASSED -- all 7 verification criteria met with positive evidence
 
 ### Roadmap Evolution
 
@@ -255,9 +259,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Phase 18 Plan 18-02 COMPLETE (Tier 3 migration). Plan 18-03 next.
+Stopped at: Phase 18 COMPLETE. All 5 plans done. Gate PASSED.
 
-Resume file: .planning/phases/18-rxpy-codebase-wide-async-migration/18-03-PLAN.md
+Resume file: N/A -- Phase 18 complete. Next phase TBD.
 
 Phase 17 context (COMPLETE):
 - RxPY reactive observable pipeline for TUI event streams -- DELIVERED

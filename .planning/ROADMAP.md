@@ -526,9 +526,9 @@ Each wave's gate is BLOCKING for the next. If a gate fails, the failing phase mu
 | 16.5. Strategy 4 Rarest-Aspect Exhaustive Audit | v2.0 | 0/4 | In progress | - |
 | 16.6. CRAD — Corpus-Relative Aspect Differentiation | v2.0 | 0/3 | Not started | - |
 | 17. RxPY TUI Reactive Pipeline | v2.0 | 1/4 | In progress | - |
-| 18. RxPY Codebase-Wide Async Migration | v2.0 | 0/5 | Not started | - |
+| 18. RxPY Codebase-Wide Async Migration | v2.0 | 5/5 | Complete | 2026-02-27 |
 
 ---
 *Roadmap created: 2026-02-19*
 *Pre-mortem: governance/pre-mortem-gemini-fsm.md*
-*Last updated: 2026-02-27 -- Phase 17 Plan 17-01 complete: HOSTILE spike gate PASSED (5/5 RxPY+Textual integration tests, human-approved); 17-02 unblocked*
+*Last updated: 2026-02-27 -- Phase 18 complete: all 5 plans done, gate PASSED (476 tests, 0 asyncio primitives, STABLE, 0 orphans, 5/5 search queries resolved, 7/7 TUI invariants)*
