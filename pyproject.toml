@@ -22,6 +22,7 @@ dependencies = [
     "opentelemetry-api>=1.24",
     "opentelemetry-sdk>=1.24",
     "python-statemachine==2.6.0",
+    "reactivex>=4.0",
 ]
 
 [project.optional-dependencies]
