@@ -10,10 +10,10 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 
 ## Current Position
 
-Phase: 17 (RxPY TUI Reactive Pipeline) -- COMPLETE
-Plan: 17-04 COMPLETE -- Post-UAT validation: all 7 invariants pass, 470/470 full suite green
-Status: Phase 17 COMPLETE. Phase 18 UNBLOCKED.
-Last activity: 2026-02-27 -- Plan 17-04 COMPLETE: post-UAT validation passed, 10 test_tui.py tests fixed, full project suite 470/470 green
+Phase: 18 (RxPY Codebase-Wide Async Migration) -- IN PROGRESS
+Plan: 18-01 COMPLETE -- Spike GO verdict; 18-02 UNBLOCKED
+Status: Phase 18 execution in progress.
+Last activity: 2026-02-27 -- Completed 18-01 spike: all 5 patterns validated, operator contracts finalized, 3 RxPY 3.x API corrections documented
 
 Progress: [############################################] 45/45 v2.0 plans complete
 
@@ -38,7 +38,7 @@ Phase 16.1:[##########] 3/3 plans -- COMPLETE (audit + fix + re-validation done;
 Phase 16.2:[##########] 2/2 plans -- COMPLETE (audit exits 0; all 1,885 files satisfy invariant; Phase 16.3 readiness 100%; gate PASSED 2026-02-24)
 Phase 16.3:[##########] 3/3 plans -- COMPLETE (Retrievability Research: diagnosis + intervention + production remediation; all 1,749 files re-uploaded with identity headers; gate PASSED 2026-02-25; ITOE OH 60 files also batch-extracted + re-uploaded 2026-02-25)
 Phase 17:  [##########] 4/4 plans -- COMPLETE (gate PASSED 2026-02-27: 7/7 UATs match pre-migration, 470/470 full suite green)
-Phase 18:  [░░░░░░░░░░] 0/5 plans -- UNBLOCKED (RxPY codebase-wide async migration)
+Phase 18:  [##░░░░░░░░] 1/5 plans -- IN PROGRESS (18-01 spike GO; 18-02 UNBLOCKED)
 
 ## Performance Metrics
 
@@ -48,9 +48,9 @@ Phase 18:  [░░░░░░░░░░] 0/5 plans -- UNBLOCKED (RxPY codebas
 - Total execution time: 128 min
 
 **v2.0 Velocity:**
-- Total plans completed: 33
-- Average duration: 18.1 min
-- Total execution time: 599 min
+- Total plans completed: 34
+- Average duration: 17.8 min
+- Total execution time: 624 min
 
 *Updated after each plan completion*
 
@@ -211,6 +211,11 @@ Recent decisions affecting current work:
 - [17-04]: 10 broken test_tui.py tests fixed: SearchRequested->_enter_subject.on_next(), _fire_search->pilot.press("enter"), filter test->pipeline-first emission
 - [17-04]: test_schema.py fixed for Phase 16.6 CRAD tables (EXPECTED_TABLES +2, user_version 11->12) -- pre-existing gap, not Phase 17
 - [17-04]: Phase 17 gate PASSED: 7/7 UAT invariants match pre-migration contract, 470/470 full project suite green, Phase 18 UNBLOCKED
+- [18-01]: HOSTILE spike GO: 5/5 RxPY operator patterns validated. 3 API corrections: retry_when/flat_map(max_concurrent)/delay_when do not exist in RxPY 3.2.0.
+- [18-01]: shutdown_gate is two-operator composition (gate_input before flat_map, gate_output after), not single operator
+- [18-01]: dynamic_semaphore MUST receive coroutine factories, not pre-started futures (bypasses concurrency control)
+- [18-01]: .run() forbidden in async contexts (deadlocks event loop); use Future-based subscription pattern
+- [18-01]: Bounded concurrency: ops.map(factory).pipe(ops.merge(max_concurrent=N)), NOT flat_map(max_concurrent=N)
 
 ### Roadmap Evolution
 
@@ -242,9 +247,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Phase 17 COMPLETE. All 4 plans done. Phase 18 UNBLOCKED.
+Stopped at: Phase 18 Plan 18-01 COMPLETE (spike GO). Plan 18-02 next.
 
-Resume file: .planning/phases/18-rxpy-codebase-wide-async-migration/ (Phase 18 plans)
+Resume file: .planning/phases/18-rxpy-codebase-wide-async-migration/18-02-PLAN.md
 
 Phase 17 context (COMPLETE):
 - RxPY reactive observable pipeline for TUI event streams -- DELIVERED
