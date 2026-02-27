@@ -453,7 +453,7 @@ Plans:
 **Plans**: 4 plans in 4 waves
 
 Plans:
-- [ ] 17-01-PLAN.md -- RxPY + asyncio + Textual spike: 5 affirmative-evidence tests confirming AsyncIOScheduler, defer_task, BehaviorSubject, merge+distinct, catch integration (HOSTILE gate)
+- [x] 17-01-PLAN.md -- RxPY + asyncio + Textual spike: 5 affirmative-evidence tests confirming AsyncIOScheduler, defer_task, BehaviorSubject, merge+distinct, catch integration (HOSTILE gate) -- PASSED 2026-02-27
 - [ ] 17-02-PLAN.md -- Pre-implementation UAT baseline: 7 behavioral invariant tests capturing exact contract values against current code
 - [ ] 17-03-PLAN.md -- RxPY pipeline implementation: rx_pipeline.py + SearchBar Subject refactor + ObjlibApp combine_latest/switch_map pipeline + pyproject.toml
 - [ ] 17-04-PLAN.md -- Post-implementation UAT validation: identical 7 assertions re-run + full test suite regression check; gate = behavioral parity
@@ -525,10 +525,10 @@ Each wave's gate is BLOCKING for the next. If a gate fails, the failing phase mu
 | 16.4. Metadata Invariant + Retrievability Audit | v2.0 | 3/4 | In progress | - |
 | 16.5. Strategy 4 Rarest-Aspect Exhaustive Audit | v2.0 | 0/4 | In progress | - |
 | 16.6. CRAD — Corpus-Relative Aspect Differentiation | v2.0 | 0/3 | Not started | - |
-| 17. RxPY TUI Reactive Pipeline | v2.0 | 0/4 | Not started | - |
+| 17. RxPY TUI Reactive Pipeline | v2.0 | 1/4 | In progress | - |
 | 18. RxPY Codebase-Wide Async Migration | v2.0 | 0/5 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-19*
 *Pre-mortem: governance/pre-mortem-gemini-fsm.md*
-*Last updated: 2026-02-26 -- Phase 16.6 inserted: CRAD (Corpus-Relative Aspect Differentiation) via Binswanger Genus Method; depends on Phase 16-02; blocks Phase 17; 3 plans; execution order updated*
+*Last updated: 2026-02-27 -- Phase 17 Plan 17-01 complete: HOSTILE spike gate PASSED (5/5 RxPY+Textual integration tests, human-approved); 17-02 unblocked*

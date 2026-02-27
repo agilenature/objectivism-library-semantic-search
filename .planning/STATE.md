@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 
 ## Current Position
 
-Phase: 16.6 (CRAD) -- COMPLETE (all 3 plans done, gate PASSED)
-Plan: Phase 16.6-03 COMPLETE -- GATE PASSED (3 consecutive STABLE runs, 20/20 A7 each, no exclusions)
-Status: CRAD fully integrated. 63 S1-failing files now retrievable via Discrimination: header + A7 CRAD fallback. Phase 17 UNBLOCKED.
-Last activity: 2026-02-26 -- Phase 16.6 gate PASSED: 3x STABLE 20/20 A7 at 22:06, 22:08, 22:11 UTC
+Phase: 17 (RxPY TUI Reactive Pipeline) -- IN PROGRESS
+Plan: 17-01 COMPLETE -- HOSTILE gate PASSED (5/5 affirmative evidence tests, human-approved)
+Status: RxPY + Textual integration spike validated. Plan 17-02 (pre-UAT baseline) UNBLOCKED.
+Last activity: 2026-02-27 -- Plan 17-01 HOSTILE gate PASSED: 5/5 tests, 2.09s, human-approved
 
-Progress: [########################################] 40/45 v2.0 plans complete
+Progress: [########################################░] 41/45 v2.0 plans complete
 
 Note: Phase 07-07 (TUI integration smoke test from v1.0) deferred to Phase 16, plan 16-03.
   Runs against full live corpus after upload -- more meaningful than running on empty store.
@@ -37,7 +37,7 @@ Phase 16.6:[##########] 3/3 plans -- COMPLETE (gate PASSED 2026-02-26: 3x STABLE
 Phase 16.1:[##########] 3/3 plans -- COMPLETE (audit + fix + re-validation done; A7 structural fix delivered in Phase 16.3)
 Phase 16.2:[##########] 2/2 plans -- COMPLETE (audit exits 0; all 1,885 files satisfy invariant; Phase 16.3 readiness 100%; gate PASSED 2026-02-24)
 Phase 16.3:[##########] 3/3 plans -- COMPLETE (Retrievability Research: diagnosis + intervention + production remediation; all 1,749 files re-uploaded with identity headers; gate PASSED 2026-02-25; ITOE OH 60 files also batch-extracted + re-uploaded 2026-02-25)
-Phase 17:  [░░░░░░░░░░] 0/4 plans -- UNBLOCKED (Phase 16.6 gate PASSED 2026-02-26)
+Phase 17:  [##░░░░░░░░] 1/4 plans -- IN PROGRESS (17-01 HOSTILE gate PASSED 2026-02-27; 17-02 UNBLOCKED)
 Phase 18:  [░░░░░░░░░░] 0/5 plans -- BLOCKED by Phase 17 gate (RxPY codebase-wide async migration)
 
 ## Performance Metrics
@@ -228,16 +228,17 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-26
-Stopped at: Phase 16.6 COMPLETE. 3 consecutive STABLE runs. Phase 17 UNBLOCKED.
+Last session: 2026-02-27
+Stopped at: Phase 17 Plan 17-01 COMPLETE. HOSTILE spike gate PASSED. Plan 17-02 UNBLOCKED.
 
-Resume file: .planning/phases/17-rxpy-tui/ (Phase 17 plan)
+Resume file: .planning/phases/17-rxpy-reactive-observable-pipeline-for-tui-event-streams-validated-by-pre-post-uats/17-02-PLAN.md
 
 Phase 17 context:
 - RxPY reactive observable pipeline for TUI event streams
 - Replaces manual debounce/generation-tracking, @work(exclusive=True), scattered filter-refire logic
 - 4 plans: spike -> pre-UAT -> impl -> post-UAT
-- Blocked by Phase 16.6 (CRAD gate) — now UNBLOCKED
+- Plan 17-01 (spike) COMPLETE: 5/5 affirmative evidence tests, HOSTILE gate PASSED, human-approved
+- Next: Plan 17-02 (pre-UAT behavioral baseline -- 7 invariant tests against current code)
 
 Temporal stability log (Phase 16 -- full library, post-remediation):
 - T=0 baseline: Run 1 (2026-02-25 11:50:32 UTC): STABLE -- 1749 indexed, 1749 store, 0 orphans; A7 19/20 (Objectivist Logic Class 10-02 miss, within tolerance=2); 333 Episode + 60 OH excluded
