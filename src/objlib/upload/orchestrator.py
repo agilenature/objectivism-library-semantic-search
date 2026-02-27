@@ -4,10 +4,10 @@ Composes the upload primitives (client, state manager, circuit breaker,
 rate limiter, progress tracker) into a complete upload engine that:
 
 * Processes pending files in configurable batch sizes
-* Limits concurrency with ``asyncio.Semaphore``
+* Limits concurrency with RxPY ``ops.merge(max_concurrent=N)``
 * Writes state before every API call (crash recovery)
 * Polls import operations to completion
-* Handles graceful shutdown on Ctrl+C (SIGINT/SIGTERM)
+* Handles graceful shutdown via RxPY Subject two-signal system
 """
 
 from __future__ import annotations
@@ -16,7 +16,6 @@ import asyncio
 import json
 import logging
 import os
-import random
 import signal
 import sqlite3
 import tempfile
@@ -40,6 +39,11 @@ from objlib.upload.recovery import (
     retry_failed_file,
 )
 from objlib.upload.state import AsyncUploadStateManager
+from objlib.upload._operators import subscribe_awaitable, upload_with_retry
+
+import rx
+from rx import operators as ops
+from rx.subject import Subject
 
 logger = logging.getLogger(__name__)
 
@@ -79,9 +83,11 @@ class UploadOrchestrator:
         self._config = config
         self._progress = progress
 
-        self._upload_semaphore = asyncio.Semaphore(config.max_concurrent_uploads)
-        self._poll_semaphore = asyncio.Semaphore(config.max_concurrent_polls)
-        self._shutdown_event = asyncio.Event()
+        self._max_concurrent_uploads = config.max_concurrent_uploads
+        self._max_concurrent_polls = config.max_concurrent_polls
+        self._stop_accepting: Subject = Subject()
+        self._force_kill: Subject = Subject()
+        self._shutdown_requested = False
 
         # Tracking
         self._succeeded = 0
@@ -97,8 +103,9 @@ class UploadOrchestrator:
     def setup_signal_handlers(self) -> None:
         """Register SIGINT/SIGTERM handlers for graceful shutdown.
 
-        First signal sets the shutdown event (complete current uploads).
-        Second signal forces immediate exit.
+        Uses two-signal RxPY Subject system (Q4 contract):
+        First signal fires stop_accepting (no new items, drain in-flight).
+        Second signal fires force_kill (immediate stop) and exits.
         """
         self._signal_count = 0
 
@@ -108,9 +115,11 @@ class UploadOrchestrator:
                 logger.warning(
                     "Graceful shutdown initiated, completing current uploads..."
                 )
-                self._shutdown_event.set()
+                self._shutdown_requested = True
+                self._stop_accepting.on_next(None)
             else:
                 logger.warning("Forced shutdown. Exiting immediately.")
+                self._force_kill.on_next(None)
                 raise SystemExit(1)
 
         try:
@@ -187,7 +196,7 @@ class UploadOrchestrator:
 
             try:
                 for batch_num, batch_files in enumerate(batches, start=1):
-                    if self._shutdown_event.is_set():
+                    if self._shutdown_requested:
                         logger.warning("Shutdown requested, skipping remaining batches")
                         self._skipped += sum(
                             len(b)
@@ -235,9 +244,21 @@ class UploadOrchestrator:
             "Starting batch %d (%d files)", batch_number, len(files)
         )
 
-        # Phase 1: Upload all files in this batch
-        upload_tasks = [self._upload_single_file(f) for f in files]
-        upload_results = await asyncio.gather(*upload_tasks, return_exceptions=True)
+        # Phase 1: Upload all files in this batch (RxPY bounded concurrency)
+        async def _do_upload(f):
+            try:
+                return await self._upload_single_file(f)
+            except Exception as exc:
+                return exc
+
+        obs = rx.from_iterable(files).pipe(
+            ops.map(lambda f: rx.defer(
+                lambda f=f: rx.from_future(asyncio.ensure_future(_do_upload(f)))
+            )),
+            ops.merge(max_concurrent=self._max_concurrent_uploads),
+            ops.to_list(),
+        )
+        upload_results = await subscribe_awaitable(obs)
 
         # Collect successful operations for polling
         operations: list[tuple[str, Any]] = []
@@ -254,10 +275,22 @@ class UploadOrchestrator:
             else:
                 operations.append(result)
 
-        # Phase 2: Poll all operations
+        # Phase 2: Poll all operations (RxPY bounded concurrency)
         if operations:
-            poll_tasks = [self._poll_single_operation(op) for op in operations]
-            poll_results = await asyncio.gather(*poll_tasks, return_exceptions=True)
+            async def _do_poll(op):
+                try:
+                    return await self._poll_single_operation(op)
+                except Exception as exc:
+                    return exc
+
+            poll_obs = rx.from_iterable(operations).pipe(
+                ops.map(lambda op: rx.defer(
+                    lambda op=op: rx.from_future(asyncio.ensure_future(_do_poll(op)))
+                )),
+                ops.merge(max_concurrent=self._max_concurrent_polls),
+                ops.to_list(),
+            )
+            poll_results = await subscribe_awaitable(poll_obs)
 
             for result in poll_results:
                 if isinstance(result, Exception):
@@ -304,7 +337,7 @@ class UploadOrchestrator:
         file_path = file_info["file_path"]
 
         # Check shutdown
-        if self._shutdown_event.is_set():
+        if self._shutdown_requested:
             self._skipped += 1
             return None
 
@@ -330,11 +363,10 @@ class UploadOrchestrator:
             # Build display name (truncated to 512 chars)
             display_name = file_info.get("filename", os.path.basename(file_path))[:512]
 
-            # Upload with semaphore-limited concurrency
-            async with self._upload_semaphore:
-                file_obj, operation = await self._client.upload_and_import(
-                    file_path, display_name, custom_metadata
-                )
+            # Upload (concurrency bounded by ops.merge at caller level)
+            file_obj, operation = await self._client.upload_and_import(
+                file_path, display_name, custom_metadata
+            )
 
             # Record success AFTER API response
             await self._state.record_upload_success(
@@ -347,12 +379,12 @@ class UploadOrchestrator:
             if self._progress is not None:
                 self._progress.file_uploaded(file_path)
 
-            # Adjust semaphore based on circuit breaker recommendation
+            # Adjust concurrency based on circuit breaker recommendation
             recommended = self._circuit_breaker.get_recommended_concurrency(
                 self._config.max_concurrent_uploads
             )
-            if recommended != self._upload_semaphore._value:
-                self._upload_semaphore = asyncio.Semaphore(recommended)
+            if recommended != self._max_concurrent_uploads:
+                self._max_concurrent_uploads = recommended
                 if self._progress is not None:
                     self._progress.update_circuit_state(
                         self._circuit_breaker.state.value, recommended
@@ -394,10 +426,10 @@ class UploadOrchestrator:
         file_path, operation = operation_info
 
         try:
-            async with self._poll_semaphore:
-                completed = await self._client.poll_operation(
-                    operation, timeout=self._config.poll_timeout_seconds
-                )
+            # Concurrency bounded by ops.merge at caller level
+            completed = await self._client.poll_operation(
+                operation, timeout=self._config.poll_timeout_seconds
+            )
 
             # Check if operation completed successfully
             done = getattr(completed, "done", None)
@@ -567,7 +599,7 @@ class EnrichedUploadOrchestrator(UploadOrchestrator):
 
             try:
                 for batch_num, batch_files in enumerate(batches, start=1):
-                    if self._shutdown_event.is_set():
+                    if self._shutdown_requested:
                         logger.warning("Shutdown requested, skipping remaining batches")
                         self._skipped += sum(
                             len(b)
@@ -742,17 +774,29 @@ class EnrichedUploadOrchestrator(UploadOrchestrator):
             "Starting enriched batch %d (%d files)", batch_number, len(files)
         )
 
-        # Phase 1: Upload all files with staggered launches
-        upload_tasks = []
+        # Phase 1: Upload all files with staggered launches (RxPY pipeline)
         file_map = {}  # Track file_path -> file_info for retry
-        for i, f in enumerate(files):
-            if i > 0:
-                await asyncio.sleep(1.0)  # Stagger to prevent burst
-            task = asyncio.create_task(self._upload_enriched_file(f))
-            upload_tasks.append(task)
+        for f in files:
             file_map[f["file_path"]] = f
 
-        upload_results = await asyncio.gather(*upload_tasks, return_exceptions=True)
+        async def _staggered_upload(pair):
+            """Upload with stagger delay built into the pipeline."""
+            idx, f = pair
+            if idx > 0:
+                await asyncio.sleep(1.0)  # Stagger to prevent burst
+            try:
+                return await self._upload_enriched_file(f)
+            except Exception as exc:
+                return exc
+
+        upload_obs = rx.from_iterable(enumerate(files)).pipe(
+            ops.map(lambda pair: rx.defer(
+                lambda pair=pair: rx.from_future(asyncio.ensure_future(_staggered_upload(pair)))
+            )),
+            ops.merge(max_concurrent=self._max_concurrent_uploads),
+            ops.to_list(),
+        )
+        upload_results = await subscribe_awaitable(upload_obs)
 
         # Collect successful operations for polling
         operations: list[tuple[str, Any]] = []
@@ -769,11 +813,23 @@ class EnrichedUploadOrchestrator(UploadOrchestrator):
             else:
                 operations.append(result)
 
-        # Phase 2: Poll all operations
+        # Phase 2: Poll all operations (RxPY bounded concurrency)
         failed_files = []
         if operations:
-            poll_tasks = [self._poll_single_operation(op) for op in operations]
-            poll_results = await asyncio.gather(*poll_tasks, return_exceptions=True)
+            async def _do_poll_enriched(op):
+                try:
+                    return await self._poll_single_operation(op)
+                except Exception as exc:
+                    return exc
+
+            poll_obs = rx.from_iterable(operations).pipe(
+                ops.map(lambda op: rx.defer(
+                    lambda op=op: rx.from_future(asyncio.ensure_future(_do_poll_enriched(op)))
+                )),
+                ops.merge(max_concurrent=self._max_concurrent_polls),
+                ops.to_list(),
+            )
+            poll_results = await subscribe_awaitable(poll_obs)
 
             for i, result in enumerate(poll_results):
                 if isinstance(result, Exception):
@@ -792,10 +848,10 @@ class EnrichedUploadOrchestrator(UploadOrchestrator):
                     if file_path in file_map:
                         failed_files.append(file_map[file_path])
 
-        # Phase 3: Retry pass for failures (Option 3)
+        # Phase 3: Retry pass for failures (RxPY timer for cooldown)
         retry_succeeded = 0
         retry_failed = 0
-        if failed_files and not self._shutdown_event.is_set():
+        if failed_files and not self._shutdown_requested:
             logger.info(
                 "Batch %d: %d failures detected, starting retry pass after 30s cooldown...",
                 batch_number,
@@ -810,14 +866,22 @@ class EnrichedUploadOrchestrator(UploadOrchestrator):
                 if result is not None:
                     retry_operations.append(result)
 
-            # Poll retry operations
+            # Poll retry operations (RxPY bounded concurrency)
             if retry_operations:
-                retry_poll_tasks = [
-                    self._poll_single_operation(op) for op in retry_operations
-                ]
-                retry_poll_results = await asyncio.gather(
-                    *retry_poll_tasks, return_exceptions=True
+                async def _do_retry_poll(op):
+                    try:
+                        return await self._poll_single_operation(op)
+                    except Exception as exc:
+                        return exc
+
+                retry_poll_obs = rx.from_iterable(retry_operations).pipe(
+                    ops.map(lambda op: rx.defer(
+                        lambda op=op: rx.from_future(asyncio.ensure_future(_do_retry_poll(op)))
+                    )),
+                    ops.merge(max_concurrent=self._max_concurrent_polls),
+                    ops.to_list(),
                 )
+                retry_poll_results = await subscribe_awaitable(retry_poll_obs)
 
                 for result in retry_poll_results:
                     if isinstance(result, Exception):
@@ -879,7 +943,7 @@ class EnrichedUploadOrchestrator(UploadOrchestrator):
         file_path = file_info["file_path"]
 
         # Check shutdown
-        if self._shutdown_event.is_set():
+        if self._shutdown_requested:
             self._skipped += 1
             return None
 
@@ -925,11 +989,10 @@ class EnrichedUploadOrchestrator(UploadOrchestrator):
             # Record intent BEFORE API call
             await self._state.record_upload_intent(file_path)
 
-            # Upload with semaphore-limited concurrency
-            async with self._upload_semaphore:
-                file_obj, operation = await self._client.upload_and_import(
-                    upload_path, display_name, custom_metadata
-                )
+            # Upload (concurrency bounded by ops.merge at caller level)
+            file_obj, operation = await self._client.upload_and_import(
+                upload_path, display_name, custom_metadata
+            )
 
             # Record success AFTER API response
             await self._state.record_upload_success(
@@ -1124,7 +1187,7 @@ class FSMUploadOrchestrator(EnrichedUploadOrchestrator):
 
             try:
                 for batch_num, batch_files in enumerate(batches, start=1):
-                    if self._shutdown_event.is_set():
+                    if self._shutdown_requested:
                         logger.warning("Shutdown requested, skipping remaining batches")
                         self._skipped += sum(
                             len(b)
@@ -1182,17 +1245,28 @@ class FSMUploadOrchestrator(EnrichedUploadOrchestrator):
             "Starting FSM batch %d (%d files)", batch_number, len(files)
         )
 
-        # Phase 1: Upload all files with staggered launches
-        upload_tasks = []
+        # Phase 1: Upload all files with staggered launches (RxPY pipeline)
         file_map: dict[str, dict] = {}
-        for i, f in enumerate(files):
-            if i > 0:
-                await asyncio.sleep(1.0)  # Stagger to prevent burst
-            task = asyncio.create_task(self._upload_fsm_file(f))
-            upload_tasks.append(task)
+        for f in files:
             file_map[f["file_path"]] = f
 
-        upload_results = await asyncio.gather(*upload_tasks, return_exceptions=True)
+        async def _staggered_fsm_upload(pair):
+            idx, f = pair
+            if idx > 0:
+                await asyncio.sleep(1.0)  # Stagger to prevent burst
+            try:
+                return await self._upload_fsm_file(f)
+            except Exception as exc:
+                return exc
+
+        upload_obs = rx.from_iterable(enumerate(files)).pipe(
+            ops.map(lambda pair: rx.defer(
+                lambda pair=pair: rx.from_future(asyncio.ensure_future(_staggered_fsm_upload(pair)))
+            )),
+            ops.merge(max_concurrent=self._max_concurrent_uploads),
+            ops.to_list(),
+        )
+        upload_results = await subscribe_awaitable(upload_obs)
 
         # Collect successful operations for polling
         operations: list[tuple[str, Any, int]] = []  # (file_path, operation, version)
@@ -1209,13 +1283,23 @@ class FSMUploadOrchestrator(EnrichedUploadOrchestrator):
             else:
                 operations.append(result)
 
-        # Phase 2: Poll all operations
+        # Phase 2: Poll all operations (RxPY bounded concurrency)
         failed_files: list[dict] = []
         if operations:
-            poll_tasks = [
-                self._poll_fsm_operation(op_info) for op_info in operations
-            ]
-            poll_results = await asyncio.gather(*poll_tasks, return_exceptions=True)
+            async def _do_fsm_poll(op_info):
+                try:
+                    return await self._poll_fsm_operation(op_info)
+                except Exception as exc:
+                    return exc
+
+            poll_obs = rx.from_iterable(operations).pipe(
+                ops.map(lambda op_info: rx.defer(
+                    lambda op_info=op_info: rx.from_future(asyncio.ensure_future(_do_fsm_poll(op_info)))
+                )),
+                ops.merge(max_concurrent=self._max_concurrent_polls),
+                ops.to_list(),
+            )
+            poll_results = await subscribe_awaitable(poll_obs)
 
             for i, result in enumerate(poll_results):
                 if isinstance(result, Exception):
@@ -1235,7 +1319,7 @@ class FSMUploadOrchestrator(EnrichedUploadOrchestrator):
         # Phase 3: Retry pass for failures
         retry_succeeded = 0
         retry_failed = 0
-        if failed_files and not self._shutdown_event.is_set():
+        if failed_files and not self._shutdown_requested:
             logger.info(
                 "FSM batch %d: %d failures detected, starting retry pass after 30s cooldown...",
                 batch_number,
@@ -1264,13 +1348,20 @@ class FSMUploadOrchestrator(EnrichedUploadOrchestrator):
                     retry_operations.append(result)
 
             if retry_operations:
-                retry_poll_tasks = [
-                    self._poll_fsm_operation(op_info)
-                    for op_info in retry_operations
-                ]
-                retry_poll_results = await asyncio.gather(
-                    *retry_poll_tasks, return_exceptions=True
+                async def _do_fsm_retry_poll(op_info):
+                    try:
+                        return await self._poll_fsm_operation(op_info)
+                    except Exception as exc:
+                        return exc
+
+                retry_poll_obs = rx.from_iterable(retry_operations).pipe(
+                    ops.map(lambda op_info: rx.defer(
+                        lambda op_info=op_info: rx.from_future(asyncio.ensure_future(_do_fsm_retry_poll(op_info)))
+                    )),
+                    ops.merge(max_concurrent=self._max_concurrent_polls),
+                    ops.to_list(),
                 )
+                retry_poll_results = await subscribe_awaitable(retry_poll_obs)
 
                 for result in retry_poll_results:
                     if isinstance(result, Exception):
@@ -1327,7 +1418,7 @@ class FSMUploadOrchestrator(EnrichedUploadOrchestrator):
         file_path = file_info["file_path"]
 
         # Check shutdown
-        if self._shutdown_event.is_set():
+        if self._shutdown_requested:
             self._skipped += 1
             return None
 
@@ -1426,30 +1517,23 @@ class FSMUploadOrchestrator(EnrichedUploadOrchestrator):
                     )
 
             try:
-                # Upload with 429 in-place retry (locked decision #1)
-                file_obj = None
-                operation = None
-                for attempt in range(MAX_429_RETRIES):
-                    try:
-                        async with self._upload_semaphore:
-                            file_obj, operation = await self._client.upload_and_import(
-                                upload_path, display_name, custom_metadata
-                            )
-                        break  # Success -- exit retry loop
-                    except RateLimitError as exc:
-                        if attempt == MAX_429_RETRIES - 1:
-                            logger.error(
-                                "429 retry budget exhausted for %s after %d attempts: %s",
-                                file_path, MAX_429_RETRIES, exc,
-                            )
-                            raise  # Will be caught by the Exception handler below
-                        delay = min(BASE_DELAY * (2 ** attempt), MAX_DELAY)
-                        jittered = random.random() * delay  # full jitter
-                        logger.warning(
-                            "429 rate limit on %s (attempt %d/%d), retrying in %.1fs",
-                            file_path, attempt + 1, MAX_429_RETRIES, jittered,
-                        )
-                        await asyncio.sleep(jittered)
+                # Upload with 429 retry via upload_with_retry operator
+                # Concurrency bounded by ops.merge at caller level
+                _upload_path = upload_path  # capture for closure
+
+                async def _do_api_upload(_record):
+                    return await self._client.upload_and_import(
+                        _upload_path, display_name, custom_metadata
+                    )
+
+                file_record = {"file_path": file_path}
+                upload_obs = upload_with_retry(
+                    file_record, _do_api_upload,
+                    max_attempts=MAX_429_RETRIES,
+                    base_delay=BASE_DELAY,
+                    max_delay=MAX_DELAY,
+                )
+                file_obj, operation = await subscribe_awaitable(upload_obs)
             finally:
                 cleanup_temp_file(temp_path)
                 cleanup_temp_file(identity_temp_path)
@@ -1501,10 +1585,10 @@ class FSMUploadOrchestrator(EnrichedUploadOrchestrator):
         file_path, operation, version = operation_info
 
         try:
-            async with self._poll_semaphore:
-                completed = await self._client.poll_operation(
-                    operation, timeout=self._config.poll_timeout_seconds
-                )
+            # Concurrency bounded by ops.merge at caller level
+            completed = await self._client.poll_operation(
+                operation, timeout=self._config.poll_timeout_seconds
+            )
 
             done = getattr(completed, "done", None)
             error = getattr(completed, "error", None)
