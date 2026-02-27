@@ -450,12 +450,13 @@ Plans:
   6. Empty query: clears results immediately (no debounce)
   7. Error containment: a search API error shows a notification but does not crash the TUI or leave `is_searching=True`
 
-**Plans**: 4 plans
+**Plans**: 4 plans in 4 waves
+
 Plans:
-- [ ] 17-01: RxPY + asyncio + Textual spike -- confirm `AsyncIOScheduler` integrates cleanly; test concurrent observables inside Textual App; document approach (HOSTILE gate)
-- [ ] 17-02: Pre-implementation UAT baseline -- automated scripts capturing all 7 behavioral assertions against live TUI + real corpus; record verbatim outputs as the contract
-- [ ] 17-03: RxPY pipeline implementation -- replace `SearchBar` debounce, `_run_search @work`, and `on_filter_changed` re-fire with unified observable pipeline
-- [ ] 17-04: Post-implementation UAT validation -- same 7 assertions re-run; gate: all pass with outputs matching pre-UAT contract
+- [ ] 17-01-PLAN.md -- RxPY + asyncio + Textual spike: 5 affirmative-evidence tests confirming AsyncIOScheduler, defer_task, BehaviorSubject, merge+distinct, catch integration (HOSTILE gate)
+- [ ] 17-02-PLAN.md -- Pre-implementation UAT baseline: 7 behavioral invariant tests capturing exact contract values against current code
+- [ ] 17-03-PLAN.md -- RxPY pipeline implementation: rx_pipeline.py + SearchBar Subject refactor + ObjlibApp combine_latest/switch_map pipeline + pyproject.toml
+- [ ] 17-04-PLAN.md -- Post-implementation UAT validation: identical 7 assertions re-run + full test suite regression check; gate = behavioral parity
 
 ---
 
