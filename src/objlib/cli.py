@@ -1384,6 +1384,7 @@ def search(
     ] = False,
 ) -> None:
     """Search the library by meaning with optional metadata filters."""
+    import asyncio
     import hashlib
     import uuid
 
@@ -1433,9 +1434,9 @@ def search(
     # --- Stage 2: Gemini File Search ---
     search_client = GeminiSearchClient(state.gemini_client, state.store_resource_name)
     try:
-        response = search_client.query_with_retry(
+        response = asyncio.run(search_client.query_with_retry(
             search_query, metadata_filter=metadata_filter, top_k=top_k, model=model
-        )
+        ))
     except Exception as e:
         console.print(f"[red]Search failed after retries:[/red] {e}")
         raise typer.Exit(code=1)
@@ -1570,6 +1571,7 @@ def view(
 
     Copy the filename from search results and pass it here. No session state needed.
     """
+    import asyncio
     import shutil
 
     from objlib.models import Citation
@@ -1684,10 +1686,10 @@ def view(
         console.print("\n[dim]Finding related documents...[/dim]")
 
         try:
-            response = search_client.query_with_retry(
+            response = asyncio.run(search_client.query_with_retry(
                 f"Find documents related to this content: {excerpt}",
                 model=model,
-            )
+            ))
         except Exception as e:
             console.print(f"[red]Related document search failed:[/red] {e}")
             raise typer.Exit(code=1)
