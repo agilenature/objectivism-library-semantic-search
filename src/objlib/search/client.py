@@ -1,33 +1,24 @@
 """Gemini File Search query client with retry logic.
 
-Provides a synchronous client for querying Gemini File Search stores
-via ``generate_content()`` with the ``FileSearch`` tool. Includes
-automatic retry with exponential backoff and jitter.
+Provides a client for querying Gemini File Search stores via
+``generate_content()`` with the ``FileSearch`` tool. Includes
+automatic retry with exponential backoff via RxPY observable.
 """
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Any
 
 from google import genai
 from google.genai import types
 from rich.console import Console
-from tenacity import (
-    RetryCallState,
-    retry,
-    stop_after_attempt,
-    wait_exponential_jitter,
-)
+
+from objlib.upload._operators import make_retrying_observable, subscribe_awaitable
 
 logger = logging.getLogger(__name__)
 console = Console()
-
-
-def _log_retry(retry_state: RetryCallState) -> None:
-    """Display retry status via Rich console."""
-    attempt = retry_state.attempt_number
-    console.print(f"[yellow]Retrying search ({attempt}/3)...[/yellow]")
 
 
 class GeminiSearchClient:
@@ -41,7 +32,7 @@ class GeminiSearchClient:
         client = genai.Client(api_key="...")
         store_name = GeminiSearchClient.resolve_store_name(client, "my-store")
         search = GeminiSearchClient(client, store_name)
-        response = search.query_with_retry("What is the nature of rights?")
+        response = await search.query_with_retry("What is the nature of rights?")
     """
 
     def __init__(self, client: genai.Client, store_resource_name: str) -> None:
@@ -84,23 +75,20 @@ class GeminiSearchClient:
             config=config,
         )
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential_jitter(initial=0.5, max=2.0, jitter=0.5),
-        before_sleep=_log_retry,
-        reraise=True,
-    )
-    def query_with_retry(
+    async def query_with_retry(
         self,
         query: str,
         metadata_filter: str | None = None,
         top_k: int = 20,
         model: str = "gemini-2.5-flash",
     ) -> Any:
-        """Query with automatic retry (3 attempts, exponential backoff + jitter).
+        """Query with automatic retry (3 attempts, exponential backoff).
 
-        Uses tenacity with ``wait_exponential_jitter(initial=0.5, max=2.0, jitter=0.5)``
-        giving waits around 0.5s, 1s, 2s with +/-50% jitter.
+        Uses RxPY make_retrying_observable with exponential backoff
+        (base_delay=0.5s, delays ~0.5s, 1s, 2s).
+
+        The sync ``query()`` call is offloaded to a thread executor to
+        avoid blocking the event loop.
 
         Args:
             query: Natural language search query.
@@ -114,7 +102,19 @@ class GeminiSearchClient:
         Raises:
             Exception: After 3 failed attempts, the last exception is reraised.
         """
-        return self.query(query, metadata_filter=metadata_filter, top_k=top_k, model=model)
+        loop = asyncio.get_event_loop()
+
+        async def _attempt() -> Any:
+            result = await loop.run_in_executor(
+                None,
+                lambda: self.query(
+                    query, metadata_filter=metadata_filter, top_k=top_k, model=model
+                ),
+            )
+            return result
+
+        obs = make_retrying_observable(_attempt, max_retries=2, base_delay=0.5)
+        return await subscribe_awaitable(obs)
 
     @staticmethod
     def resolve_store_name(client: genai.Client, display_name: str) -> str:

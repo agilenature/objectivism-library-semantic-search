@@ -99,9 +99,8 @@ class SearchService:
         # Build metadata filter
         metadata_filter = build_metadata_filter(filters) if filters else None
 
-        # Query Gemini (blocking I/O -> thread)
-        response = await asyncio.to_thread(
-            self._search_client.query_with_retry,
+        # Query Gemini (async with RxPY retry observable)
+        response = await self._search_client.query_with_retry(
             search_query,
             metadata_filter=metadata_filter,
             top_k=top_k,
