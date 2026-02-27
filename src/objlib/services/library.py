@@ -1,17 +1,23 @@
 """Library browsing service facade wrapping Database internals.
 
 Provides async methods for browsing, filtering, and viewing library
-content without Gemini API calls. All SQLite operations are wrapped
-in asyncio.to_thread() with Database connections opened and closed
-within the sync function.
+content without Gemini API calls. All SQLite operations are offloaded
+to a thread executor via RxPY observables with Future-based subscription.
 """
 
 from __future__ import annotations
 
 import asyncio
 import logging
+from typing import Callable, TypeVar
+
+import rx
+
+from objlib.upload._operators import subscribe_awaitable
 
 logger = logging.getLogger(__name__)
+
+T = TypeVar("T")
 
 
 class LibraryService:
@@ -30,6 +36,15 @@ class LibraryService:
     def __init__(self, db_path: str) -> None:
         self._db_path = db_path
 
+    async def _run_in_executor(self, fn: Callable[[], T]) -> T:
+        """Run a sync callable in a thread executor via RxPY observable.
+
+        Replaces asyncio.to_thread() with RxPY Future-based pattern.
+        """
+        loop = asyncio.get_event_loop()
+        obs = rx.from_future(asyncio.ensure_future(loop.run_in_executor(None, fn)))
+        return await subscribe_awaitable(obs)
+
     async def get_categories(self) -> list[tuple[str, int]]:
         """Get all categories with file counts.
 
@@ -43,7 +58,7 @@ class LibraryService:
             with Database(self._db_path) as db:
                 return db.get_categories_with_counts()
 
-        return await asyncio.to_thread(_query)
+        return await self._run_in_executor(_query)
 
     async def get_courses(self) -> list[tuple[str, int]]:
         """Get all courses with file counts.
@@ -58,7 +73,7 @@ class LibraryService:
             with Database(self._db_path) as db:
                 return db.get_courses_with_counts()
 
-        return await asyncio.to_thread(_query)
+        return await self._run_in_executor(_query)
 
     async def get_files_by_course(
         self, course: str, year: str | None = None
@@ -79,7 +94,7 @@ class LibraryService:
             with Database(self._db_path) as db:
                 return db.get_files_by_course(course, year)
 
-        return await asyncio.to_thread(_query)
+        return await self._run_in_executor(_query)
 
     async def get_items_by_category(self, category: str) -> list[dict]:
         """Get files within a non-course category.
@@ -97,7 +112,7 @@ class LibraryService:
             with Database(self._db_path) as db:
                 return db.get_items_by_category(category)
 
-        return await asyncio.to_thread(_query)
+        return await self._run_in_executor(_query)
 
     async def filter_files(
         self, filters: list[str], limit: int = 50
@@ -126,7 +141,7 @@ class LibraryService:
             with Database(self._db_path) as db:
                 return db.filter_files_by_metadata(filter_dict, limit)
 
-        return await asyncio.to_thread(_query)
+        return await self._run_in_executor(_query)
 
     async def get_file_content(self, file_path: str) -> str | None:
         """Read file content from disk.
@@ -146,7 +161,7 @@ class LibraryService:
             except (FileNotFoundError, PermissionError):
                 return None
 
-        return await asyncio.to_thread(_read)
+        return await self._run_in_executor(_read)
 
     async def get_file_count(self) -> int:
         """Get total count of files in the library.
@@ -161,4 +176,4 @@ class LibraryService:
             with Database(self._db_path) as db:
                 return db.get_file_count()
 
-        return await asyncio.to_thread(_query)
+        return await self._run_in_executor(_query)

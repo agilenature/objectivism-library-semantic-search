@@ -1,8 +1,8 @@
 """Search service facade wrapping Gemini File Search internals.
 
-Provides async methods for search and synthesis. All Gemini API
-and SQLite calls are wrapped in asyncio.to_thread() to avoid
-blocking the event loop.
+Provides async methods for search and synthesis. Blocking I/O
+(SQLite, Gemini API) is offloaded to thread executors via RxPY
+observables with Future-based subscription.
 """
 
 from __future__ import annotations
@@ -10,6 +10,11 @@ from __future__ import annotations
 import asyncio
 import logging
 from typing import TYPE_CHECKING
+
+import rx
+from rx.scheduler.eventloop import AsyncIOScheduler
+
+from objlib.upload._operators import subscribe_awaitable
 
 from objlib.models import Citation, SearchResult
 from objlib.search.citations import (
@@ -114,22 +119,30 @@ class SearchService:
             )
         citations = extract_citations(grounding_metadata)
 
-        # Enrich citations with local SQLite metadata (blocking I/O -> thread)
+        loop = asyncio.get_event_loop()
+
+        # Enrich citations with local SQLite metadata (blocking I/O -> executor)
         if citations:
 
-            def _enrich(cites: list[Citation]) -> list[Citation]:
+            def _enrich() -> list[Citation]:
                 from objlib.database import Database
 
                 with Database(self._db_path) as db:
-                    return enrich_citations(cites, db, self._client)
+                    return enrich_citations(citations, db, self._client)
 
-            citations = await asyncio.to_thread(_enrich, citations)
+            obs = rx.from_future(asyncio.ensure_future(loop.run_in_executor(None, _enrich)))
+            citations = await subscribe_awaitable(obs)
 
-        # Rerank (Gemini API call -> thread)
+        # Rerank (Gemini API call -> executor via RxPY)
         if rerank and len(citations) > 1:
-            citations = await asyncio.to_thread(
-                rerank_passages, self._client, query, citations
+            _client = self._client
+            _cites = citations
+            obs = rx.from_future(
+                asyncio.ensure_future(
+                    loop.run_in_executor(None, rerank_passages, _client, query, _cites)
+                )
             )
+            citations = await subscribe_awaitable(obs)
 
         # Apply difficulty ordering (CPU-only, inline)
         citations = apply_difficulty_ordering(citations, mode=mode)
@@ -168,9 +181,16 @@ class SearchService:
         # Apply MMR diversity (CPU-only, inline)
         diverse_citations = apply_mmr_diversity(citations)
 
-        # Synthesize (Gemini API call -> thread)
-        result = await asyncio.to_thread(
-            synthesize_answer, self._client, query, diverse_citations
+        # Synthesize (Gemini API call -> executor via RxPY)
+        loop = asyncio.get_event_loop()
+        _client = self._client
+        obs = rx.from_future(
+            asyncio.ensure_future(
+                loop.run_in_executor(
+                    None, synthesize_answer, _client, query, diverse_citations
+                )
+            )
         )
+        result = await subscribe_awaitable(obs)
 
         return result
