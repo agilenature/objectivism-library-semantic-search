@@ -2,27 +2,30 @@
   "$schema": "https://canon.so/schema/canon.json",
   "_canon_workflow": "gsd",
   "projectTitle": "objlib",
-  "description": "Service library and CLI for semantic search over a curated Objectivism Library — 1,749 philosophical texts indexed via Google Gemini File Search with AI-enriched 4-tier metadata (category, difficulty, topics, aspects, descriptions) and entity extraction",
+  "description": "Service library and CLI for semantic search over a curated Objectivism Library — 1,749 philosophical texts indexed via Google Gemini File Search with AI-enriched 4-tier metadata (category, difficulty, topics, aspects, descriptions) and entity extraction. All async pipelines use RxPY observables (Phase 18 migration complete).",
   "branch": "main",
   "folders": [
     "docs/user/",
     "docs/architecture/",
     "src/objlib/services/",
     "src/objlib/tui/",
-    "src/objlib/tui/widgets/"
+    "src/objlib/tui/widgets/",
+    "src/objlib/upload/",
+    "src/objlib/extraction/",
+    "src/objlib/search/",
+    "src/objlib/sync/"
   ],
   "excludeFolders": [
     "docs/archive/",
     "logs",
     "src/objlib/__pycache__",
-    "src/objlib/upload",
-    "src/objlib/extraction",
     "src/objlib/entities",
-    "src/objlib/sync",
-    "src/objlib/search",
     "src/objlib/session",
     "src/objlib/search/__pycache__",
     "src/objlib/session/__pycache__",
+    "src/objlib/upload/__pycache__",
+    "src/objlib/extraction/__pycache__",
+    "src/objlib/sync/__pycache__",
     ".planning",
     "data",
     "tests",
@@ -31,19 +34,94 @@
   "excludeFiles": [
     "cli.py"
   ],
+  "modules": {
+    "_phase18_rxpy_migration": {
+      "description": "Phase 18 migrated all async pipelines from asyncio primitives (Semaphore, gather, Event, wait_for) and tenacity to RxPY observables. Zero tenacity imports remain.",
+      "migrated_modules": {
+        "src/objlib/services/search.py": {
+          "tier": 3,
+          "patterns_replaced": "to_thread replaced with Future-based rx.from_callable",
+          "interface": "SearchService.search() is async, internally uses RxPY observable for retry"
+        },
+        "src/objlib/services/library.py": {
+          "tier": 3,
+          "patterns_replaced": "to_thread replaced with Future-based rx.from_callable",
+          "interface": "LibraryService methods are async, internally use RxPY observable"
+        },
+        "src/objlib/search/client.py": {
+          "tier": 3,
+          "patterns_replaced": "@retry replaced with make_retrying_observable",
+          "interface": "GeminiSearchClient.query_with_retry() is async, returns awaitable via subscribe_awaitable(obs)"
+        },
+        "src/objlib/sync/orchestrator.py": {
+          "tier": 3,
+          "patterns_replaced": "light async replaced with observable pipeline",
+          "interface": "SyncOrchestrator.run() is async, uses observable internally"
+        },
+        "src/objlib/extraction/batch_client.py": {
+          "tier": 2,
+          "patterns_replaced": "Semaphore/gather/polling replaced with ops.map+ops.merge/interval",
+          "interface": "BatchClient methods use RxPY observables for concurrent batch processing"
+        },
+        "src/objlib/extraction/orchestrator.py": {
+          "tier": 2,
+          "patterns_replaced": "Semaphore/wave logic replaced with ops.map+ops.merge/flat_map",
+          "interface": "ExtractionOrchestrator uses RxPY for wave-based extraction with rate limiting"
+        },
+        "src/objlib/upload/state.py": {
+          "tier": 1,
+          "patterns_replaced": "OCC retry replaced with occ_transition_async from _operators.py",
+          "interface": "UploadState methods use occ_transition_async for OCC-guarded state transitions"
+        },
+        "src/objlib/upload/client.py": {
+          "tier": 1,
+          "patterns_replaced": "AsyncRetrying replaced with make_retrying_observable + Future-based subscription",
+          "interface": "UploadClient methods use RxPY retry_when for 429-aware upload retry"
+        },
+        "src/objlib/upload/recovery.py": {
+          "tier": 1,
+          "patterns_replaced": "asyncio.wait_for replaced with ops.timeout",
+          "interface": "RecoveryCrawler uses ops.timeout for recovery timeout guard"
+        },
+        "src/objlib/upload/orchestrator.py": {
+          "tier": 1,
+          "patterns_replaced": "all asyncio patterns replaced with full RxPY pipeline",
+          "interface": "UploadOrchestrator uses observable pipeline with dynamic_semaphore, shutdown_gate, upload_with_retry"
+        }
+      },
+      "custom_operators": {
+        "file": "src/objlib/upload/_operators.py",
+        "operators": {
+          "occ_transition": "OCC-guarded state transition returning Observable; params: fn, max_attempts, base_delay",
+          "occ_transition_async": "Async wrapper for occ_transition; awaitable interface for state.py async methods; uses Future-based subscription",
+          "upload_with_retry": "429-aware upload retry; params: file_record, upload_fn, max_attempts",
+          "shutdown_gate": "Two-signal shutdown (Q4 contract): stop_accepting$ gates input, force_kill$ terminates active chains; params: obs, stop_accepting$, force_kill$",
+          "dynamic_semaphore": "BehaviorSubject-driven concurrency control (Q2 contract): in-flight items complete on limit decrease, no cancellation; params: limit$: BehaviorSubject[int]"
+        }
+      },
+      "key_api_decisions": [
+        "asyncio.run(coro) is NEVER used inside RxPY pipelines — replaced by asyncio.create_task(coro) + rx.from_future()",
+        "Observable.run() is NEVER used in async contexts — replaced by Future-based subscription (loop.create_future + subscribe + await)",
+        "Bounded concurrency uses ops.map(factory).pipe(ops.merge(max_concurrent=N)) — NOT ops.flat_map(mapper, max_concurrent=N) (does not exist in RxPY 3.x)"
+      ]
+    }
+  },
   "rules": [
     "Import only from objlib.services — never from objlib.cli, objlib.upload, objlib.extraction, objlib.entities, or objlib.sync; those are internal pipeline modules, not part of the public API.",
     "Initialize services with db_path and api_key strings: SearchService(api_key, store_resource_name, db_path), LibraryService(db_path), SessionService(db_path) — all three form the complete client backend.",
-    "SearchService.search() is async with 300ms–2s Gemini latency — always await it in an async context or background worker (asyncio.run_coroutine_threadsafe); never block the TUI main thread.",
+    "SearchService.search() is async with 300ms-2s Gemini latency — always await it in an async context or background worker (asyncio.run_coroutine_threadsafe); never block the TUI main thread.",
     "Always call LibraryService.enrich_citations(citations, db) after SearchService.search() before rendering — unenriched Citations have file_path=None and metadata=None.",
-    "Enriched Citation fields: index (rank), title (filename), text (excerpt), confidence (0–1), file_path, metadata (keys: course, year, difficulty, primary_topics, topic_aspects, description, entities).",
+    "Enriched Citation fields: index (rank), title (filename), text (excerpt), confidence (0-1), file_path, metadata (keys: course, year, difficulty, primary_topics, topic_aspects, description, entities).",
     "Use Database as a context manager ('with Database(db_path) as db:') — never hold a connection open across async await boundaries.",
     "The active Gemini store name is read from AppState.store_resource_name — never hardcode a store name in client code.",
     "For browse/filter without a search query, use LibraryService — it provides file listing, filtering, and document retrieval with no Gemini API call or disk mount.",
     "Filter syntax: 'field:value' for strings ('course:OPAR'), 'field:N' for numeric ('year:2023'), 'field:>=N' for comparison — pass lists to LibraryService filter methods; never write raw SQL.",
     "Session events are append-only — use SessionService.add_event(); there are no update or delete methods for session records.",
     "Disk commands (scan, upload, sync) require /Volumes/U32 Shadow mounted — query commands (search, browse, filter, view) work without it; design clients to degrade gracefully when the disk is absent.",
-    "CLI: 'python -m objlib --store NAME search QUERY' (search); 'python -m objlib browse' (list all); 'python -m objlib tui' (interactive TUI) — --store precedes search but follows 'view --show-related'."
+    "CLI: 'python -m objlib --store NAME search QUERY' (search); 'python -m objlib browse' (list all); 'python -m objlib tui' (interactive TUI) — --store precedes search but follows 'view --show-related'.",
+    "All async pipelines use RxPY observables (Phase 18). Custom operators in src/objlib/upload/_operators.py: occ_transition, occ_transition_async, upload_with_retry, shutdown_gate, dynamic_semaphore.",
+    "Never use Observable.run() in async contexts — use Future-based subscription (loop.create_future + subscribe + await) via subscribe_awaitable() from _operators.py.",
+    "Bounded concurrency: ops.map(factory).pipe(ops.merge(max_concurrent=N)) — NOT ops.flat_map(mapper, max_concurrent=N) which does not exist in RxPY 3.x."
   ],
   "previousVersions": [],
   "branchVersions": []
