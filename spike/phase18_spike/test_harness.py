@@ -195,7 +195,134 @@ async def test_pattern1_scheduler_aiosqlite() -> PatternResult:
 
 async def test_pattern2_occ_transition() -> PatternResult:
     """Pattern 2: OCC-guarded transition as custom retry observable."""
-    raise NotImplementedError("Pattern 2 not yet implemented")
+    import random
+
+    t0 = time.monotonic()
+    evidence_lines: list[str] = []
+
+    # ---------------------------------------------------------------------------
+    # occ_transition operator: retries fn() internally on OCCConflictError
+    # Per Q3: fn() is retried, NOT outer observable re-subscribe
+    # ---------------------------------------------------------------------------
+
+    class OCCConflictError(Exception):
+        pass
+
+    def occ_transition(fn, max_attempts=5, base_delay=0.01):
+        """Custom operator: retry fn() on OCCConflictError with exponential backoff + jitter.
+
+        fn: async callable () -> T (reads fresh DB state on each call)
+        Returns: Observable that emits fn()'s result on success, or errors after max_attempts.
+        """
+        def subscribe(observer, scheduler=None):
+            async def run():
+                for attempt in range(max_attempts):
+                    try:
+                        result = await fn()
+                        observer.on_next(result)
+                        observer.on_completed()
+                        return
+                    except OCCConflictError:
+                        if attempt == max_attempts - 1:
+                            observer.on_error(
+                                OCCConflictError(f"OCC conflict after {max_attempts} attempts")
+                            )
+                            return
+                        delay = min(base_delay * (2 ** attempt) + random.random() * 0.005, 1.0)
+                        await asyncio.sleep(delay)
+            asyncio.ensure_future(run())
+        return rx.create(subscribe)
+
+    # ---------------------------------------------------------------------------
+    # Adversarial test: shared counter with optimistic locking
+    # ---------------------------------------------------------------------------
+
+    # Simulated DB row with version-based OCC
+    counter_lock = asyncio.Lock()  # Simulates serialized DB writes
+    counter_value = 0
+    counter_version = 0
+    total_retries = 0
+
+    async def occ_increment() -> str:
+        """Atomically increment counter using OCC. Raises OCCConflictError on version mismatch."""
+        nonlocal counter_value, counter_version, total_retries
+
+        # Read phase (snapshot)
+        read_version = counter_version
+        read_value = counter_value
+
+        # Simulate some processing delay to increase conflict probability
+        await asyncio.sleep(random.random() * 0.002)
+
+        # Write phase (optimistic)
+        async with counter_lock:
+            if counter_version != read_version:
+                total_retries += 1
+                raise OCCConflictError(
+                    f"Version mismatch: expected {read_version}, got {counter_version}"
+                )
+            counter_value = read_value + 1
+            counter_version += 1
+            return f"incremented_to_{counter_value}"
+
+    # Run 10 concurrent occ_transition observables
+    results: list[str] = []
+    errors_list: list[Exception] = []
+    done_event = asyncio.Event()
+    completed_count = 0
+
+    def on_next(v):
+        results.append(v)
+
+    def on_error(e):
+        errors_list.append(e)
+        done_event.set()
+
+    def on_completed():
+        nonlocal completed_count
+        completed_count += 1
+        if completed_count == 10:
+            done_event.set()
+
+    # Each of the 10 coroutines gets its own occ_transition observable
+    # They share the same counter — conflicts WILL happen
+    for i in range(10):
+        occ_transition(occ_increment, max_attempts=20, base_delay=0.005).subscribe(
+            on_next=on_next,
+            on_error=on_error,
+            on_completed=on_completed,
+        )
+
+    await asyncio.wait_for(done_event.wait(), timeout=10.0)
+
+    elapsed = time.monotonic() - t0
+
+    # Collect evidence
+    evidence_lines.append(f"Final counter value: {counter_value} (expected 10)")
+    evidence_lines.append(f"Final counter version: {counter_version} (expected 10)")
+    evidence_lines.append(f"Successful results: {len(results)} (expected 10)")
+    evidence_lines.append(f"Total OCC retries: {total_retries}")
+    evidence_lines.append(f"Errors: {len(errors_list)}")
+    evidence_lines.append(f"Elapsed: {elapsed:.3f}s")
+
+    if errors_list:
+        for e in errors_list:
+            evidence_lines.append(f"Error: {type(e).__name__}: {e}")
+
+    passed = (
+        counter_value == 10
+        and counter_version == 10
+        and len(results) == 10
+        and len(errors_list) == 0
+    )
+
+    return PatternResult(
+        pattern=2,
+        name="OCC-guarded transition as custom retry observable",
+        passed=passed,
+        evidence="\n".join(evidence_lines),
+        elapsed_s=elapsed,
+    )
 
 
 async def test_pattern3_dynamic_semaphore() -> PatternResult:
