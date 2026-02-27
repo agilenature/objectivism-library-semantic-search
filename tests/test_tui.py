@@ -273,15 +273,22 @@ async def test_preview_shows_placeholder_on_mount():
 # ---------------------------------------------------------------------------
 
 
-async def test_empty_search_clears_results():
-    """Empty SearchRequested clears results, resets selected_index."""
-    app = make_app()
+async def test_empty_search_clears_results(mock_search_service):
+    """Empty query via input clears results, resets selected_index.
+
+    Updated for RxPY pipeline (plan 17-04): replaced post_message(SearchRequested)
+    with input_subject.on_next("") which triggers the empty-query clear subscription.
+    Requires search_service so the RxPY pipeline (including clear subscription) is wired.
+    """
+    app = make_app(search_service=mock_search_service)
     async with app.run_test(size=(120, 40)) as pilot:
         app.results = [Citation(1, "Test", None, "text", None, 0.5)]
         app.query = "previous query"
         app.selected_index = 0
 
-        app.post_message(SearchRequested(query=""))
+        # Drive empty query through the RxPY pipeline's clear subscription
+        search_bar = app.query_one(SearchBar)
+        search_bar.input_subject.on_next("")
         await pilot.pause(0.2)
 
         assert app.query == ""
@@ -290,10 +297,15 @@ async def test_empty_search_clears_results():
 
 
 async def test_search_triggers_service_call(mock_search_service, mock_library_service):
-    """SearchRequested with a query calls search_service.search()."""
+    """Enter-submitted query calls search_service.search().
+
+    Updated for RxPY pipeline (plan 17-04): replaced post_message(SearchRequested)
+    with _enter_subject.on_next() which fires search through the RxPY pipeline.
+    """
     app = make_app(search_service=mock_search_service, library_service=mock_library_service)
     async with app.run_test(size=(120, 40)) as pilot:
-        app.post_message(SearchRequested(query="virtue"))
+        search_bar = app.query_one(SearchBar)
+        search_bar._enter_subject.on_next("virtue")
         await pilot.pause(0.5)
 
         mock_search_service.search.assert_called_once()
@@ -301,10 +313,15 @@ async def test_search_triggers_service_call(mock_search_service, mock_library_se
 
 
 async def test_search_results_populate_list(mock_search_service, mock_library_service, sample_citations):
-    """After search completes, ResultsList contains one ResultItem per citation."""
+    """After search completes, ResultsList contains one ResultItem per citation.
+
+    Updated for RxPY pipeline (plan 17-04): replaced post_message(SearchRequested)
+    with _enter_subject.on_next() which fires search through the RxPY pipeline.
+    """
     app = make_app(search_service=mock_search_service, library_service=mock_library_service)
     async with app.run_test(size=(120, 40)) as pilot:
-        app.post_message(SearchRequested(query="consciousness"))
+        search_bar = app.query_one(SearchBar)
+        search_bar._enter_subject.on_next("consciousness")
         await pilot.pause(0.5)
 
         assert len(app.results) == len(sample_citations)
@@ -313,11 +330,16 @@ async def test_search_results_populate_list(mock_search_service, mock_library_se
 
 
 async def test_search_updates_reactive_query(mock_search_service, mock_library_service):
-    """SearchRequested updates app.query reactive property."""
+    """Search via Enter updates app.query reactive property.
+
+    Updated for RxPY pipeline (plan 17-04): replaced post_message(SearchRequested)
+    with _enter_subject.on_next() which fires search through the RxPY pipeline.
+    """
     app = make_app(search_service=mock_search_service, library_service=mock_library_service)
     async with app.run_test(size=(120, 40)) as pilot:
-        app.post_message(SearchRequested(query="epistemology"))
-        await pilot.pause(0.2)
+        search_bar = app.query_one(SearchBar)
+        search_bar._enter_subject.on_next("epistemology")
+        await pilot.pause(0.5)
 
         assert app.query == "epistemology"
 
@@ -325,11 +347,18 @@ async def test_search_updates_reactive_query(mock_search_service, mock_library_s
 async def test_search_with_active_filters_passes_filter_strings(
     mock_search_service, mock_library_service
 ):
-    """Search with active filters forwards filter strings to the service."""
+    """Search with active filters forwards filter strings to the service.
+
+    Updated for RxPY pipeline (plan 17-04): replaced post_message(SearchRequested)
+    with _enter_subject.on_next(). Set filters via _filter_subject so the
+    combine_latest pipeline picks them up.
+    """
     app = make_app(search_service=mock_search_service, library_service=mock_library_service)
     async with app.run_test(size=(120, 40)) as pilot:
-        app.active_filters = FilterSet(difficulty="advanced")
-        app.post_message(SearchRequested(query="ethics"))
+        # Feed filter through the BehaviorSubject so combine_latest sees it
+        app._filter_subject.on_next(FilterSet(difficulty="advanced"))
+        search_bar = app.query_one(SearchBar)
+        search_bar._enter_subject.on_next("ethics")
         await pilot.pause(0.5)
 
         call_kwargs = mock_search_service.search.call_args[1]
@@ -340,10 +369,15 @@ async def test_search_with_active_filters_passes_filter_strings(
 async def test_search_with_empty_filters_passes_no_filters(
     mock_search_service, mock_library_service
 ):
-    """Search with no active filters passes filters=None to service."""
+    """Search with no active filters passes filters=None to service.
+
+    Updated for RxPY pipeline (plan 17-04): replaced post_message(SearchRequested)
+    with _enter_subject.on_next() which fires search through the RxPY pipeline.
+    """
     app = make_app(search_service=mock_search_service, library_service=mock_library_service)
     async with app.run_test(size=(120, 40)) as pilot:
-        app.post_message(SearchRequested(query="metaphysics"))
+        search_bar = app.query_one(SearchBar)
+        search_bar._enter_subject.on_next("metaphysics")
         await pilot.pause(0.5)
 
         call_kwargs = mock_search_service.search.call_args[1]
@@ -362,7 +396,11 @@ async def test_search_without_service_does_nothing():
 async def test_search_logs_to_active_session(
     mock_search_service, mock_library_service, mock_session_service
 ):
-    """An active session receives a 'search' event after each search."""
+    """An active session receives a 'search' event after each search.
+
+    Updated for RxPY pipeline (plan 17-04): replaced post_message(SearchRequested)
+    with _enter_subject.on_next() which fires search through the RxPY pipeline.
+    """
     app = make_app(
         search_service=mock_search_service,
         library_service=mock_library_service,
@@ -370,7 +408,8 @@ async def test_search_logs_to_active_session(
     )
     async with app.run_test(size=(120, 40)) as pilot:
         app.active_session_id = "session-uuid-12345678"
-        app.post_message(SearchRequested(query="metaphysics"))
+        search_bar = app.query_one(SearchBar)
+        search_bar._enter_subject.on_next("metaphysics")
         await pilot.pause(0.5)
 
         mock_session_service.add_event.assert_called()
@@ -381,15 +420,28 @@ async def test_search_logs_to_active_session(
 async def test_filter_changed_with_active_query_reruns_search(
     mock_search_service, mock_library_service
 ):
-    """FilterChanged re-triggers search when app.query is non-empty."""
+    """FilterChanged re-triggers search when a query is active.
+
+    Updated for RxPY pipeline (plan 17-04): replaced direct app.query assignment
+    with _enter_subject.on_next() so the query_stream has emitted (required for
+    combine_latest). Then FilterChanged re-triggers via the _filter_subject.
+    """
     app = make_app(search_service=mock_search_service, library_service=mock_library_service)
     async with app.run_test(size=(120, 40)) as pilot:
-        app.query = "epistemology"
+        # First, fire a query through the pipeline so combine_latest has a value
+        search_bar = app.query_one(SearchBar)
+        search_bar._enter_subject.on_next("epistemology")
+        await pilot.pause(0.5)
+
+        initial_count = mock_search_service.search.call_count
+        assert initial_count >= 1
+
+        # Now change filters -- should re-trigger search via combine_latest
         app.post_message(FilterChanged(filters=FilterSet(difficulty="advanced")))
         await pilot.pause(0.5)
 
         assert app.active_filters.difficulty == "advanced"
-        mock_search_service.search.assert_called()
+        assert mock_search_service.search.call_count > initial_count
 
 
 async def test_filter_changed_with_no_query_does_not_search(
@@ -1346,24 +1398,55 @@ async def test_search_bar_initial_history_is_empty():
         assert bar._history_index == -1
 
 
-async def test_search_bar_fire_search_adds_to_history():
-    """_fire_search records query in history."""
+async def test_search_bar_enter_adds_to_history():
+    """Pressing Enter records query in search history.
+
+    Updated for RxPY pipeline (plan 17-04): replaced _fire_search() (removed)
+    with typing + Enter via pilot, which triggers on_key history management.
+    """
     app = make_app()
     async with app.run_test(size=(120, 40)) as pilot:
         bar = app.query_one(SearchBar)
-        bar._fire_search("virtue")
+        bar.focus()
+        await pilot.pause(0.05)
+
+        for char in "virtue":
+            await pilot.press(char)
+        await pilot.press("enter")
+        await pilot.pause(0.1)
 
         assert "virtue" in bar._history
 
 
-async def test_search_bar_fire_search_deduplicates_consecutive():
-    """_fire_search skips adding duplicate consecutive entries to history."""
+async def test_search_bar_enter_deduplicates_consecutive():
+    """Pressing Enter twice with same query adds it to history only once.
+
+    Updated for RxPY pipeline (plan 17-04): replaced _fire_search() (removed)
+    with typing + Enter via pilot, which triggers on_key history management.
+    """
     app = make_app()
     async with app.run_test(size=(120, 40)) as pilot:
         bar = app.query_one(SearchBar)
-        bar._fire_search("virtue")
-        bar._fire_search("virtue")
-        bar._fire_search("consciousness")
+        bar.focus()
+        await pilot.pause(0.05)
+
+        # Type "virtue" and press Enter
+        for char in "virtue":
+            await pilot.press(char)
+        await pilot.press("enter")
+        await pilot.pause(0.1)
+
+        # Press Enter again with same value (should not duplicate)
+        await pilot.press("enter")
+        await pilot.pause(0.1)
+
+        # Clear and type "consciousness"
+        bar.value = ""
+        await pilot.pause(0.05)
+        for char in "consciousness":
+            await pilot.press(char)
+        await pilot.press("enter")
+        await pilot.pause(0.1)
 
         assert bar._history == ["virtue", "consciousness"]
 
