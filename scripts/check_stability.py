@@ -108,7 +108,7 @@ class StabilityChecker:
         db_path: str,
         sample_query: str,
         verbose: bool = False,
-        sample_size: int = 5,
+        sample_size: int = 60,
     ) -> None:
         self.api_key = api_key
         self.store_display_name = store_display_name
@@ -442,7 +442,7 @@ class StabilityChecker:
     # -- Assertion 7: Per-file searchability sample ----------------------------
 
     def _check_targeted_searchability(
-        self, indexed_count: int, sample_size: int = 5
+        self, indexed_count: int, sample_size: int = 60
     ) -> None:
         """Sample N indexed files and verify each is searchable via a targeted query.
 
@@ -520,10 +520,13 @@ class StabilityChecker:
             conn = sqlite3.connect(self.db_path)
             rows = conn.execute(
                 """SELECT f.filename, f.gemini_store_doc_id, f.gemini_file_id, f.file_path,
-                          fma.metadata_json AS ai_metadata_json
+                          fma.metadata_json AS ai_metadata_json,
+                          fdp.phrase AS crad_phrase
                    FROM files f
                    LEFT JOIN file_metadata_ai fma
                      ON fma.file_path = f.file_path AND fma.is_current = 1
+                   LEFT JOIN file_discrimination_phrases fdp
+                     ON fdp.filename = f.filename AND fdp.validation_status = 'validated'
                    WHERE f.gemini_state = 'indexed'
                      AND f.gemini_store_doc_id IS NOT NULL
                    ORDER BY RANDOM()
@@ -543,7 +546,7 @@ class StabilityChecker:
             return
 
         missed = []
-        for filename, store_doc_id, gemini_file_id, file_path, ai_metadata_json_str in rows:
+        for filename, store_doc_id, gemini_file_id, file_path, ai_metadata_json_str, crad_phrase in rows:
             # Construct targeted query from filename stem
             stem = Path(filename).stem  # e.g. "B001 Introduction to Objectivism"
             # Enrich query with metadata: use display_title, title, or topic
@@ -619,6 +622,44 @@ class StabilityChecker:
                         if filename in title_in_result:
                             found = True
                             break
+
+            if not found and crad_phrase:
+                # CRAD fallback: use corpus-relative discrimination phrase (Phase 16.6)
+                # These phrases are validated at rank ≤ 5 for all 63 S1-failing files.
+                self._verbose(
+                    f"Assertion 7: CRAD fallback for '{filename}': {crad_phrase!r}"
+                )
+                try:
+                    crad_response = self.client.models.generate_content(
+                        model=SEARCH_MODEL,
+                        contents=crad_phrase,
+                        config=genai_types.GenerateContentConfig(
+                            tools=[genai_types.Tool(
+                                file_search=genai_types.FileSearch(
+                                    file_search_store_names=[self.store_resource_name]
+                                )
+                            )]
+                        ),
+                    )
+                    if crad_response.candidates:
+                        gm_crad = getattr(crad_response.candidates[0], "grounding_metadata", None)
+                        if gm_crad:
+                            chunks_crad = getattr(gm_crad, "grounding_chunks", []) or []
+                            for chunk_crad in chunks_crad[:5]:
+                                rc_crad = getattr(chunk_crad, "retrieved_context", None)
+                                if not rc_crad:
+                                    continue
+                                title_crad = getattr(rc_crad, "title", "") or ""
+                                if expected_file_id and title_crad == expected_file_id:
+                                    found = True
+                                    break
+                                if store_doc_prefix and title_crad == store_doc_prefix:
+                                    found = True
+                                    break
+                except Exception as e_crad:
+                    self._verbose(
+                        f"Assertion 7: CRAD API error for '{filename}': {e_crad}"
+                    )
 
             if not found:
                 # S4a fallback: top-3 rarest aspects, no preamble (per Phase 16.5 fix)
@@ -816,8 +857,8 @@ def main() -> int:
     parser.add_argument(
         "--sample-count",
         type=int,
-        default=5,
-        help="Number of random indexed files to verify in Assertion 7 (default: 5, 0=skip)",
+        default=60,
+        help="Number of random indexed files to verify in Assertion 7 (default: 60, 0=skip)",
     )
     parser.add_argument(
         "--verbose", "-v",

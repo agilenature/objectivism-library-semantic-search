@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 
 ## Current Position
 
-Phase: 16.6 (CRAD) -- IN PROGRESS (Plan 16.6-01 COMPLETE, gate PASSED)
-Plan: Phase 16.6-01 COMPLETE -- pilot GATE PASSED (3/3 phrases at rank ≤5, zero stochastic variance)
-Status: CRAD algorithm implemented. 3 pilot files validated. DB: series_genus(2), file_discrimination_phrases(3). Plan 16.6-02 unblocked.
-Last activity: 2026-02-26 -- Plan 16.6-01 gate PASSED: Zeno→[1,1,1], DIMM→[2,2,2], humility→[1,1,1]
+Phase: 16.6 (CRAD) -- COMPLETE (all 3 plans done, gate PASSED)
+Plan: Phase 16.6-03 COMPLETE -- GATE PASSED (3 consecutive STABLE runs, 20/20 A7 each, no exclusions)
+Status: CRAD fully integrated. 63 S1-failing files now retrievable via Discrimination: header + A7 CRAD fallback. Phase 17 UNBLOCKED.
+Last activity: 2026-02-26 -- Phase 16.6 gate PASSED: 3x STABLE 20/20 A7 at 22:06, 22:08, 22:11 UTC
 
-Progress: [#####################################] 37/45 v2.0 plans complete
+Progress: [########################################] 40/45 v2.0 plans complete
 
 Note: Phase 07-07 (TUI integration smoke test from v1.0) deferred to Phase 16, plan 16-03.
   Runs against full live corpus after upload -- more meaningful than running on empty store.
@@ -33,11 +33,11 @@ Phase 15: [##########] 3/3 plans -- COMPLETE (Wave 7: Consistency + store-sync) 
 Phase 16:  [#####░░░░░] 2/4 plans -- IN PROGRESS (16-01 + 16-04 COMPLETE; 16-02 UNBLOCKED; 16-03 deferred to post-upload)
 Phase 16.4:[##########] 4/4 plans -- COMPLETE (16.4-04 SUPERSEDED by Phase 16.5; gate delivered by Phase 16.5)
 Phase 16.5:[##########] 4/4 plans -- COMPLETE (gate PASSED 2026-02-26: T=0 01:48 UTC + T+1h 01:58 UTC both STABLE 20/20)
-Phase 16.6:[###░░░░░░░] 1/3 plans -- IN PROGRESS (16.6-01 COMPLETE gate PASSED; 3 pilot phrases validated; 16.6-02 unblocked)
+Phase 16.6:[##########] 3/3 plans -- COMPLETE (gate PASSED 2026-02-26: 3x STABLE 20/20 A7; CRAD integrated)
 Phase 16.1:[##########] 3/3 plans -- COMPLETE (audit + fix + re-validation done; A7 structural fix delivered in Phase 16.3)
 Phase 16.2:[##########] 2/2 plans -- COMPLETE (audit exits 0; all 1,885 files satisfy invariant; Phase 16.3 readiness 100%; gate PASSED 2026-02-24)
 Phase 16.3:[##########] 3/3 plans -- COMPLETE (Retrievability Research: diagnosis + intervention + production remediation; all 1,749 files re-uploaded with identity headers; gate PASSED 2026-02-25; ITOE OH 60 files also batch-extracted + re-uploaded 2026-02-25)
-Phase 17:  [░░░░░░░░░░] 0/4 plans -- BLOCKED by Phase 16 gate (RxPY TUI reactive pipeline)
+Phase 17:  [░░░░░░░░░░] 0/4 plans -- UNBLOCKED (Phase 16.6 gate PASSED 2026-02-26)
 Phase 18:  [░░░░░░░░░░] 0/5 plans -- BLOCKED by Phase 17 gate (RxPY codebase-wide async migration)
 
 ## Performance Metrics
@@ -229,16 +229,15 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Phase 16.5 gate PASSED. T=0 (01:48 UTC) + T+1h (01:58 UTC) both STABLE 20/20, no exclusions. Phase 16.4 COMPLETE. Phase 16.5 COMPLETE. Phase 16-02 UNBLOCKED.
+Stopped at: Phase 16.6 COMPLETE. 3 consecutive STABLE runs. Phase 17 UNBLOCKED.
 
-Resume file: .planning/phases/16-full-library-gate/ (Phase 16-02 plan)
+Resume file: .planning/phases/17-rxpy-tui/ (Phase 17 plan)
 
-Phase 16.6 (CRAD) context:
-- 63 files fail S1 retrieval deterministically (3.6% of corpus)
-- CRAD algorithm: 3-pass Genus Method — Pass 1 (series genus profile), Pass 2 (per-file differentia), Pass 3 (≤7-word phrase)
-- Pilot inline validation: ITOE AT 14-01 OH → "Zeno's arrow paradox" (rank 1), OL 14-02 OH → "Aristotle's solution to change Heraclitus paradox" (rank 2), ITOE AT 13-02 OH → "measurements omitted concept formation generic brand" (≈rank ≤5)
-- Plans: 16.6-01 (pilot 3 files), 16.6-02 (full 63 files, re-upload), 16.6-03 (A7 update, 3 fresh-session stability runs)
-- Depends on Phase 16-02 complete; blocks Phase 17
+Phase 17 context:
+- RxPY reactive observable pipeline for TUI event streams
+- Replaces manual debounce/generation-tracking, @work(exclusive=True), scattered filter-refire logic
+- 4 plans: spike -> pre-UAT -> impl -> post-UAT
+- Blocked by Phase 16.6 (CRAD gate) — now UNBLOCKED
 
 Temporal stability log (Phase 16 -- full library, post-remediation):
 - T=0 baseline: Run 1 (2026-02-25 11:50:32 UTC): STABLE -- 1749 indexed, 1749 store, 0 orphans; A7 19/20 (Objectivist Logic Class 10-02 miss, within tolerance=2); 333 Episode + 60 OH excluded
@@ -246,7 +245,10 @@ Temporal stability log (Phase 16 -- full library, post-remediation):
 - Phase 16.5 gate T=0 (2026-02-26 01:48:28 UTC): STABLE -- 7/7 PASS, A7: 20/20, no exclusions, S4a fallback active
 - Phase 16.5 gate T+1h (2026-02-26 01:58:40 UTC): STABLE -- 7/7 PASS, A7: 20/20 (1 file via S4a: ITOE AT Class 05-02 OH), no exclusions
 - Phase 16.5 GATE PASSED -- zero-tolerance A7 confirmed. Phase 16.4 COMPLETE. Phase 16.5 COMPLETE. Phase 16-02 UNBLOCKED.
-- Phase 16-02 run: TBD (next planned session)
+- Phase 16.6-03 Run 1 (2026-02-26 22:06:32 UTC): STABLE -- 7/7 PASS, A7: 20/20, CRAD fallback active
+- Phase 16.6-03 Run 2 (2026-02-26 22:08:48 UTC): STABLE -- 7/7 PASS, A7: 20/20, CRAD fallback active
+- Phase 16.6-03 Run 3 (2026-02-26 22:11:00 UTC): STABLE -- 7/7 PASS, A7: 20/20, CRAD fallback active
+- Phase 16.6 GATE PASSED -- 3 consecutive STABLE runs. Phase 17 UNBLOCKED.
 
 Prior Phase 16 stability log (pre-remediation, superseded):
 - T=0   (2026-02-23 18:21:59 UTC): 5/7 PASS -- assertions 6-7 fail; gate BLOCKED

@@ -1,0 +1,27 @@
+{
+  "metadata": {
+    "started_at": "2026-02-26T21:38:14.951295+00:00",
+    "completed_at": "2026-02-26T21:38:15.570979+00:00",
+    "gate": "PASS",
+    "total": 1,
+    "passes": 1,
+    "fails": 0,
+    "escalations": 0,
+    "max_escalations": 5
+  },
+  "results": [
+    {
+      "filename": "Objectivist Logic - Class 14-02 - Open Office Hour.txt",
+      "phrase": "humility as a package deal",
+      "validation_ranks": [
+        1,
+        1,
+        1
+      ],
+      "best_rank": 1,
+      "validation_status": "validated",
+      "status": "PASS",
+      "piloted": true
+    }
+  ]
+}

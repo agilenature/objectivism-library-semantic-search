@@ -376,6 +376,57 @@ Plans:
 
 ---
 
+### Phase 16.6: CRAD — Corpus-Relative Aspect Differentiation (INSERTED)
+
+**Goal:** The 63 files that fail S1 retrieval acquire deterministic, user-plausible discrimination phrases derived via the Binswanger Genus Method 3-pass algorithm (CRAD), so that every file in the corpus has at least one stable search path that finds it at rank ≤ 5 — replacing the stochastic S4a cascade with a content-anchored, corpus-relative identifier stored in each file's identity header.
+
+**Background:** Phase 16.5 proved all 1,749 files ARE findable via instrument-internal S4a/S4b queries (rarity-ranked aspect concatenation, no preamble). But 63 files (3.6%) remain S1-deaf: their filename stems have zero semantic content, and current S4a is stochastic (rank variance across runs). The root cause is that Mistral batch extraction produces content-absolute descriptions ("what topics are in this file?") rather than corpus-relative differentia ("what makes this file unique among its series siblings?"). The Genus Method solves this: Pass 1 identifies the genus (shared aspects across the series), Pass 2 subtracts the genus to find each file's differentia, Pass 3 essentializes to a Crow-friendly ≤7-word phrase usable as a standalone search query.
+
+**Pilot validation (inline, this session):** CRAD algorithm applied to 3 pilot files using established S4a data as ground truth:
+- `ITOE AT - Class 14-01 - OH`: phrase = `"Zeno's arrow paradox"` (exact match to S4a, rank 1)
+- `OL - Class 14-02 - Open OH`: phrase = `"Aristotle's solution to change Heraclitus paradox"` (exact match to S4c, rank 2)
+- `ITOE AT - Class 13-02 - OH`: phrase = `"measurements omitted concept formation generic brand"` (6-word approximation of 10-word S4a, target rank ≤ 5)
+
+**Depends on:** Phase 16-02 (temporal stability confirmed for current corpus; CRAD re-uploads 63 files and requires its own post-upload stability check)
+**Distrust:** HOSTILE for pilot (pilot must generate phrases matching or exceeding S4a rank for all 3 pilot files before full run proceeds); SKEPTICAL for full run
+**Gate:** BLOCKING for Phase 17 (all 63 files must have validated discrimination phrases at rank ≤ 5; A7 updated to use CRAD phrases deterministically)
+
+**Success Criteria** (what must be TRUE):
+  1. CRAD script implemented (`scripts/crad_algorithm.py`): Pass 1 (DB query → aspect-frequency GENUS_PROFILE per series), Pass 2 (per-file differentia by genus subtraction, ranked by series rarity), Pass 3 (≤7-word Crow-friendly phrase, markdown-clean); pilot on 3 known-failing files confirms all 3 phrases match or exceed known S4a rank with zero stochastic variance (3 consecutive queries, same rank each time)
+  2. Full CRAD run produces discrimination phrases for all 63 S1-failing files, stored in a new `file_discrimination_phrases` table (`filename`, `series_name`, `phrase`, `word_count`, `validation_rank`, `last_validated`); all 63 validation_ranks ≤ 5; files with rank > 5 after Pass 3 are escalated to manual review (not silently accepted)
+  3. Identity headers updated for all 63 files: `header_builder.py` extended with optional `Discrimination:` field when a CRAD phrase exists; files re-uploaded via FSM pipeline (not `--reset-existing`); `store-sync --no-dry-run` confirms 0 new orphans; DB=1,749, Store=1,749
+  4. `check_stability.py` A7 updated: for files with a `file_discrimination_phrases` entry, CRAD phrase is the primary A7 query (not S4a); A7 achieves 100% with zero stochastic variance across 3 consecutive fresh-session runs (same 20-file sample, same ranks each time)
+
+**DB Schema additions:**
+```sql
+CREATE TABLE series_genus (
+  series_name TEXT PRIMARY KEY,
+  genus_profile_json TEXT,  -- {shared_aspects, aspect_frequency_map, rarity_threshold}
+  file_count INTEGER,
+  last_updated TEXT
+);
+
+CREATE TABLE file_discrimination_phrases (
+  filename TEXT PRIMARY KEY,
+  series_name TEXT,
+  phrase TEXT,
+  word_count INTEGER,
+  aspects_used TEXT,        -- JSON array of aspects contributing to phrase
+  validation_rank INTEGER,  -- Gemini rank of target file for this phrase
+  validation_status TEXT,   -- "validated", "candidate", "escalated"
+  last_validated TEXT
+);
+```
+
+**Plans**: 3 plans in 3 waves
+
+Plans:
+- [ ] 16.6-01-PLAN.md -- CRAD pilot: implement 3-pass script, define DB schema, run on 3 pilot files, validate vs. known S4a ranks (all 3 must pass before full run)
+- [ ] 16.6-02-PLAN.md -- Full CRAD run: all 63 S1-failing files grouped by series; update identity headers; re-upload via FSM; store-sync 0 orphans; all 63 phrases at rank ≤ 5
+- [ ] 16.6-03-PLAN.md -- A7 update + stability gate: check_stability.py uses CRAD phrases for S1-failing files; 3 consecutive fresh-session STABLE runs; zero stochastic variance confirmed [autonomous=false]
+
+---
+
 ### Phase 17: RxPY Reactive Observable Pipeline for TUI Event Streams
 **Goal**: Replace the TUI's manual debounce timer, generation-tracking, `@work(exclusive=True)` pattern, and scattered filter-refire logic with a composable RxPY observable pipeline -- producing identical user-visible behavior, validated by automated UATs executed before and after implementation
 **Depends on**: Phase 16.4 (zero-exclusion zero-tolerance A7 confirmed; all non-book files satisfy metadata completeness invariant)
@@ -441,7 +492,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute sequentially: 8 -> 9 -> 10 -> 11 -> 12 -> 13 -> 14 -> 15 -> 16 -> 16.1 -> 16.2 -> 16.3 -> 16.4 -> 16.5 -> 17 -> 18
+Phases execute sequentially: 8 -> 9 -> 10 -> 11 -> 12 -> 13 -> 14 -> 15 -> 16 -> 16.1 -> 16.2 -> 16.3 -> 16.4 -> 16.5 -> 16-02 -> 16.6 -> 17 -> 18
 Each wave's gate is BLOCKING for the next. If a gate fails, the failing phase must be repeated before proceeding.
 
 **Note:** Phase 07-07 (TUI integration smoke test, deferred from v1.0) is incorporated into Phase 16 as plan 16-03. It runs against the full live corpus after the library upload completes -- a more meaningful test than running it against an empty store.
@@ -472,10 +523,11 @@ Each wave's gate is BLOCKING for the next. If a gate fails, the failing phase mu
 | 16.3. Gemini File Search Retrievability Research | v2.0 | 3/3 | Complete | 2026-02-25 |
 | 16.4. Metadata Invariant + Retrievability Audit | v2.0 | 3/4 | In progress | - |
 | 16.5. Strategy 4 Rarest-Aspect Exhaustive Audit | v2.0 | 0/4 | In progress | - |
+| 16.6. CRAD — Corpus-Relative Aspect Differentiation | v2.0 | 0/3 | Not started | - |
 | 17. RxPY TUI Reactive Pipeline | v2.0 | 0/4 | Not started | - |
 | 18. RxPY Codebase-Wide Async Migration | v2.0 | 0/5 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-19*
 *Pre-mortem: governance/pre-mortem-gemini-fsm.md*
-*Last updated: 2026-02-25 -- Phase 16.5 inserted: root cause confirmed (S4 query strategy), all 4 plans created; 16.4-02/16.4-03 marked complete; 16.4-04 superseded by 16.5-04*
+*Last updated: 2026-02-26 -- Phase 16.6 inserted: CRAD (Corpus-Relative Aspect Differentiation) via Binswanger Genus Method; depends on Phase 16-02; blocks Phase 17; 3 plans; execution order updated*

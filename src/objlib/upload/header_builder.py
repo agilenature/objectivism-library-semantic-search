@@ -107,6 +107,14 @@ def build_identity_header(file_path: str, conn: sqlite3.Connection) -> str:
         except (json.JSONDecodeError, TypeError):
             pass
 
+    # CRAD discrimination phrase — corpus-relative differentia for S1-failing files
+    disc_row = conn.execute(
+        "SELECT phrase FROM file_discrimination_phrases"
+        " WHERE filename = ? AND validation_status = 'validated'",
+        (filename,),
+    ).fetchone()
+    discrimination_phrase = disc_row[0] if disc_row and disc_row[0] else None
+
     # Build header
     lines = ["--- DOCUMENT METADATA ---"]
     lines.append(f"Title: {stem}")
@@ -124,17 +132,21 @@ def build_identity_header(file_path: str, conn: sqlite3.Connection) -> str:
     if topic_aspects:
         lines.append(f"Aspects: {'; '.join(topic_aspects)}")
 
+    if discrimination_phrase:
+        lines.append(f"Discrimination: {discrimination_phrase}")
+
     lines.append("--- END METADATA ---")
 
     header = "\n".join(lines) + "\n"
 
     logger.debug(
-        "build_identity_header: %s -> %d bytes (%d tags, %d aspects, class=%s)",
+        "build_identity_header: %s -> %d bytes (%d tags, %d aspects, class=%s, disc=%s)",
         filename,
         len(header.encode("utf-8")),
         len(primary_topics),
         len(topic_aspects),
         class_id or "none",
+        "yes" if discrimination_phrase else "no",
     )
 
     return header
