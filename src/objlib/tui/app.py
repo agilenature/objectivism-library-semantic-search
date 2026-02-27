@@ -7,7 +7,12 @@ and delegates search/browse to service facades.
 
 from __future__ import annotations
 
-from textual import work
+import asyncio
+
+import reactivex as rx
+from reactivex import operators as ops
+from reactivex.scheduler.eventloop import AsyncIOScheduler
+from reactivex.subject import BehaviorSubject
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.reactive import reactive
@@ -21,6 +26,7 @@ from objlib.tui.messages import (
     SearchRequested,
 )
 from objlib.tui.providers import ObjlibCommands
+from objlib.tui.rx_pipeline import defer_task
 from objlib.tui.state import Bookmark, FilterSet
 from objlib.tui.telemetry import Telemetry, set_telemetry
 from objlib.tui.widgets import FilterPanel, NavTree, PreviewPane, ResultsList, SearchBar
@@ -164,6 +170,9 @@ class ObjlibApp(App):
         self.session_service = session_service
         self.telemetry = telemetry if telemetry is not None else Telemetry.noop()
         set_telemetry(self.telemetry)
+        self._filter_subject = BehaviorSubject(FilterSet())
+        self._rx_subscription = None
+        self._rx_clear_subscription = None
 
     def compose(self) -> ComposeResult:
         """Compose the three-pane layout with real widgets."""
@@ -201,81 +210,115 @@ class ObjlibApp(App):
             self.query_one(PreviewPane).show_placeholder()
             self.telemetry.log.info("app mounted")
 
+        # Wire RxPY observable pipeline for search
+        if self.search_service is not None:
+            loop = asyncio.get_running_loop()
+            scheduler = AsyncIOScheduler(loop)
+            search_bar = self.query_one(SearchBar)
+
+            # Two-stream merge: debounced typing + immediate Enter
+            query_stream = rx.merge(
+                search_bar.input_subject.pipe(
+                    ops.filter(lambda q: q != ""),
+                    ops.debounce(0.3, scheduler=scheduler),
+                ),
+                search_bar.enter_subject,
+            ).pipe(ops.distinct_until_changed())
+
+            # Combine with filter stream (BehaviorSubject provides initial value)
+            pipeline = rx.combine_latest(
+                query_stream,
+                self._filter_subject,
+            ).pipe(
+                ops.switch_map(lambda pair: self._search_observable(pair[0], pair[1]))
+            )
+
+            self._rx_subscription = pipeline.subscribe(
+                on_next=self._on_search_result,
+            )
+
+            # Empty-query immediate clearing (no debounce)
+            self._rx_clear_subscription = search_bar.input_subject.pipe(
+                ops.filter(lambda q: q == ""),
+            ).subscribe(
+                on_next=lambda _: self._clear_results(),
+            )
+
+    # ------------------------------------------------------------------
+    # RxPY pipeline methods
+    # ------------------------------------------------------------------
+
+    def _search_observable(self, query: str, filter_set):
+        """Create an observable for a single search with error handling."""
+        self.is_searching = True
+        self.query = query
+        self.query_one(ResultsList).update_status("Searching...")
+
+        filters = None
+        if hasattr(filter_set, "is_empty") and not filter_set.is_empty():
+            filters = filter_set.to_filter_strings()
+
+        return defer_task(
+            lambda: self.search_service.search(query, filters=filters, top_k=20)
+        ).pipe(
+            ops.catch(lambda err, source: self._handle_search_error(err, query))
+        )
+
+    def _on_search_result(self, result) -> None:
+        """Handle a successful search result from the pipeline."""
+        self.results = result.citations if hasattr(result, "citations") else []
+        results_widget = self.query_one(ResultsList)
+        results_widget.update_results(self.results)
+        self.query_one(SearchBar).focus()
+        count = len(self.results)
+        truncated_query = self.query[:30]
+        self.query_one("#status-bar", Static).update(
+            f"{count} citations retrieved | {truncated_query} | Ctrl+P: Commands"
+        )
+        self.telemetry.log.info(
+            f"search completed query={self.query!r} result_count={count}"
+        )
+        self.is_searching = False
+        if self.active_session_id and self.session_service:
+            asyncio.get_running_loop().create_task(
+                self._log_search_event(self.query, count)
+            )
+
+    async def _log_search_event(self, query: str, count: int) -> None:
+        """Log search event to session (fire-and-forget)."""
+        try:
+            await self.session_service.add_event(
+                self.active_session_id,
+                "search",
+                {"query": query, "result_count": count},
+            )
+        except Exception:
+            pass
+
+    def _handle_search_error(self, error: Exception, query: str):
+        """Handle search error: show notification, reset state, return empty observable."""
+        self.query_one(ResultsList).update_status(f"Search error: {error}")
+        self.notify("Search error", severity="error")
+        self.is_searching = False
+        self.telemetry.log.error(f"search error query={query!r} error={error!r}")
+        return rx.empty()
+
+    def _clear_results(self) -> None:
+        """Clear search results and reset UI state."""
+        self.telemetry.log.info("search cleared")
+        self.query = ""
+        self.results = []
+        self.selected_index = None
+        self.query_one(ResultsList).update_status("Enter a search query")
+        self.query_one(PreviewPane).show_placeholder()
+        self.query_one("#status-bar", Static).update(
+            "Ready | 0 results | Ctrl+P: Commands"
+        )
+        self.is_searching = False
+
     # ------------------------------------------------------------------
     # Message handlers
     # ------------------------------------------------------------------
-
-    def on_search_requested(self, event: SearchRequested) -> None:
-        """Handle search requests from the SearchBar widget."""
-        self.query = event.query
-        if not event.query:
-            self.telemetry.log.info("search cleared")
-            self.results = []
-            self.selected_index = None
-            self.query_one(ResultsList).update_status("Enter a search query")
-            self.query_one(PreviewPane).show_placeholder()
-            self.query_one("#status-bar", Static).update(
-                "Ready | 0 results | Ctrl+P: Commands"
-            )
-            return
-        self.telemetry.log.info(f"search requested query={event.query!r}")
-        self._run_search(event.query)
-
-    @work(exclusive=True)
-    async def _run_search(self, query: str) -> None:
-        """Execute search via service (auto-cancels stale searches).
-
-        The @work(exclusive=True) decorator ensures only the latest
-        search runs -- previous searches are automatically cancelled.
-        """
-        if self.search_service is None:
-            return
-
-        self.is_searching = True
-        try:
-            results_widget = self.query_one(ResultsList)
-            results_widget.update_status("Searching...")
-
-            # Build filter strings if any active filters
-            filters = None
-            if not self.active_filters.is_empty():
-                filters = self.active_filters.to_filter_strings()
-
-            with self.telemetry.span("tui.search") as span:
-                span.set_attribute("search.query", query)
-                span.set_attribute("search.has_filters", filters is not None)
-                result = await self.search_service.search(query, filters=filters, top_k=20)
-                self.results = result.citations if hasattr(result, "citations") else []
-                span.set_attribute("search.result_count", len(self.results))
-
-            results_widget.update_results(self.results)
-
-            # Return focus to search bar so user can immediately refine the query
-            self.query_one(SearchBar).focus()
-
-            # Update status bar
-            count = len(self.results)
-            truncated_query = query[:30]
-            self.query_one("#status-bar", Static).update(
-                f"{count} citations retrieved | {truncated_query} | Ctrl+P: Commands"
-            )
-            self.telemetry.log.info(f"search completed query={query!r} result_count={count}")
-
-            # Log to session if active
-            if self.active_session_id and self.session_service:
-                try:
-                    await self.session_service.add_event(
-                        self.active_session_id,
-                        "search",
-                        {"query": query, "result_count": count},
-                    )
-                except Exception:
-                    pass
-        except Exception as e:
-            self.query_one(ResultsList).update_status(f"Search error: {e}")
-            self.notify("Search error", severity="error")
-        finally:
-            self.is_searching = False
 
     async def on_result_selected(self, event: ResultSelected) -> None:
         """Handle result selection -- update highlight and show preview."""
@@ -370,11 +413,10 @@ class ObjlibApp(App):
             results_widget.update_status(f"Navigation error: {e}")
 
     def on_filter_changed(self, event: FilterChanged) -> None:
-        """Handle filter changes -- re-run search with new filters."""
+        """Handle filter changes -- feed the filter Subject to re-trigger pipeline."""
         self.active_filters = event.filters
         self.telemetry.log.info(f"filter changed filters={event.filters}")
-        if self.query:
-            self._run_search(self.query)
+        self._filter_subject.on_next(event.filters)
 
     def watch_is_searching(self, searching: bool) -> None:
         """Update status bar when search state changes."""
@@ -414,9 +456,16 @@ class ObjlibApp(App):
     def action_clear_search(self) -> None:
         """Clear search input and results."""
         self.query_one(SearchBar).clear_and_reset()
-        self.query = ""
-        self.results = []
-        self.selected_index = None
+        self._clear_results()
+
+    def on_unmount(self) -> None:
+        """Dispose RxPY subscriptions on app shutdown."""
+        if self._rx_subscription is not None:
+            self._rx_subscription.dispose()
+            self._rx_subscription = None
+        if self._rx_clear_subscription is not None:
+            self._rx_clear_subscription.dispose()
+            self._rx_clear_subscription = None
 
     # ------------------------------------------------------------------
     # Bookmark actions
