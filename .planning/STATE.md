@@ -2,20 +2,19 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-19)
+See: .planning/PROJECT.md (updated 2026-02-27)
 
 **Core value:** Three equally critical pillars -- semantic search quality, metadata preservation, incremental updates
-**Current focus:** Milestone v2.0 -- Gemini File Lifecycle FSM
-**Definition of done:** `[Unresolved file #N]` never appears in TUI search results
+**Current focus:** v3.0 -- TBD (next milestone)
+**Milestone v2.0:** ✅ SHIPPED 2026-02-27 — Gemini File Lifecycle FSM
 
 ## Current Position
 
-Phase: 18 (RxPY Codebase-Wide Async Migration) -- COMPLETE
-Plan: 18-05 COMPLETE -- Post-migration validation; Phase 18 gate PASSED
-Status: Phase 18 complete. All async code outside tui/ migrated to RxPY.
-Last activity: 2026-02-27 -- Completed 18-05: gate PASSED (476 tests, 0 asyncio primitives, STABLE 7/7, 0 orphans, 5/5 search queries resolved, 7/7 TUI invariants); CLI async bridge bug fixed
+Phase: v2.0 COMPLETE — milestone archived 2026-02-27
+Status: v2.0 shipped. All 1,749 files indexed and stable. 0 asyncio primitives outside tui/. STABLE 60/60.
+Last activity: 2026-02-27 — v2.0 milestone archived; git tag v2.0 created; REQUIREMENTS.md deleted (fresh for v3.0)
 
-Progress: [############################################] 46/46 v2.0 plans complete
+Progress: [############################################] 55/55 v2.0 plans complete
 
 Note: Phase 07-07 (TUI integration smoke test from v1.0) deferred to Phase 16, plan 16-03.
   Runs against full live corpus after upload -- more meaningful than running on empty store.
@@ -259,9 +258,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Phase 18 COMPLETE. All 5 plans done. Gate PASSED.
+Stopped at: v2.0 milestone archived. Git tagged v2.0. Ready for v3.0.
 
-Resume file: N/A -- Phase 18 complete. Next phase TBD.
+Resume file: N/A -- Start with /gsd:new-milestone to define v3.0 requirements and roadmap.
 
 Phase 17 context (COMPLETE):
 - RxPY reactive observable pipeline for TUI event streams -- DELIVERED
