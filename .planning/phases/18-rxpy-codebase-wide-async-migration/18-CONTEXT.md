@@ -178,6 +178,108 @@ Phase 18 is BLOCKED on Phase 17 gate passing. Specifically:
 
 ---
 
+## AI Synthesis Results (2026-02-27)
+
+**Source:** Gemini Pro (high) + Perplexity Sonar Deep Research (OpenAI timed out)
+**Phase 17 status:** COMPLETE — 7/7 UATs, 470/470 tests green. Phase 18 UNBLOCKED.
+
+**Confidence markers:**
+- ✅ **Consensus** — Both providers identified this as critical
+- ⚠️ **Recommended** — One provider identified, well-supported by domain context
+- 🔍 **Needs Clarification** — Ambiguous, requires explicit decision
+
+### ✅ GA-1: Migration Order Is Inverted in the Roadmap (Consensus)
+
+**What needs to be decided:** Tier 3 → Tier 2 → Tier 1 (bottom-up) vs. Tier 1 → Tier 2 → Tier 3 (top-down as listed in ROADMAP.md plans 18-02 to 18-04).
+
+**Why it matters:** If `orchestrator.py` (Tier 1) is migrated first to emit Observables, but `services/library.py` (Tier 3) still uses `async/await`, every service call from the orchestrator must be wrapped back into awaitables. This creates an ugly interop layer that must later be removed. Bottom-up means leaf services become Observable sources first — higher tiers consume them naturally.
+
+**Synthesis recommendation:** ✅ **Tier 3 → Tier 2 → Tier 1** (bottom-up). ROADMAP.md lists plans as 18-02=Tier3, 18-03=Tier2, 18-04=Tier1 — this IS already correct. The tier *description* in ROADMAP.md is ordered high-to-low but the plan numbers reflect bottom-up execution. **No change needed — roadmap order (18-02=Tier3 first) is correct.**
+
+---
+
+### ✅ GA-2: Dynamic Concurrency — flat_map Does Not Support Dynamic max_concurrent (Consensus)
+
+**What needs to be decided:** `orchestrator.py` dynamically resizes a `Semaphore` in response to 429 pressure. RxPY's `flat_map` takes a fixed `max_concurrent` at construction time. The `BehaviorSubject → flat_map max_concurrent` design in CONTEXT.md above is NOT natively supported.
+
+**Options:**
+- **A. Custom `dynamic_semaphore` operator** — Internal buffer + subscription to `limit` BehaviorSubject. Only pulls from upstream when `active_count < current_limit`. When limit decreases, in-flight items complete (no cancellation).
+- **B. Restart-on-resize** — On each limit change, dispose and re-subscribe with new `max_concurrent`. Risk: drops in-flight uploads.
+- **C. Skip dynamic resizing** — Use fixed concurrency (e.g., c=10) with `flat_map(max_concurrent=10)`. The 429 handler only adds delay, not resizes the pool.
+
+**Synthesis recommendation:** ✅ **Option A** (custom `dynamic_semaphore` operator) — consensus. Must be one of the 5 spike patterns in 18-01.
+
+---
+
+### ✅ GA-3: aiosqlite Connection Lifecycle Across Rx Chains (Consensus)
+
+**What needs to be decided:** `aiosqlite` connections must survive complex Rx chains (retry logic, `flat_map`, error recovery). If each Observable opens/closes its own connection, retry creates new connections mid-chain — risk of "Connection closed" errors.
+
+**Synthesis recommendation:** ✅ **Singleton connection service** — aiosqlite connection managed as a shared service (already done in `state.py`), passed into operators as a dependency, NOT opened inside observables. Wrapping pattern: `rx.defer(lambda: rx.from_future(asyncio.create_task(coro)))` with externally-managed connection.
+
+---
+
+### ✅ GA-4: OCC Retry — Retry Must NOT Re-subscribe to Upstream (Consensus)
+
+**What needs to be decided:** When `occ_transition` catches `OCCConflictError`, standard Rx `retry()` re-subscribes to the upstream observable — this re-triggers side effects (file re-read, new upload attempt). For OCC, only the transition *function call* should be retried, not the entire pipeline.
+
+**Synthesis recommendation:** ✅ `occ_transition(fn, max_attempts=5, base_delay=0.1)` is an **operator that retries `fn()` internally** (a coroutine factory that reads fresh DB state on each call), NOT standard `retry()` on the outer observable. The operator contracts in CONTEXT.md above are correct. This MUST be validated in 18-01 spike.
+
+---
+
+### ✅ GA-5: Graceful vs. Force Shutdown — Two-Signal System (Consensus)
+
+**What needs to be decided:** `take_until` is immediate — it completes the stream with no drain guarantee. Current code uses `asyncio.Event` which allows checking `is_set()` at loop boundaries (effective drain).
+
+**Synthesis recommendation:** ✅ **Two-signal system**:
+- `stop_accepting$` Subject: stops accepting new uploads into the pipeline (gates the input source)
+- `force_kill$` Subject: fires `take_until(force_kill$)` on all active chains (immediate stop)
+- Normal shutdown: fire `stop_accepting$`, await drain, then fire `force_kill$`
+- Ctrl-C: fire both simultaneously
+The `shutdown_gate` operator in CONTEXT.md above should implement `stop_accepting$` semantics, not `take_until`.
+
+---
+
+### ⚠️ GA-6: Tenacity Jitter Algorithm Preservation (Perplexity)
+
+**What needs to be decided:** `tenacity`'s `wait_random_exponential` uses a specific full-jitter formula. The "zero behavior change" mandate technically requires preserving exact retry timing — but retry timing is probabilistic and not observable from the outside.
+
+**Synthesis recommendation:** ⚠️ **Functionally equivalent backoff** (same max delay, same error conditions, same max attempts) is sufficient. Exact jitter seed matching is not required — it's not observable behavior. The `upload_with_retry` operator should document its backoff formula (full_jitter, base=1.0s, max=60s, max_attempts=5) to match tenacity's observed range.
+
+---
+
+### 🔍 GA-7: Behavioral Parity Testing Strategy per Tier
+
+**What needs to be decided:** The existing pytest suite tests behavior at the unit and integration level but doesn't capture "observable output sequences" — the Rx-specific behavioral contract. Do we need additional per-module parity specs?
+
+**Synthesis recommendation:** 🔍 **Per-module behavioral spec captured before migration**:
+- For each module: document input conditions → expected DB state changes (not observable sequences)
+- Use existing pytest suite as the parity gate (it already tests DB state outcomes)
+- Add specific tests for new failure modes introduced by Rx (e.g., `take_until` on in-flight aiosqlite — confirm no "Connection closed" error)
+- Do NOT add Rx-specific observable output recording tests — they add complexity without behavioral value
+
+---
+
+### Summary: Decision Checklist
+
+**Tier 1 (Blocking — must resolve in 18-01 spike):**
+- [x] Migration order confirmed: 18-02=Tier3, 18-03=Tier2, 18-04=Tier1 (already correct)
+- [ ] `dynamic_semaphore` operator — prototype and validate in 18-01
+- [ ] `occ_transition` retry semantics — fn() retry NOT outer observable re-subscribe
+- [ ] Two-signal shutdown (stop_accepting$ + force_kill$) validated in spike
+- [ ] Singleton connection service pattern confirmed with aiosqlite
+
+**Tier 2 (Important):**
+- [ ] Tenacity replacement with functionally equivalent backoff documented
+- [ ] Per-module pre-migration behavioral spec strategy defined
+
+**Tier 3 (Polish):**
+- [ ] Shim operators (`from_async_iterable`, `to_async_iterable`) for transition interop
+- [ ] `_operators.py` scope (upload-specific vs. shared at objlib level)
+
+---
+
 *Generated: 2026-02-23*
+*Updated: 2026-02-27 — Added AI synthesis (Gemini Pro + Perplexity); Phase 17 COMPLETE*
 *Phase predecessor: Phase 17 (RxPY TUI Reactive Pipeline)*
 *Pre-mortem reference: governance/pre-mortem-gemini-fsm.md (atomicity / recovery concerns apply to 18-04)*

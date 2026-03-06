@@ -1,5 +1,9 @@
 # Objectivism Library Semantic Search System
 
+## Description
+
+A semantic search system for an Objectivism philosophical library that uploads course materials to the Gemini File API, preserving lecture structure and curriculum hierarchy, and enables concept-level queries with cross-reference synthesis across Peikoff teaching recordings.
+
 ## Overview
 
 A comprehensive semantic search system for the Objectivism Library using Google's Gemini File API. This system preserves the intellectual and pedagogical structure of your library while enabling powerful semantic search capabilities.
